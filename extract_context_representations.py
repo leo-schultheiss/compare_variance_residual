@@ -7,6 +7,8 @@ import argparse
 import json
 import pandas as pd
 
+CACHE_DIR = "./cache"
+
 # Use GPU if possible
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -21,8 +23,8 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
     print(model_config, model_hf_path, seq_len)
     n_total_layers = model_config['num_layers']
 
-    model = AutoModel.from_pretrained(model_hf_path, cache_dir="./").to(device)
-    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir="./")
+    model = AutoModel.from_pretrained(model_hf_path, cache_dir=CACHE_DIR).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir=CACHE_DIR)
     model.eval()
 
     # get the token embeddings
