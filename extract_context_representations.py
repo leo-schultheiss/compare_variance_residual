@@ -20,10 +20,7 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
     model, model_config, n_total_layers, tokenizer = load_model(args, seq_len)
 
     # get the token embeddings
-    token_embeddings = []
-    for word in text_array:
-        current_token_embedding = get_model_token_embeddings([word], tokenizer, model)
-        token_embeddings.append(np.mean(current_token_embedding.detach().numpy(), 1))
+    token_embeddings = extract_token_embeddings(model, text_array, tokenizer)
 
     # where to store layer-wise embeddings of particular length
     Words_layers_representations = {}
