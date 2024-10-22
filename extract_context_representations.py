@@ -16,63 +16,91 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 @torch.inference_mode()
 def get_model_layer_representations(args, text_array, word_ind_to_extract):
     seq_len = args.sequence_length
-    model_name = args.model
-    with open('text_model_config.json', 'r') as f:
-        model_config = json.load(f)[model_name]
-        model_hf_path = model_config['huggingface_hub']
-    print(model_config, model_hf_path, seq_len)
-    n_total_layers = model_config['num_layers']
 
-    model = AutoModel.from_pretrained(model_hf_path, cache_dir=CACHE_DIR).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir=CACHE_DIR)
-    model.eval()
+    model, model_config, n_total_layers, tokenizer = load_model(args, seq_len)
 
-    # get the token embeddings
-    token_embeddings = []
-    for word in text_array:
-        current_token_embedding = get_model_token_embeddings([word], tokenizer, model)
-        token_embeddings.append(np.mean(current_token_embedding.detach().numpy(), 1))
 
     # where to store layer-wise embeddings of particular length
-    Words_layers_representations = {}
+    words_layers_representations = {}
     for layer in range(n_total_layers):
-        Words_layers_representations[layer] = []
-    Words_layers_representations[-1] = token_embeddings
+        words_layers_representations[layer] = []
 
-    # Before we've seen enough words to make up the seq_len
-    # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
-    start_time = tm.time()
-    for truncated_seq_len in range(1, 1 + seq_len):
-        word_seq = text_array[:truncated_seq_len]
-        from_start_word_ind_to_extract = -1 + truncated_seq_len
-        Words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
-                                                                                  from_start_word_ind_to_extract,
-                                                                                  Words_layers_representations,
-                                                                                  model_config)
-        if truncated_seq_len % 100 == 0:
-            print('Completed {} out of {}: {}'.format(truncated_seq_len, len(text_array), tm.time() - start_time))
-            start_time = tm.time()
+    # get the token embeddings for all words
+    words_layers_representations[-1] = extract_text_token_embeddings(model, text_array, tokenizer)
 
-    word_seq = text_array[:seq_len]
+    words_layers_representations = extract_sliding_window_context_representation(model, model_config,
+                                                                                 seq_len, text_array,
+                                                                                 tokenizer,
+                                                                                 words_layers_representations)
+
+    # word_seq = text_array[:seq_len]
     if word_ind_to_extract < 0:  # the index is specified from the end of the array, so invert the index
         from_start_word_ind_to_extract = seq_len + word_ind_to_extract
     else:
         from_start_word_ind_to_extract = word_ind_to_extract
 
-    # Then, use sequences of length seq_len, still adding the embedding of the last word in a sequence
-    for end_curr_seq in range(seq_len, len(text_array)):
-        word_seq = text_array[end_curr_seq - seq_len + 1:end_curr_seq + 1]
-        Words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
-                                                                                  from_start_word_ind_to_extract,
-                                                                                  Words_layers_representations,
-                                                                                  model_config)
-
-        if end_curr_seq % 100 == 0:
-            print('Completed {} out of {}: {}'.format(end_curr_seq, len(text_array), tm.time() - start_time))
-            start_time = tm.time()
+    words_layers_representations = add_average_token_embeddings_to_representation(from_start_word_ind_to_extract, model,
+                                                                                  model_config, seq_len, text_array,
+                                                                                  tokenizer,
+                                                                                  words_layers_representations)
 
     print('Done extracting sequences of length {}'.format(seq_len))
-    return Words_layers_representations
+    return words_layers_representations
+
+
+def add_average_token_embeddings_to_representation(from_start_word_ind_to_extract, model, model_config, seq_len,
+                                                   text_array, tokenizer, words_layers_representations):
+    # Then, use sequences of length seq_len, still adding the embedding of the last word in a sequence
+    start_time = tm.time()
+    for end_curr_seq in range(seq_len, len(text_array)):
+        word_seq = text_array[end_curr_seq - seq_len + 1:end_curr_seq + 1]
+        words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
+                                                                                  from_start_word_ind_to_extract,
+                                                                                  words_layers_representations,
+                                                                                  model_config)
+
+        if end_curr_seq % 500 == 0:
+            print('Completed {} out of {}: {}'.format(end_curr_seq, len(text_array), tm.time() - start_time))
+            start_time = tm.time()
+    return words_layers_representations
+
+
+def extract_sliding_window_context_representation(model, model_config, seq_len, text_array, tokenizer,
+                                                  words_layers_representations):
+    start_time = tm.time()
+    # Before we've seen enough words to make up the seq_len
+    # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
+    for truncated_seq_len in range(1, 1 + seq_len):
+        word_seq = text_array[:truncated_seq_len]
+        from_start_word_ind_to_extract = -1 + truncated_seq_len
+        words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
+                                                                                  from_start_word_ind_to_extract,
+                                                                                  words_layers_representations,
+                                                                                  model_config)
+        if truncated_seq_len % 100 == 0:
+            print('Completed {} out of {}: {}'.format(truncated_seq_len, len(text_array), tm.time() - start_time))
+            start_time = tm.time()
+    return start_time, words_layers_representations
+
+
+def extract_text_token_embeddings(model, text_array, tokenizer):
+    token_embeddings = []
+    for word in text_array:
+        current_token_embedding = get_model_token_embeddings([word], tokenizer, model)
+        token_embeddings.append(np.mean(current_token_embedding.detach().numpy(), 1))
+    return token_embeddings
+
+
+def load_model(args, seq_len):
+    with open('text_model_config.json', 'r') as f:
+        model_config = json.load(f)[args.model]
+        model_hf_path = model_config['huggingface_hub']
+    print(model_config, model_hf_path, seq_len)
+    n_total_layers = model_config['num_layers']
+    model = AutoModel.from_pretrained(model_hf_path, cache_dir=CACHE_DIR).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir=CACHE_DIR)
+    model.eval()
+    return model, model_config, n_total_layers, tokenizer
 
 
 # extracts layer representations for all words in words_in_array
@@ -211,16 +239,16 @@ if __name__ == "__main__":
     word_ind_to_extract = -1
 
     if os.path.isfile(args.input_file):
-        words = load_words_from_file(args.input_file)
-        extracted_features = get_model_layer_representations(args, np.array(words), word_ind_to_extract)
+        text = load_words_from_file(args.input_file)
+        extracted_representations = get_model_layer_representations(args, np.array(text), word_ind_to_extract)
     elif os.path.isdir(args.input_file):
         stories_files = {}
         for story in sorted(os.listdir(args.input_file)):
-            words = load_words_from_file(os.path.join(args.input_file, story))
-            embeddings = get_model_layer_representations(args, np.array(words), word_ind_to_extract)
+            text = load_words_from_file(os.path.join(args.input_file, story))
+            embeddings = get_model_layer_representations(args, np.array(text), word_ind_to_extract)
             stories_files[story] = embeddings
-        extracted_features = stories_files
+        extracted_representations = stories_files
     else:
         raise ValueError("input_file should be an existing file or a directory")
 
-    np.save(args.output_file, extracted_features)
+    np.save(args.output_file, extracted_representations)
