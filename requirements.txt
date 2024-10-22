@@ -1,8 +1,10 @@
 requests~=2.32.3
 tqdm~=4.66.5
-
-# feature extraction
 torch~=2.5.0
 numpy~=2.1.2
 transformers~=4.45.2
 pandas~=2.2.3
+tables~=3.10.1
+matplotlib~=3.9.2
+scipy~=1.14.1
+h5py~=3.12.1
