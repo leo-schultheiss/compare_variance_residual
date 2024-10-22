@@ -23,10 +23,10 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
     token_embeddings = extract_token_embeddings(model, text_array, tokenizer)
 
     # where to store layer-wise embeddings of particular length
-    Words_layers_representations = {}
+    words_layers_representations = {}
     for layer in range(n_total_layers):
-        Words_layers_representations[layer] = []
-    Words_layers_representations[-1] = token_embeddings
+        words_layers_representations[layer] = []
+    words_layers_representations[-1] = token_embeddings
 
     # Before we've seen enough words to make up the seq_len
     # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
@@ -34,9 +34,9 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
     for truncated_seq_len in range(1, 1 + seq_len):
         word_seq = text_array[:truncated_seq_len]
         from_start_word_ind_to_extract = -1 + truncated_seq_len
-        Words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
+        words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
                                                                                   from_start_word_ind_to_extract,
-                                                                                  Words_layers_representations,
+                                                                                  words_layers_representations,
                                                                                   model_config)
         if truncated_seq_len % 100 == 0:
             print('Completed {} out of {}: {}'.format(truncated_seq_len, len(text_array), tm.time() - start_time))
@@ -51,9 +51,9 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
     # Then, use sequences of length seq_len, still adding the embedding of the last word in a sequence
     for end_curr_seq in range(seq_len, len(text_array)):
         word_seq = text_array[end_curr_seq - seq_len + 1:end_curr_seq + 1]
-        Words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
+        words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
                                                                                   from_start_word_ind_to_extract,
-                                                                                  Words_layers_representations,
+                                                                                  words_layers_representations,
                                                                                   model_config)
 
         if end_curr_seq % 100 == 0:
@@ -61,7 +61,8 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
             start_time = tm.time()
 
     print('Done extracting sequences of length {}'.format(seq_len))
-    return Words_layers_representations
+    return words_layers_representations
+def extract_token_embeddings(model, text_array, tokenizer):
 
 
 # extracts layer representations for all words in words_in_array
