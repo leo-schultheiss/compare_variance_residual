@@ -187,6 +187,17 @@ def get_model_token_embeddings(words_in_array, tokenizer, model):
     return token_embeddings
 
 
+def load_words_from_file(file):
+    if '.npy' in file:
+        words = np.load(args.input_file)
+    elif '.csv' in file:
+        data_words = pd.read_csv(file, header=None)
+        words = data_words[1]
+    else:
+        words = open(file, 'r').read().strip().split('\n')
+    return words
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CheXpert NN argparser")
     parser.add_argument("--input_file", help="Choose inputfile", type=str, required=True)
@@ -198,24 +209,18 @@ if __name__ == "__main__":
     print(args.input_file)
 
     word_ind_to_extract = -1
-    output_filename = args.output_file + '_' + args.model + '_' + str(args.sequence_length)
+
     if os.path.isfile(args.input_file):
-        if '.npy' in args.input_file:
-            words = np.load(args.input_file)
-        elif '.csv' in args.input_file:
-            data_words = pd.read_csv(args.input_file, header=None)
-            words = data_words[1]
-        else:
-            words = open(args.input_file, 'r').read().strip().split('\n')
-        embeddings = get_model_layer_representations(args, np.array(words), word_ind_to_extract)
-        np.save(output_filename, embeddings)
+        words = load_words_from_file(args.input_file)
+        extracted_features = get_model_layer_representations(args, np.array(words), word_ind_to_extract)
     elif os.path.isdir(args.input_file):
         stories_files = {}
-        for eachstory in sorted(os.listdir(args.input_file)):
-            read_eachstory = open(os.path.join(args.input_file, eachstory), 'r')
-            words = read_eachstory.read().strip().split('\n')
-
+        for story in sorted(os.listdir(args.input_file)):
+            words = load_words_from_file(os.path.join(args.input_file, story))
             embeddings = get_model_layer_representations(args, np.array(words), word_ind_to_extract)
-            stories_files[eachstory] = embeddings
+            stories_files[story] = embeddings
+        extracted_features = stories_files
+    else:
+        raise ValueError("input_file should be an existing file or a directory")
 
-        np.save(output_filename, stories_files)
+    np.save(args.output_file, extracted_features)
