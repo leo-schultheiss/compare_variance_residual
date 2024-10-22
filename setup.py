@@ -49,12 +49,14 @@ def download_data(file_path, file_url):
 
 # English1000 is a 985-dimensional word
 # embedding feature space based on word co-occurrence in English text
+# see more at https://github.com/HuthLab/deep-fMRI-dataset/
 english1000_encodings = "https://github.com/HuthLab/deep-fMRI-dataset/raw/refs/heads/master/em_data/english1000sm.hf5"
 
 # choose subjects to download fmri data for
 # fMRI data for the six subjects in the experiment
 # in arrays of (time x voxels) for each data collection run
 # (10 stories of training data, 1 story repeated 2 times as validation data).
+# https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri
 subjects = [
     "01",
     # "02",
