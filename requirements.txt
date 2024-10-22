@@ -1,2 +1,8 @@
 requests~=2.32.3
 tqdm~=4.66.5
+
+# feature extraction
+torch~=2.5.0
+numpy~=2.1.2
+transformers~=4.45.2
+pandas~=2.2.3
