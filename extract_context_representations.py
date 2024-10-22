@@ -28,6 +28,16 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
         words_layers_representations[layer] = []
     words_layers_representations[-1] = token_embeddings
 
+    words_layers_representations = extract_sliding_window_context_representations(model, model_config, seq_len,
+                                                                                  text_array, tokenizer,
+                                                                                  word_ind_to_extract,
+                                                                                  words_layers_representations)
+
+    return words_layers_representations
+
+
+def extract_sliding_window_context_representations(model, model_config, seq_len, text_array, tokenizer,
+                                                   word_ind_to_extract, words_layers_representations):
     # Before we've seen enough words to make up the seq_len
     # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
     # Then, use sequences of length seq_len, still adding the embedding of the last word in a sequence
@@ -51,8 +61,6 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
         if end_curr_seq % 100 == 0:
             print('Completed {} out of {}: {}'.format(end_curr_seq, len(text_array), tm.time() - start_time))
             start_time = tm.time()
-
-    print('Done extracting sequences of length {}'.format(seq_len))
     return words_layers_representations
 
 
