@@ -30,27 +30,19 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
 
     # Before we've seen enough words to make up the seq_len
     # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
-    start_time = tm.time()
-    for truncated_seq_len in range(1, 1 + seq_len):
-        word_seq = text_array[:truncated_seq_len]
-        from_start_word_ind_to_extract = -1 + truncated_seq_len
-        words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
-                                                                                  from_start_word_ind_to_extract,
-                                                                                  words_layers_representations,
-                                                                                  model_config)
-        if truncated_seq_len % 100 == 0:
-            print('Completed {} out of {}: {}'.format(truncated_seq_len, len(text_array), tm.time() - start_time))
-            start_time = tm.time()
-
-    word_seq = text_array[:seq_len]
-    if word_ind_to_extract < 0:  # the index is specified from the end of the array, so invert the index
-        from_start_word_ind_to_extract = seq_len + word_ind_to_extract
-    else:
-        from_start_word_ind_to_extract = word_ind_to_extract
-
     # Then, use sequences of length seq_len, still adding the embedding of the last word in a sequence
-    for end_curr_seq in range(seq_len, len(text_array)):
-        word_seq = text_array[end_curr_seq - seq_len + 1:end_curr_seq + 1]
+    start_time = tm.time()
+    for end_curr_seq in range(1, len(text_array)):
+        if end_curr_seq <= seq_len:
+            word_seq = text_array[:end_curr_seq]
+            from_start_word_ind_to_extract = -1 + end_curr_seq
+        else:
+            word_seq = text_array[end_curr_seq - seq_len + 1:end_curr_seq + 1]
+            if word_ind_to_extract < 0:
+                from_start_word_ind_to_extract = seq_len + word_ind_to_extract
+            else:
+                from_start_word_ind_to_extract = word_ind_to_extract
+
         words_layers_representations = add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model,
                                                                                   from_start_word_ind_to_extract,
                                                                                   words_layers_representations,
