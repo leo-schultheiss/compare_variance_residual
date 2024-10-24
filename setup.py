@@ -52,6 +52,8 @@ def download_data(file_path, file_url):
 # see more at https://github.com/HuthLab/deep-fMRI-dataset/
 english1000_encodings = "https://github.com/HuthLab/deep-fMRI-dataset/raw/refs/heads/master/em_data/english1000sm.hf5"
 
+urls = [english1000_encodings]
+
 # choose subjects to download fmri data for
 # fMRI data for the six subjects in the experiment
 # in arrays of (time x voxels) for each data collection run
@@ -72,15 +74,12 @@ modalities = [
     "reading",
     "listening"
 ]
-
+for subject in subjects:
+    for modality in modalities:
+        for data_type in ["trn", "val"]:
+            url = f"https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/master/responses/subject{subject}_{modality}_fmri_data_{data_type}.hdf"
+            urls.append(url)
+            
 if __name__ == "__main__":
-    urls = [english1000_encodings]
-    for subject in subjects:
-        for modality in modalities:
-            for data_type in ["trn", "val"]:
-                url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/master/responses/subject{}_{}_fmri_data_{}.hdf".format(
-                    subject, modality, data_type)
-                urls.append(url)
-
     for url in urls:
         download_file(url)
