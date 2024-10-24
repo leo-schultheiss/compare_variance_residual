@@ -8,3 +8,4 @@ tables~=3.10.1
 matplotlib~=3.9.2
 scipy~=1.14.1
 h5py~=3.12.1
+ridge-utils~=0.2
