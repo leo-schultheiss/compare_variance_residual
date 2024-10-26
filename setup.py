@@ -64,18 +64,18 @@ urls.append(english1000_encodings)
 # https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri
 subjects = [
     "01",
-    # "02",
-    # "03",
-    # "04",
-    # "05",
-    # "06",
-    # "07",
-    # "08",
-    # "09"
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09"
 ]
 modalities = [
     "reading",
-    # "listening"
+    "listening"
 ]
 for subject in subjects:
     for modality in modalities:
