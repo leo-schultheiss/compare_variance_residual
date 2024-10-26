@@ -2,6 +2,7 @@ import requests
 import os
 import logging
 
+from pkg_resources import file_ns_handler
 from tqdm import tqdm
 from urllib.request import urlopen
 
@@ -17,19 +18,29 @@ def download_file(file_url, download_path="data"):
     file_path = os.path.join(download_path, file_name)
 
     # check if an existing file has correct size
-    if os.path.exists(file_path):
-        response = urlopen(file_url)
-        total_size = int(response.info().get('Content-Length').strip())
-        if os.path.getsize(file_path) == total_size:
-            logger.info(f"{file_name} already exists.")
-            return
-        else:
-            logger.info(f"{file_name} is corrupted. Downloading again.")
+    if is_file_complete(file_path, url):
+        logger.info(f"{file_name} already exists.")
+        return
+    else:
+        logger.info(f"downloading {file_name}")
 
     # Ensure the data directory exists
     os.makedirs(download_path, exist_ok=True)
 
     download_data(file_path, file_url)
+
+
+def is_file_complete(file_path, file_url):
+    if os.path.exists(file_path):
+        response = urlopen(file_url)
+        total_size = int(response.info().get('Content-Length').strip())
+        if os.path.getsize(file_path) == total_size:
+            return True
+        else:
+            logger.info(f"{file_path} is corrupted.")
+            return False
+    else:
+        return False
 
 
 def download_data(file_path, file_url):
