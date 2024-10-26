@@ -93,4 +93,7 @@ for url in [features_matrix_url, features_trn_new_url, features_val_new_url]:
 
 if __name__ == "__main__":
     for url in urls:
-        download_file(url)
+        try:
+            download_file(url)
+        except Exception as e:
+            print(f"unable to download file from {url}: {e}")
