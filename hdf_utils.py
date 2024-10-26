@@ -4,9 +4,10 @@ cortical surface.
 
 """
 
+import h5py
 import numpy as np
 import scipy.sparse
-import h5py
+
 
 def load_data(fname, key=None):
     """Function to load data from an hdf file.
