@@ -47,13 +47,16 @@ def download_data(file_path, file_url):
         raise RuntimeError("Could not download file")
 
 
+urls = []
+
+############## used for context extraction ####################
 # English1000 is a 985-dimensional word
 # embedding feature space based on word co-occurrence in English text
 # see more at https://github.com/HuthLab/deep-fMRI-dataset/
 english1000_encodings = "https://github.com/HuthLab/deep-fMRI-dataset/raw/refs/heads/master/em_data/english1000sm.hf5"
+urls.append(english1000_encodings)
 
-urls = [english1000_encodings]
-
+############### used for building correlation matrices ########
 # choose subjects to download fmri data for
 # fMRI data for the six subjects in the experiment
 # in arrays of (time x voxels) for each data collection run
@@ -72,14 +75,22 @@ subjects = [
 ]
 modalities = [
     "reading",
-    "listening"
+    # "listening"
 ]
 for subject in subjects:
     for modality in modalities:
         for data_type in ["trn", "val"]:
             url = f"https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/master/responses/subject{subject}_{modality}_fmri_data_{data_type}.hdf"
             urls.append(url)
-            
+
+######### used for calculating residuals ####################
+
+features_matrix_url = "https://gin.g-node.org/gallantlab/story_listening/raw/master/features/features_matrix.hdf"
+features_trn_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/src/master/features/features_trn_NEW.hdf"
+features_val_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/src/master/features/features_val_NEW.hdf"
+for url in [features_matrix_url, features_trn_new_url, features_val_new_url]:
+    urls.append(url)
+
 if __name__ == "__main__":
     for url in urls:
         download_file(url)
