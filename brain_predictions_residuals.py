@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-import argparse
+import numpy as np
 import logging
+import argparse
 import os
 
 import h5py
@@ -13,11 +14,12 @@ from residuals_text_speech import *
 logging.basicConfig(level=logging.DEBUG)
 
 
-# These files contains low-level textual and speech features
+
+#These files contains low-level textual and speech features
 def load_low_level_textual_features():
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
-    base_features_train = h5py.File('../features_trn_NEW.hdf', 'r+')
-    base_features_val = h5py.File('../features_val_NEW.hdf', 'r+')
+    base_features_train = h5py.File('../features_trn_NEW.hdf','r+')
+    base_features_val = h5py.File('../features_val_NEW.hdf','r+')
     return base_features_train, base_features_val
 
 
@@ -25,8 +27,8 @@ def load_low_level_speech_features(lowlevelfeature):
     # 'diphone', 'powspec', 'triphone'
     if lowlevelfeature in ['diphone', 'powspec', 'triphone']:
         df = h5py.File('./features_matrix.hdf')
-        base_features_train = df[lowlevelfeature + '_train']
-        base_features_val = df[lowlevelfeature + '_test']
+        base_features_train = df[lowlevelfeature+'_train']
+        base_features_val = df[lowlevelfeature+'_test']
     elif lowlevelfeature in 'articulation':
         base_features_train = np.load('./articulation_train.npy')
         base_features_val = np.load('./articulation_test.npy')
@@ -56,23 +58,23 @@ def load_subject_fMRI(subject, modality):
     print(tstdata5.keys())
 
     trim = 5
-    zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
-    zPresp = np.vstack([zscore(tstdata5[story][0][5 + trim:-trim - 5]) for story in tstdata5.keys()])
+    zRresp = np.vstack([zscore(trndata5[story][5+trim:-trim-5]) for story in trndata5.keys()])
+    zPresp = np.vstack([zscore(tstdata5[story][0][5+trim:-trim-5]) for story in tstdata5.keys()])
 
     return zRresp, zPresp
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
-    parser.add_argument("subjectNum", help="Choose subject", type=int)
-    parser.add_argument("featurename", help="Choose feature", type=str)
-    parser.add_argument("modality", help="Choose modality", type=str)
-    parser.add_argument("dirname", help="Choose Directory", type=str)
-    parser.add_argument("layernum", help="Choose Layer Num", type=int)
-    parser.add_argument("lowlevelfeature", help="Choose low-level feature name", type=str)
+    parser = argparse.ArgumentParser(description = "CheXpert NN argparser")
+    parser.add_argument("subjectNum", help="Choose subject", type = int)
+    parser.add_argument("featurename", help="Choose feature", type = str)
+    parser.add_argument("modality", help="Choose modality", type = str)
+    parser.add_argument("dirname", help="Choose Directory", type = str)
+    parser.add_argument("layernum", help="Choose Layer Num", type = int)
+    parser.add_argument("lowlevelfeature", help="Choose low-level feature name", type = str)
     args = parser.parse_args()
 
-    stimulus_features = np.load(args.featurename, allow_pickle=True)  # This file contains already downsampled data
+    stimulus_features = np.load(args.featurename, allow_pickle=True) # This file contains already downsampled data
 
     if args.lowlevelfeature in ['letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std']:
         base_features_train, base_features_val = load_low_level_textual_features()
@@ -80,20 +82,18 @@ if __name__ == "__main__":
                                               args.lowlevelfeature)
     elif args.lowlevelfeature in ['powspec', 'diphone', 'triphone', 'articulation']:
         base_features_train, base_features_val = load_low_level_speech_features(args.lowlevelfeature)
-        residual_features = residuals_phones(base_features_train, base_features_val, stimulus_features,
-                                             args.lowlevelfeature)
+        residual_features = residuals_phones(base_features_train, base_features_val, stimulus_features, args.lowlevelfeature)
     elif args.lowlevelfeature in ['motion']:
         base_features_train, base_features_val = load_low_level_visual_features()
-        residual_features = residuals_visual(base_features_train, base_features_val, stimulus_features,
-                                             args.lowlevelfeature)
+        residual_features = residuals_visual(base_features_train, base_features_val, stimulus_features, args.lowlevelfeature)
 
     # Delay stimuli
     from util import make_delayed
 
     ndelays = 6
-    delays = range(1, ndelays + 1)
+    delays = range(1, ndelays+1)
 
-    print("FIR model delays: ", delays)
+    print ("FIR model delays: ", delays)
 
     delRstim = []
     for eachlayer in np.arange(12):
@@ -104,21 +104,20 @@ if __name__ == "__main__":
         delPstim.append(make_delayed(np.array(residual_features.item()[args.lowlevelfeature][1][eachlayer]), delays))
 
     # Print the sizes of these matrices
-    print("delRstim shape: ", delRstim[0].shape)
-    print("delPstim shape: ", delPstim[0].shape)
+    print ("delRstim shape: ", delRstim[0].shape)
+    print ("delPstim shape: ", delPstim[0].shape)
 
-    subject = '0' + str(args.subjectNum)
+    subject = '0'+str(args.subjectNum)
 
-    nboots = 5  # Number of cross-validation runs.
-    chunklen = 40  #
+    nboots = 5 # Number of cross-validation runs.
+    chunklen = 40 #
     nchunks = 20
-    main_dir = args.dirname + '/' + args.modality + '/' + subject
+    main_dir = args.dirname+'/'+args.modality+'/'+subject
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    for eachlayer in np.arange(args.layernum, 12):
+    for eachlayer in np.arange(args.layernum,12):
         zRresp, zPresp = load_subject_fMRI(subject, args.modality)
-        alphas = np.logspace(1, 3,
-                             10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
+        alphas = np.logspace(1, 3, 10) # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
         save_dir = str(eachlayer)
         if not os.path.exists(main_dir + '/' + save_dir):
@@ -129,10 +128,10 @@ if __name__ == "__main__":
                                                              singcutoff=1e-10, single_alpha=True)
         pred = np.dot(np.nan_to_num(delPstim[eachlayer]), wt)
 
-        print("pred has shape: ", pred.shape)
-        voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
+        print ("pred has shape: ", pred.shape)
+        voxcorrs = np.zeros((zPresp.shape[1],)) # create zero-filled array to hold correlations
         for vi in range(zPresp.shape[1]):
-            voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
-        print(voxcorrs)
+            voxcorrs[vi] = np.corrcoef(zPresp[:,vi], pred[:,vi])[0,1]
+        print (voxcorrs)
 
-        np.save(os.path.join(main_dir + '/' + save_dir, "layer_" + str(eachlayer)), voxcorrs)
+        np.save(os.path.join(main_dir+'/'+save_dir, "layer_"+str(eachlayer)),voxcorrs)
