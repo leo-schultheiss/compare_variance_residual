@@ -18,8 +18,8 @@ logging.basicConfig(level=logging.DEBUG)
 #These files contains low-level textual and speech features
 def load_low_level_textual_features():
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
-    base_features_train = h5py.File('../features_trn_NEW.hdf','r+')
-    base_features_val = h5py.File('../features_val_NEW.hdf','r+')
+    base_features_train = h5py.File('data/features_trn_NEW.hdf','r+')
+    base_features_val = h5py.File('data/features_val_NEW.hdf','r+')
     return base_features_train, base_features_val
 
 
