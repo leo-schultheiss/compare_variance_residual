@@ -236,9 +236,9 @@ def residuals_textual(source_train, source_val, target_data, eachfeature):
     np.random.seed(9)
 
     sourcedata_train = np.vstack(
-        [zscore(source_train[story][eachfeature][5 + trim:-trim]) for story in base_features_train.keys()])
+        [zscore(source_train[story][eachfeature][5 + trim:-trim]) for story in source_train.keys()])
     sourcedata_test = np.vstack(
-        [zscore(source_val[story][eachfeature][5 + trim:-trim]) for story in base_features_val.keys()])
+        [zscore(source_val[story][eachfeature][5 + trim:-trim]) for story in source_val.keys()])
 
     final_residuals = {}
     all_train = []
