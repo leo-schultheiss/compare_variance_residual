@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="brain_predictions_residuals" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+  <configuration default="false" name="2 predict brain activity based on context representations" type="PythonConfigurationType" factoryName="Python">
     <module name="Interpreting-Brain-Recordings-Through-the-Robustness-of-DNN-Model-Representations" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -13,8 +13,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/brain_predictions_residuals.py" />
-    <option name="PARAMETERS" value="1 bert-subset-moth-radio-downsampled.npy reading bert-predictions 0 articulation" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/brain_predictions.py" />
+    <option name="PARAMETERS" value="1 bertbase20.npy reading bert-predictions 12" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
