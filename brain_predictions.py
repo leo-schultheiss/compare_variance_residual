@@ -44,87 +44,87 @@ if __name__ == "__main__":
     stimul_features = np.load(args.featurename, allow_pickle=True)
     print(stimul_features.item().keys())
 
-    Rstories = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
+    training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
                 'life', 'myfirstdaywiththeyankees', 'naked',
                 'odetostepfather', 'souls', 'undertheinfluence']
 
     # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
-    Pstories = ['wheretheressmoke']
+    prediction_story_names = ['wheretheressmoke']
     num_layers = args.layers
 
-    allstories = Rstories + Pstories
+    all_story_names = training_story_names + prediction_story_names
 
-    grids = load_grids_for_stories(allstories)
+    grids = load_grids_for_stories(all_story_names)
 
     # Load TRfiles
-    trfiles = load_generic_trfiles(allstories, root="stimuli/trfiles")
+    trfiles = load_generic_trfiles(all_story_names, root="stimuli/trfiles")
 
     # Make word and phoneme datasequences
     wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
     phonseqs = make_phoneme_ds(grids, trfiles)  # dictionary of {storyname : phoneme DataSequence}
 
-    eng1000 = SemanticModel.load("./data/english1000sm.hf5")
+    eng1000 = SemanticModel.load("data/english1000sm.hf5")
     semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
-    for story in allstories:
+    for story in all_story_names:
         semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
 
-    storie_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
+    story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
                         'life', 'myfirstdaywiththeyankees', 'naked',
                         'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
     semanticseqs = dict()
-    for i in np.arange(len(allstories)):
-        print(allstories[i])
-        semanticseqs[allstories[i]] = []
-        for eachlayer in np.arange(num_layers):
-            temp = make_semantic_model(wordseqs[allstories[i]], [eng1000], [985])
-            temp.data = np.nan_to_num(stimul_features.item()[storie_filenames[i]][eachlayer])
-            semanticseqs[allstories[i]].append(temp)
+    for i in np.arange(len(all_story_names)):
+        print(all_story_names[i])
+        semanticseqs[all_story_names[i]] = []
+        for layer in np.arange(num_layers):
+            temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
+            temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
+            semanticseqs[all_story_names[i]].append(temp)
 
     # Downsample stimuli
     interptype = "lanczos"  # filter type
     window = 3  # number of lobes in Lanczos filter
     # num_layers = 12
     downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
-    for story in allstories:
+    for story in all_story_names:
         downsampled_semanticseqs[story] = []
-        for eachlayer in np.arange(num_layers):
-            temp = semanticseqs[story][eachlayer].chunksums(interptype, window=window)
+        for layer in np.arange(num_layers):
+            temp = semanticseqs[story][layer].chunksums(interptype, window=window)
             downsampled_semanticseqs[story].append(temp)
 
     trim = 5
-    Rstim = {}
-    Pstim = {}
-    for eachlayer in np.arange(num_layers):
-        Rstim[eachlayer] = []
-        Rstim[eachlayer].append(
-            np.vstack([zscore(downsampled_semanticseqs[story][eachlayer][5 + trim:-trim]) for story in Rstories]))
+    training_stim = {}
+    predicion_stim = {}
+    for layer in np.arange(num_layers):
+        training_stim[layer] = []
+        training_stim[layer].append(
+            np.vstack([zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in training_story_names]))
 
-    for eachlayer in np.arange(num_layers):
-        Pstim[eachlayer] = []
-        Pstim[eachlayer].append(
-            np.vstack([zscore(downsampled_semanticseqs[story][eachlayer][5 + trim:-trim]) for story in Pstories]))
-    storylens = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in Rstories]
-    print(storylens)
+    for layer in np.arange(num_layers):
+        predicion_stim[layer] = []
+        predicion_stim[layer].append(
+            np.vstack([zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in prediction_story_names]))
+    story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
+    print(story_lengths)
 
     # Delay stimuli
     from util import make_delayed
 
-    ndelays = 6
-    delays = range(1, ndelays + 1)
+    numer_of_delays = 6
+    delays = range(1, numer_of_delays + 1)
 
     print("FIR model delays: ", delays)
-    print(np.array(Rstim[0]).shape)
-    delRstim = []
-    for eachlayer in np.arange(num_layers):
-        delRstim.append(make_delayed(np.array(Rstim[eachlayer])[0], delays))
+    print(np.array(training_stim[0]).shape)
+    delayed_Rstim = []
+    for layer in np.arange(num_layers):
+        delayed_Rstim.append(make_delayed(np.array(training_stim[layer])[0], delays))
 
-    delPstim = []
-    for eachlayer in np.arange(num_layers):
-        delPstim.append(make_delayed(np.array(Pstim[eachlayer])[0], delays))
+    delayed_Pstim = []
+    for layer in np.arange(num_layers):
+        delayed_Pstim.append(make_delayed(np.array(predicion_stim[layer])[0], delays))
 
     # Print the sizes of these matrices
-    print("delRstim shape: ", delRstim[0].shape)
-    print("delPstim shape: ", delPstim[0].shape)
+    print("delRstim shape: ", delayed_Rstim[0].shape)
+    print("delPstim shape: ", delayed_Pstim[0].shape)
 
     subject = '0' + str(args.subjectNum)
     # Run regression
@@ -134,19 +134,19 @@ if __name__ == "__main__":
     main_dir = args.dirname + '/' + args.modality + '/' + subject
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    for eachlayer in np.arange(num_layers):
+    for layer in np.arange(num_layers):
         zRresp, zPresp = load_subject_fMRI(subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
-        save_dir = str(eachlayer)
+        save_dir = str(layer)
         if not os.path.exists(main_dir + '/' + save_dir):
             os.mkdir(main_dir + '/' + save_dir)
-        wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delRstim[eachlayer]), zRresp,
-                                                             np.nan_to_num(delPstim[eachlayer]), zPresp,
+        wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim[layer]), zRresp,
+                                                             np.nan_to_num(delayed_Pstim[layer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
                                                              singcutoff=1e-10, single_alpha=True)
-        pred = np.dot(np.nan_to_num(delPstim[eachlayer]), wt)
+        pred = np.dot(np.nan_to_num(delayed_Pstim[layer]), wt)
 
         print("pred has shape: ", pred.shape)
         # np.save(os.path.join(main_dir+'/'+save_dir, "test_"+str(eachlayer)),zPresp)
@@ -156,4 +156,4 @@ if __name__ == "__main__":
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
         print(voxcorrs)
 
-        np.save(os.path.join(main_dir + '/' + save_dir, "layer_" + str(eachlayer)), voxcorrs)
+        np.save(os.path.join(main_dir + '/' + save_dir, "layer_" + str(layer)), voxcorrs)
