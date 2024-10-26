@@ -8,7 +8,7 @@ import os
 import h5py
 from ridge_utils.ridge import bootstrap_ridge
 
-import utils1
+from hdf_utils import load_data
 from residuals_text_speech import *
 
 logging.basicConfig(level=logging.DEBUG)
@@ -50,11 +50,11 @@ fdir = './fdir/'
 
 def load_subject_fMRI(subject, modality):
     fname_tr5 = os.path.join(fdir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
-    trndata5 = utils1.load_data(fname_tr5)
+    trndata5 = load_data(fname_tr5)
     print(trndata5.keys())
 
     fname_te5 = os.path.join(fdir, 'subject{}_{}_fmri_data_val.hdf'.format(subject, modality))
-    tstdata5 = utils1.load_data(fname_te5)
+    tstdata5 = load_data(fname_te5)
     print(tstdata5.keys())
 
     trim = 5
