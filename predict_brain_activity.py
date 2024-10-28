@@ -45,8 +45,8 @@ if __name__ == "__main__":
     print(stimul_features.item().keys())
 
     training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
-                'life', 'myfirstdaywiththeyankees', 'naked',
-                'odetostepfather', 'souls', 'undertheinfluence']
+                            'life', 'myfirstdaywiththeyankees', 'naked',
+                            'odetostepfather', 'souls', 'undertheinfluence']
 
     # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
     prediction_story_names = ['wheretheressmoke']
@@ -69,8 +69,8 @@ if __name__ == "__main__":
         semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
 
     story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
-                        'life', 'myfirstdaywiththeyankees', 'naked',
-                        'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
+                       'life', 'myfirstdaywiththeyankees', 'naked',
+                       'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
     semanticseqs = dict()
     for i in np.arange(len(all_story_names)):
         print(all_story_names[i])
@@ -97,14 +97,25 @@ if __name__ == "__main__":
     for layer in np.arange(num_layers):
         training_stim[layer] = []
         training_stim[layer].append(
-            np.vstack([zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in training_story_names]))
+            np.vstack(
+                [zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in training_story_names]))
 
     for layer in np.arange(num_layers):
         predicion_stim[layer] = []
         predicion_stim[layer].append(
-            np.vstack([zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in prediction_story_names]))
+            np.vstack(
+                [zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in prediction_story_names]))
     story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
     print(story_lengths)
+
+    #### save downsampled stimuli
+    bert_downsampled_data = {}
+    for eachstory in list(downsampled_semanticseqs.keys()):
+        bert_downsampled_data[eachstory] = []
+        for eachlayer in np.arange(12):
+            bert_downsampled_data[eachstory].append(np.array(downsampled_semanticseqs[eachstory][eachlayer].data))
+    np.save('bert_downsampled_data', bert_downsampled_data)
+    #########
 
     # Delay stimuli
     from util import make_delayed
