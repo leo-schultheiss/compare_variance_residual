@@ -2,7 +2,6 @@ import requests
 import os
 import logging
 
-from pkg_resources import file_ns_handler
 from tqdm import tqdm
 from urllib.request import urlopen
 
@@ -19,7 +18,7 @@ def download_file(file_url, download_path="data"):
 
     # check if an existing file has correct size
     if is_file_complete(file_path, url):
-        logger.info(f"{file_name} already exists.")
+        logger.info(f"{file_name} already exists and has the right file size.")
         return
     else:
         logger.info(f"downloading {file_name}")
@@ -95,11 +94,12 @@ for subject in subjects:
             urls.append(url)
 
 ######### used for calculating residuals ####################
-
 features_matrix_url = "https://gin.g-node.org/gallantlab/story_listening/raw/master/features/features_matrix.hdf"
-features_trn_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/src/master/features/features_trn_NEW.hdf"
-features_val_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/src/master/features/features_val_NEW.hdf"
-for url in [features_matrix_url, features_trn_new_url, features_val_new_url]:
+features_trn_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/18fd91d109305acea443610303aa8ac992d926bb/features/features_trn_NEW.hdf"
+features_val_new_url = "https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/18fd91d109305acea443610303aa8ac992d926bb/features/features_val_NEW.hdf"
+articulation_trn_url = "https://github.com/subbareddy248/speech-llm-brain/raw/refs/heads/main/Low-level-features/articulation_train.npy"
+articulation_test_url = "https://github.com/subbareddy248/speech-llm-brain/raw/refs/heads/main/Low-level-features/articulation_test.npy"
+for url in [features_matrix_url, features_trn_new_url, features_val_new_url, articulation_trn_url, articulation_test_url]:
     urls.append(url)
 
 if __name__ == "__main__":
