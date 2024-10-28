@@ -44,7 +44,7 @@ def load_low_level_visual_features():
 
 
 trim = 5
-fdir = './fdir/'
+fdir = './data/'
 
 
 def load_subject_fMRI(subject, modality):
@@ -96,11 +96,11 @@ if __name__ == "__main__":
 
     delRstim = []
     for eachlayer in np.arange(12):
-        delRstim.append(make_delayed(np.array(residual_features.item()[args.lowlevelfeature][0][eachlayer]), delays))
+        delRstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][0][eachlayer]), delays))
 
     delPstim = []
     for eachlayer in np.arange(12):
-        delPstim.append(make_delayed(np.array(residual_features.item()[args.lowlevelfeature][1][eachlayer]), delays))
+        delPstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][1][eachlayer]), delays))
 
     # Print the sizes of these matrices
     print ("delRstim shape: ", delRstim[0].shape)
