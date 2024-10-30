@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-import argparse
+import numpy as np
 import logging
+import argparse
 import os
 
 import h5py
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     nboots = 5  # Number of cross-validation runs.
     chunklen = 40  #
     nchunks = 20
-    main_dir = os.path.join(args.dirname, args.modality, args.lowlevelfeature, subject)
+    main_dir = args.dirname + '/' + args.modality + '/' + subject
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     for eachlayer in np.arange(args.layernum, 12):
