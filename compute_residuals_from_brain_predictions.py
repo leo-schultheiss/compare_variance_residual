@@ -113,17 +113,19 @@ if __name__ == "__main__":
     nboots = 5  # Number of cross-validation runs.
     chunklen = 40  #
     nchunks = 20
-    main_dir = args.dirname + '/' + args.modality + '/' + subject
+    main_dir = os.path.join(args.dirname, args.modality, subject)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
+
     for eachlayer in np.arange(args.layernum, 12):
         zRresp, zPresp = load_subject_fMRI(subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
-        save_dir = str(eachlayer)
-        if not os.path.exists(main_dir + '/' + save_dir):
-            os.mkdir(main_dir + '/' + save_dir)
+        save_dir = os.path.join(str(main_dir), eachlayer)
+
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
         wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delRstim[eachlayer]), zRresp,
                                                              np.nan_to_num(delPstim[eachlayer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
@@ -136,4 +138,4 @@ if __name__ == "__main__":
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
         print(voxcorrs)
 
-        np.save(os.path.join(main_dir + '/' + save_dir, "layer_" + str(eachlayer)), voxcorrs)
+        np.save(os.path.join(save_dir, "layer_" + str(eachlayer)), voxcorrs)
