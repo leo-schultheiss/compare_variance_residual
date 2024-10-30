@@ -24,7 +24,7 @@ def load_low_level_textual_features():
 def load_low_level_speech_features(lowlevelfeature):
     # 'diphone', 'powspec', 'triphone'
     if lowlevelfeature in ['diphone', 'powspec', 'triphone']:
-        df = h5py.File('./features_matrix.hdf')
+        df = h5py.File('data/features_matrix.hdf')
         base_features_train = df[lowlevelfeature + '_train']
         base_features_val = df[lowlevelfeature + '_test']
     elif lowlevelfeature in 'articulation':
