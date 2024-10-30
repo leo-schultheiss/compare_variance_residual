@@ -122,10 +122,6 @@ if __name__ == "__main__":
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
-        save_dir = os.path.join(str(main_dir), eachlayer)
-
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
         wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delRstim[eachlayer]), zRresp,
                                                              np.nan_to_num(delPstim[eachlayer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
@@ -133,9 +129,9 @@ if __name__ == "__main__":
         pred = np.dot(np.nan_to_num(delPstim[eachlayer]), wt)
 
         print("pred has shape: ", pred.shape)
-        voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
+        voxelwise_correlations = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
         for vi in range(zPresp.shape[1]):
-            voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
-        print(voxcorrs)
+            voxelwise_correlations[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
+        print(voxelwise_correlations)
 
-        np.save(os.path.join(save_dir, "layer_" + str(eachlayer)), voxcorrs)
+        np.save(os.path.join(str(main_dir), "layer_" + str(eachlayer)), voxelwise_correlations)

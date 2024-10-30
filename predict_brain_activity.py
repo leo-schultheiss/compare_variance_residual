@@ -150,9 +150,6 @@ if __name__ == "__main__":
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
-        save_dir = str(layer)
-        if not os.path.exists(main_dir + '/' + save_dir):
-            os.mkdir(main_dir + '/' + save_dir)
         wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim[layer]), zRresp,
                                                              np.nan_to_num(delayed_Pstim[layer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
