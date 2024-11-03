@@ -15,15 +15,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 @torch.inference_mode()
 def get_model_layer_representations(args, text_array, word_ind_to_extract):
-    with open('text_model_config.json', 'r') as f:
-        model_config = json.load(f)[args.model]
-        model_hf_path = model_config['huggingface_hub']
-    print(model_config, model_hf_path, args.sequence_length)
-    n_total_layers = model_config['num_layers']
-
-    model = AutoModel.from_pretrained(model_hf_path, cache_dir=CACHE_DIR).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir=CACHE_DIR)
-    model.eval()
+    model, model_config, tokenizer = load_model(args)
 
     # get the token embeddings
     token_embeddings = []
@@ -33,6 +25,7 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
 
     # where to store layer-wise embeddings of particular length
     words_layers_representations = {}
+    n_total_layers = model_config['num_layers']
     for layer in range(n_total_layers):
         words_layers_representations[layer] = []
     words_layers_representations[-1] = token_embeddings
@@ -69,6 +62,17 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
 
     print('Done extracting sequences of length {}'.format(args.sequence_length))
     return words_layers_representations
+
+
+def load_model(args):
+    with open('text_model_config.json', 'r') as f:
+        model_config = json.load(f)[args.model]
+    model_hf_path = model_config['huggingface_hub']
+    print(model_config, model_hf_path, args.sequence_length)
+    model = AutoModel.from_pretrained(model_hf_path, cache_dir=CACHE_DIR).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(model_hf_path, cache_dir=CACHE_DIR)
+    model.eval()
+    return model, model_config, tokenizer
 
 
 # extracts layer representations for all words in words_in_array
