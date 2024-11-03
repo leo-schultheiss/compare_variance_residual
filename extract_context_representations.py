@@ -15,9 +15,8 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 @torch.inference_mode()
 def get_model_layer_representations(args, text_array, word_ind_to_extract):
-    model_name = args.model
     with open('text_model_config.json', 'r') as f:
-        model_config = json.load(f)[model_name]
+        model_config = json.load(f)[args.model]
         model_hf_path = model_config['huggingface_hub']
     print(model_config, model_hf_path, args.sequence_length)
     n_total_layers = model_config['num_layers']
