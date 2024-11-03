@@ -195,11 +195,11 @@ def load_words_from_file(file):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
-    parser.add_argument("--input_file", help="Choose inputfile", type=str, required=True)
-    parser.add_argument("--model", help="Choose model", type=str, required=True)
-    parser.add_argument("--sequence_length", help="Choose context", type=int)
-    parser.add_argument("--output_file", help="Choose output filename", type=str)
+    parser = argparse.ArgumentParser(description='Extract context representations from text')
+    parser.add_argument("--input_file", help="File or folder with text based stories to be analyzed by the model", type=str, default="stimuli/formatted")
+    parser.add_argument("--model", help="natural language model used for extracting representations from the text", type=str, default="bert-base")
+    parser.add_argument("--sequence_length", help="number of consequent words passed to the model as context", type=int, default=20)
+    parser.add_argument("--output_file", help="File name ", type=str)
     args = parser.parse_args()
 
     print(args.input_file)
