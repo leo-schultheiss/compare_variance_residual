@@ -97,12 +97,12 @@ if __name__ == "__main__":
     print("FIR model delays: ", delays)
 
     delRstim = []
-    for eachlayer in np.arange(12):
-        delRstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][0][eachlayer]), delays))
+    for layer in np.arange(12):
+        delRstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][0][layer]), delays))
 
     delPstim = []
-    for eachlayer in np.arange(12):
-        delPstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][1][eachlayer]), delays))
+    for layer in np.arange(12):
+        delPstim.append(make_delayed(np.array(residual_features[args.lowlevelfeature][1][layer]), delays))
 
     # Print the sizes of these matrices
     print("delRstim shape: ", delRstim[0].shape)
@@ -117,16 +117,16 @@ if __name__ == "__main__":
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
 
-    for eachlayer in np.arange(args.layernum, 12):
+    for layer in np.arange(args.layernum, 12):
         zRresp, zPresp = load_subject_fMRI(subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
-        wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delRstim[eachlayer]), zRresp,
-                                                             np.nan_to_num(delPstim[eachlayer]), zPresp,
+        wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delRstim[layer]), zRresp,
+                                                             np.nan_to_num(delPstim[layer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
                                                              singcutoff=1e-10, single_alpha=True)
-        pred = np.dot(np.nan_to_num(delPstim[eachlayer]), wt)
+        pred = np.dot(np.nan_to_num(delPstim[layer]), wt)
 
         print("pred has shape: ", pred.shape)
         voxelwise_correlations = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
@@ -134,4 +134,4 @@ if __name__ == "__main__":
             voxelwise_correlations[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
         print(voxelwise_correlations)
 
-        np.save(os.path.join(str(main_dir), "layer_" + str(eachlayer)), voxelwise_correlations)
+        np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxelwise_correlations)
