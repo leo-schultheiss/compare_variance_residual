@@ -33,7 +33,7 @@ def load_subject_fMRI(subject, modality):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
+    parser = argparse.ArgumentParser(description="Predict brain activity")
     parser.add_argument("subjectNum", help="Choose subject", type=int)
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)
