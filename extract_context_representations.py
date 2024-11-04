@@ -30,6 +30,13 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
         words_layers_representations[layer] = []
     words_layers_representations[-1] = token_embeddings
 
+    words_layers_representations = extract_context_representations(args, model, model_config, text_array, tokenizer,
+                                                                   word_ind_to_extract, words_layers_representations)
+    return words_layers_representations
+
+
+def extract_context_representations(args, model, model_config, text_array, tokenizer, word_ind_to_extract,
+                                    words_layers_representations):
     # Before we've seen enough words to make up the seq_len
     # Extract index 0 after supplying tokens 0 to 0, extract 1 after 0 to 1, 2 after 0 to 2, ... , 19 after 0 to 19
     start_time = tm.time()
@@ -49,7 +56,6 @@ def get_model_layer_representations(args, text_array, word_ind_to_extract):
         if seq_len % 100 == 0:
             print('Completed {} out of {}: {}'.format(seq_len, len(text_array), tm.time() - start_time))
             start_time = tm.time()
-
     print('Done extracting sequences of length {}'.format(args.sequence_length))
     return words_layers_representations
 
@@ -196,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", help="File name ", type=str)
     args = parser.parse_args()
 
-    print(args.input_file)
+    print(args)
 
     word_ind_to_extract = -1
 
