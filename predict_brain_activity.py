@@ -164,4 +164,4 @@ if __name__ == "__main__":
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
         print(voxcorrs)
 
-        np.save(os.path.join(main_dir + '/' + save_dir, "layer_" + str(layer)), voxcorrs)
+        np.save(os.path.join(main_dir, "layer_" + str(layer)), voxcorrs)
