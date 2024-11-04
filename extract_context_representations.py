@@ -65,17 +65,14 @@ def load_model(args):
     return model, model_config, tokenizer
 
 
-# extracts layer representations for all words in words_in_array
-# encoded_layers: list of tensors, length num layers. each tensor of dims num tokens by num dimensions in representation
-# word_ind_to_token_ind: dict that maps from index in words_in_array to index in array of tokens when words_in_array is tokenized,
-#                       with keys: index of word, and values: array of indices of corresponding tokens when word is tokenized
 @torch.inference_mode()
 def predict_model_embeddings(words_in_array, tokenizer, model, model_config):
-    #     for word in words_in_array:
-    #         if word in remove_chars:
-    #             print('An input word is also in remove_chars. This word will be removed and may lead to misalignment. Proceed with caution.')
-    #             return -1
-
+    """
+    extracts layer representations for all words in words_in_array
+    :param encoded_layers: list of tensors, length num layers. each tensor of dims num tokens by num dimensions in representation
+    :param word_ind_to_token_ind: dict that maps from index in words_in_array to index in array of tokens when words_in_array is tokenized,
+                      with keys: index of word, and values: array of indices of corresponding tokens when word is tokenized
+    """
     n_seq_tokens = 0
     seq_tokens = []
 
@@ -110,10 +107,13 @@ def predict_model_embeddings(words_in_array, tokenizer, model, model_config):
     return all_layers_hidden_states, word_ind_to_token_ind, None
 
 
-# add the embeddings for a specific word in the sequence
-# token_inds_to_avrg: indices of tokens in embeddings output to avrg
 @torch.inference_mode()
 def add_word_model_embedding(model_dict, embeddings_to_add, token_inds_to_avrg, specific_layer=-1):
+    """
+    add the embeddings for a specific word in the sequence
+
+    :param token_inds_to_avrg: indices of tokens in embeddings output to avrg
+    """
     if specific_layer >= 0:  # only add embeddings for one specified layer
         layer_embedding = embeddings_to_add[specific_layer]
         full_sequence_embedding = layer_embedding.cpu().detach().numpy()
@@ -126,17 +126,18 @@ def add_word_model_embedding(model_dict, embeddings_to_add, token_inds_to_avrg, 
     return model_dict
 
 
-# predicts representations for specific word in input word sequence, and adds to existing layer-wise dictionary
-#
-# word_seq: numpy array of words in input sequence
-# tokenizer: Auto tokenizer
-# model: Auto model
-# remove_chars: characters that should not be included in the represention when word_seq is tokenized
-# from_start_word_ind_to_extract: the index of the word whose features to extract, INDEXED FROM START OF WORD_SEQ
-# model_dict: where to save the extracted embeddings
 @torch.inference_mode()
 def add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model, from_start_word_ind_to_extract, model_dict,
                                                model_config):
+    """
+    predicts representations for specific word in input word sequence, ad adds to existing layer-wise dictionary
+
+    :param word_seq: numpy array of words in input sequence
+    :param tokenizer: Auto tokenizer
+    :param model: Auto model
+    :param from_start_word_ind_to_extract: the index of the word whose features to extract, INDEXED FROM START OF WORD_SEQ
+    :param model_dict: where to save the extracted embeddings
+    """
     word_seq = list(word_seq)
     all_sequence_embeddings, word_ind_to_token_ind, _ = predict_model_embeddings(word_seq, tokenizer, model,
                                                                                  model_config)
@@ -146,14 +147,8 @@ def add_avrg_token_embedding_for_specific_word(word_seq, tokenizer, model, from_
     return model_dict
 
 
-# get the model token embeddings
 @torch.inference_mode()
 def get_model_token_embeddings(words_in_array, tokenizer, model):
-    #     for word in words_in_array:
-    #         if word in remove_chars:
-    #             print('An input word is also in remove_chars. This word will be removed and may lead to misalignment. Proceed with caution.')
-    #             return -1
-
     n_seq_tokens = 0
     seq_tokens = []
 
@@ -191,10 +186,13 @@ def load_words_from_file(file):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Extract context representations from text')
-    parser.add_argument("--input_file", help="File or folder with text based stories to be analyzed by the model", type=str, default="stimuli/formatted")
-    parser.add_argument("--model", help="natural language model used for extracting representations from the text", type=str, default="bert-base")
-    parser.add_argument("--sequence_length", help="number of consequent words passed to the model as context", type=int, default=20)
+    parser = argparse.ArgumentParser(description='Extract language model context representations from text')
+    parser.add_argument("--input_file", help="file or folder with text based stories to be analyzed by the model",
+                        type=str, default="stimuli/formatted")
+    parser.add_argument("--model", help="natural language model used for extracting representations from the text",
+                        type=str, default="bert-base")
+    parser.add_argument("--sequence_length", help="number of consequent words passed to the model as context", type=int,
+                        default=20)
     parser.add_argument("--output_file", help="File name ", type=str)
     args = parser.parse_args()
 
