@@ -10,17 +10,3 @@ To set up the project, run the following commands:
 pip install -r requirements.txt
 python setup.py
 ```
-
-# Usage
-
-To run the experiments, use the following command:
-
-```shell
-python extract_context_representations.py --output_file <context_representations_file_name>
-```
-
-For a list of all possible configurations, run:
-
-```shell
-python extract_context_representations.py --help
-```
