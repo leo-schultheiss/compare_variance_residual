@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import numpy as np
 import logging
 import argparse
 import os
@@ -8,13 +7,13 @@ import os
 import h5py
 from ridge_utils.ridge import bootstrap_ridge
 
-from hdf_utils import load_data
-from residuals_text_speech import *
+from common_utils.hdf_utils import load_data
+from brain_prediction_residual.residuals_text_speech import *
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-# These files contains low-level textual and speech features
+# These files contain low-level textual and speech features
 def load_low_level_textual_features():
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
     base_features_train = h5py.File('data/features_trn_NEW.hdf', 'r+')
@@ -29,8 +28,8 @@ def load_low_level_speech_features(lowlevelfeature):
         base_features_train = df[lowlevelfeature + '_train']
         base_features_val = df[lowlevelfeature + '_test']
     elif lowlevelfeature in 'articulation':
-        base_features_train = np.load('./data/articulation_train.npy')
-        base_features_val = np.load('./data/articulation_test.npy')
+        base_features_train = np.load('../../data/articulation_train.npy')
+        base_features_val = np.load('../../data/articulation_test.npy')
     return base_features_train, base_features_val
 
 
@@ -89,7 +88,7 @@ if __name__ == "__main__":
                                              args.lowlevelfeature)
 
     # Delay stimuli
-    from util import make_delayed
+    from common_utils.util import make_delayed
 
     ndelays = 6
     delays = range(1, ndelays + 1)

@@ -88,6 +88,7 @@ modalities = [
     "listening"
 ]
 for subject in subjects:
+    urls.append(f"https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/master/mappers/subject{subject}_mappers.hdf")
     for modality in modalities:
         for data_type in ["trn", "val"]:
             url = f"https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri/raw/master/responses/subject{subject}_{modality}_fmri_data_{data_type}.hdf"

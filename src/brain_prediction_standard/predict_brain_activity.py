@@ -1,22 +1,22 @@
-from matplotlib.pyplot import figure, cm
 import numpy as np
 import logging
 import argparse
-from stimulus_utils import load_grids_for_stories, load_generic_trfiles
+from brain_prediction_standard.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
-from SemanticModel import SemanticModel
+from brain_prediction_standard.SemanticModel import SemanticModel
 import os
-import hdf_utils
-from npp import zscore
+from common_utils import hdf_utils
+from common_utils.npp import zscore
+from common_utils.util import make_delayed
 
 logging.basicConfig(level=logging.DEBUG)
 
 trim = 5
-data_dir = 'data'
+data_dir = '../../data'
 
 
-def load_subject_fMRI(subject, modality):
+def load_subject_fmri(subject, modality):
     fname_tr5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
     trndata5 = hdf_utils.load_data(fname_tr5)
     print(trndata5.keys())
@@ -50,8 +50,6 @@ if __name__ == "__main__":
 
     # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
     prediction_story_names = ['wheretheressmoke']
-    num_layers = args.layers
-
     all_story_names = training_story_names + prediction_story_names
 
     grids = load_grids_for_stories(all_story_names)
@@ -63,7 +61,7 @@ if __name__ == "__main__":
     wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
     phonseqs = make_phoneme_ds(grids, trfiles)  # dictionary of {storyname : phoneme DataSequence}
 
-    eng1000 = SemanticModel.load("data/english1000sm.hf5")
+    eng1000 = SemanticModel.load("../../data/english1000sm.hf5")
     semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
     for story in all_story_names:
         semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
@@ -75,7 +73,7 @@ if __name__ == "__main__":
     for i in np.arange(len(all_story_names)):
         print(all_story_names[i])
         semanticseqs[all_story_names[i]] = []
-        for layer in np.arange(num_layers):
+        for layer in np.arange(args.layers):
             temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
             temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
             semanticseqs[all_story_names[i]].append(temp)
@@ -87,20 +85,20 @@ if __name__ == "__main__":
     downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
     for story in all_story_names:
         downsampled_semanticseqs[story] = []
-        for layer in np.arange(num_layers):
+        for layer in np.arange(args.layers):
             temp = semanticseqs[story][layer].chunksums(interptype, window=window)
             downsampled_semanticseqs[story].append(temp)
 
     trim = 5
     training_stim = {}
     predicion_stim = {}
-    for layer in np.arange(num_layers):
+    for layer in np.arange(args.layers):
         training_stim[layer] = []
         training_stim[layer].append(
             np.vstack(
                 [zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in training_story_names]))
 
-    for layer in np.arange(num_layers):
+    for layer in np.arange(args.layers):
         predicion_stim[layer] = []
         predicion_stim[layer].append(
             np.vstack(
@@ -118,35 +116,33 @@ if __name__ == "__main__":
     #########
 
     # Delay stimuli
-    from util import make_delayed
-
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
 
     print("FIR model delays: ", delays)
     print(np.array(training_stim[0]).shape)
     delayed_Rstim = []
-    for layer in np.arange(num_layers):
+    for layer in np.arange(args.layers):
         delayed_Rstim.append(make_delayed(np.array(training_stim[layer])[0], delays))
 
     delayed_Pstim = []
-    for layer in np.arange(num_layers):
+    for layer in np.arange(args.layers):
         delayed_Pstim.append(make_delayed(np.array(predicion_stim[layer])[0], delays))
 
     # Print the sizes of these matrices
     print("delRstim shape: ", delayed_Rstim[0].shape)
     print("delPstim shape: ", delayed_Pstim[0].shape)
 
-    subject = '0' + str(args.subjectNum)
+    subject = f'0{args.subjectNum}'
     # Run regression
     nboots = 1  # Number of cross-validation runs.
     chunklen = 40  #
     nchunks = 20
-    main_dir = args.dirname + '/' + args.modality + '/' + subject
+    main_dir = os.path.join(args.dirname, args.modality, subject)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    for layer in np.arange(num_layers):
-        zRresp, zPresp = load_subject_fMRI(subject, args.modality)
+    for layer in np.arange(args.layers):
+        zRresp, zPresp = load_subject_fmri(subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
@@ -164,4 +160,4 @@ if __name__ == "__main__":
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
         print(voxcorrs)
 
-        np.save(os.path.join(main_dir, "layer_" + str(layer)), voxcorrs)
+        np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)

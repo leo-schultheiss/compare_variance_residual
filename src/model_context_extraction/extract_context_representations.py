@@ -7,7 +7,7 @@ import argparse
 import json
 import pandas as pd
 
-CACHE_DIR = "./cache"
+CACHE_DIR = "../../cache"
 
 # Use GPU if possible
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -61,7 +61,7 @@ def extract_context_representations(args, model, model_config, text_array, token
 
 
 def load_model(args):
-    with open('text_model_config.json', 'r') as f:
+    with open('../../text_model_config.json', 'r') as f:
         model_config = json.load(f)[args.model]
     model_hf_path = model_config['huggingface_hub']
     print(model_config, model_hf_path, args.sequence_length)
