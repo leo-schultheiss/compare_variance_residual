@@ -104,6 +104,8 @@ def predict_model_embeddings(words_in_array, tokenizer, model, model_config):
         encoder_hidden_states = outputs['encoder_hidden_states'][1:]  # This is a tuple: (layer1, layer2, ..., layer6)
         decoder_hidden_states = outputs['decoder_hidden_states'][1:]
         all_layers_hidden_states = encoder_hidden_states + decoder_hidden_states
+    else:
+        raise ValueError("model_type should be either encoder, decoder or encoder-decoder")
 
     return all_layers_hidden_states, word_ind_to_token_ind, None
 
