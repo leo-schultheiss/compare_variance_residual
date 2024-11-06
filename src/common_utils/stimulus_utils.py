@@ -1,4 +1,4 @@
-from textgrid import TextGrid
+from common_utils.textgrid import TextGrid
 import os
 import numpy as np
 

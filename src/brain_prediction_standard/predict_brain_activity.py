@@ -1,10 +1,12 @@
 import numpy as np
 import logging
 import argparse
-from brain_prediction_standard.stimulus_utils import load_grids_for_stories, load_generic_trfiles
+
+from common_utils.hdf_utils import load_subject_fmri
+from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
-from brain_prediction_standard.SemanticModel import SemanticModel
+from common_utils.SemanticModel import SemanticModel
 import os
 from common_utils import hdf_utils
 from common_utils.npp import zscore
@@ -13,23 +15,8 @@ from common_utils.util import make_delayed
 logging.basicConfig(level=logging.DEBUG)
 
 trim = 5
-data_dir = '../../data'
+data_dir = 'data'
 
-
-def load_subject_fmri(subject, modality):
-    fname_tr5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
-    trndata5 = hdf_utils.load_data(fname_tr5)
-    print(trndata5.keys())
-
-    fname_te5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_val.hdf'.format(subject, modality))
-    tstdata5 = hdf_utils.load_data(fname_te5)
-    print(tstdata5.keys())
-
-    trim = 5
-    zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
-    zPresp = np.vstack([zscore(tstdata5[story][1][5 + trim:-trim - 5]) for story in tstdata5.keys()])
-
-    return zRresp, zPresp
 
 
 if __name__ == "__main__":
@@ -145,7 +132,6 @@ if __name__ == "__main__":
         zRresp, zPresp = load_subject_fmri(subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
-        all_corrs = []
         wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim[layer]), zRresp,
                                                              np.nan_to_num(delayed_Pstim[layer]), zPresp,
                                                              alphas, nboots, chunklen, nchunks,
