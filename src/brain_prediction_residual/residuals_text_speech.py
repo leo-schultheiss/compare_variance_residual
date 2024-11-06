@@ -224,13 +224,6 @@ def kernel_ridge(xtrain, xtest, ytrain, ytest):
     return ypred2, ypred1
 
 
-def sub_to_subjectnum(sub):
-    for i in range(len(all_subjects)):
-        if all_subjects[i] == sub:
-            return i + 1
-    return 0
-
-
 def residuals_textual(source_train, source_val, target_data, eachfeature):
     trim = 5
     np.random.seed(9)
