@@ -13,7 +13,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/extract_context_representations.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model_context_extraction/extract_context_representations.py" />
     <option name="PARAMETERS" value="--sequence_length 20 --output_file bert_base20" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
