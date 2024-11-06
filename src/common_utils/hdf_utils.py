@@ -81,12 +81,12 @@ def map_to_flat(voxels, mapper_file):
     By Mark Lescroart
 
     """
-    pixmap = load_sparse_array(mapper_file, 'pixmap')
-    with h5py.File(mapper_file) as hf:
-        pixmask = hf['pixmask'].value
+    pixmap = load_sparse_array(mapper_file, 'voxel_to_flatmap')
+    with h5py.File(mapper_file, mode='r') as hf:
+        pixmask = hf['flatmap_mask'][()]
     badmask = np.array(pixmap.sum(1) > 0).ravel()
-    img = (np.nan*np.ones(pixmask.shape)).astype(voxels.dtype)
-    mimg = (np.nan*np.ones(badmask.shape)).astype(voxels.dtype)
+    img = (np.nan * np.ones(pixmask.shape)).astype(voxels.dtype)
+    mimg = (np.nan * np.ones(badmask.shape)).astype(voxels.dtype)
     mimg[badmask] = (pixmap * voxels.ravel())[badmask].astype(mimg.dtype)
     img[pixmask] = mimg
     return img.T[::-1]
