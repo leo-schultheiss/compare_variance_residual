@@ -8,7 +8,7 @@ from scipy.stats import zscore
 from sklearn.kernel_ridge import KernelRidge
 from sklearn.linear_model import Ridge, RidgeCV
 from sklearn.model_selection import KFold
-from npp import zscore
+from common_utils.npp import zscore
 
 
 def corr(X, Y):
