@@ -36,14 +36,13 @@ def load_low_level_speech_features(lowlevelfeature):
 def load_low_level_visual_features():
     stimulus_data_file = np.load('m_ll.npz', allow_pickle=True)
     stimulus_data_file = {key: stimulus_data_file[key].item() for key in stimulus_data_file}
+    train_matrix = stimulus_data_file['train']['7']  # (3737, 6555) matrix of (TRs, feature_dims) for train stories (train stories ordered in alphabetical order)
     test_matrix = stimulus_data_file['test']['7']  # (291, 6555) matrix of (TRs, feature_dims) for test story
-    train_matrix = stimulus_data_file['train'][
-        '7']  # (3737, 6555) matrix of (TRs, feature_dims) for train stories (train stories ordered in alphabetical order)
     return train_matrix, test_matrix
 
 
 trim = 5
-fdir = './data/'
+fdir = 'data/'
 
 
 def load_subject_fMRI(subject, modality):
