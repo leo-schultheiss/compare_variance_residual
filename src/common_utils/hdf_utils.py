@@ -3,10 +3,13 @@ Utility function: loading data from hdf5 files and loading mapper files to displ
 cortical surface.
 
 """
+import os
 
 import h5py
 import numpy as np
 import scipy.sparse
+
+from common_utils.npp import zscore
 
 
 def load_data(fname, key=None):
@@ -90,3 +93,19 @@ def map_to_flat(voxels, mapper_file):
     mimg[badmask] = (pixmap * voxels.ravel())[badmask].astype(mimg.dtype)
     img[pixmask] = mimg
     return img.T[::-1]
+
+def load_subject_fmri(data_dir, subject, modality):
+    """Load fMRI data for a subject, z-scored across stories"""
+    fname_tr5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
+    trndata5 = load_data(fname_tr5)
+    print(trndata5.keys())
+
+    fname_te5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_val.hdf'.format(subject, modality))
+    tstdata5 = load_data(fname_te5)
+    print(tstdata5.keys())
+
+    trim = 5
+    zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
+    zPresp = np.vstack([zscore(tstdata5[story][1][5 + trim:-trim - 5]) for story in tstdata5.keys()])
+
+    return zRresp, zPresp
