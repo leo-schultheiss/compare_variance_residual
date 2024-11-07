@@ -48,7 +48,7 @@ if __name__ == "__main__":
     wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
     phonseqs = make_phoneme_ds(grids, trfiles)  # dictionary of {storyname : phoneme DataSequence}
 
-    eng1000 = SemanticModel.load("../../data/english1000sm.hf5")
+    eng1000 = SemanticModel.load(os.path.join(data_dir, "english1000sm.hf5"))
     semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
     for story in all_story_names:
         semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     for layer in np.arange(args.layers):
-        zRresp, zPresp = load_subject_fmri(subject, args.modality)
+        zRresp, zPresp = load_subject_fmri(data_dir, subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim[layer]), zRresp,
@@ -141,6 +141,7 @@ if __name__ == "__main__":
         print("pred has shape: ", pred.shape)
         # np.save(os.path.join(main_dir+'/'+save_dir, "test_"+str(eachlayer)),zPresp)
         # np.save(os.path.join(main_dir+'/'+save_dir, "pred_"+str(eachlayer)),pred)
+        print("zPresp has shape: ", zPresp.shape)
         voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
         for vi in range(zPresp.shape[1]):
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
