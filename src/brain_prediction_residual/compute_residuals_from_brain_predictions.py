@@ -7,8 +7,9 @@ import os
 import h5py
 from ridge_utils.ridge import bootstrap_ridge
 
-from common_utils.hdf_utils import load_data
+from brain_prediction_standard.predict_brain_activity import data_dir
 from brain_prediction_residual.residuals_text_speech import *
+from common_utils.hdf_utils import load_subject_fmri
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -43,22 +44,6 @@ def load_low_level_visual_features():
 
 trim = 5
 fdir = 'data/'
-
-
-def load_subject_fMRI(subject, modality):
-    fname_tr5 = os.path.join(fdir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
-    trndata5 = load_data(fname_tr5)
-    print(trndata5.keys())
-
-    fname_te5 = os.path.join(fdir, 'subject{}_{}_fmri_data_val.hdf'.format(subject, modality))
-    tstdata5 = load_data(fname_te5)
-    print(tstdata5.keys())
-
-    trim = 5
-    zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
-    zPresp = np.vstack([zscore(tstdata5[story][0][5 + trim:-trim - 5]) for story in tstdata5.keys()])
-
-    return zRresp, zPresp
 
 
 if __name__ == "__main__":
@@ -116,7 +101,7 @@ if __name__ == "__main__":
         os.makedirs(main_dir)
 
     for layer in np.arange(args.layernum, 12):
-        zRresp, zPresp = load_subject_fMRI(subject, args.modality)
+        zRresp, zPresp = load_subject_fmri(data_dir, subject, args.modality)
         alphas = np.logspace(1, 3,
                              10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
         all_corrs = []
