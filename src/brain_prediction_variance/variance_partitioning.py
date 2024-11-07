@@ -77,7 +77,7 @@ def prediction_joint_model(Rstim, Pstim, data_dir, subject, modality, num_layers
         for voxel_index in range(zPresp.shape[1]):
             voxelwise_correlations[voxel_index] = np.corrcoef(zPresp[:, voxel_index], prediction[:, voxel_index])[0, 1]
         correlations_per_layer.append(voxelwise_correlations)
-    return correlations_per_layer, prediction
+    return correlations_per_layer
 
 
 if __name__ == '__main__':
@@ -192,8 +192,8 @@ if __name__ == '__main__':
 
     subject = f'0{args.subjectNum}'
 
-    voxelxise_correlations, predictions = prediction_joint_model(Rstim, Pstim, args.data_dir, subject, args.modality,
-                                                                 args.layers)
+    voxelxise_correlations = prediction_joint_model(Rstim, Pstim, args.data_dir, subject, args.modality,
+                                                    args.layers)
 
     # save voxelwise correlations and predictions
     main_dir = os.path.join(args.output_dir, subject, args.modality, args.low_level_feature)
@@ -201,7 +201,5 @@ if __name__ == '__main__':
         os.makedirs(main_dir)
 
     for layer in range(len(voxelxise_correlations)):
-        np.save(
-            os.path.join(str(main_dir), f"joint_model_prediction_voxelwise_correlation_layer{layer}"),
-            voxelxise_correlations[layer])
-        # np.save(os.path.join(main_dir, f"predictions_{layer}"), predictions[layer])
+        np.save(os.path.join(str(main_dir), f"joint_model_prediction_voxelwise_correlation_layer{layer}"),
+                voxelxise_correlations[layer])
