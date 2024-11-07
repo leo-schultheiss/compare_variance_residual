@@ -62,7 +62,6 @@ def prediction_joint_model(Rstim, Pstim, data_dir, subject, modality, num_layers
     chunklen = 40  # Length of chunks to break data into.
     nchunks = 20  # Number of chunks to use in the cross-validated training.
     correlations_per_layer = []
-    prediction = []
     for layer_number in np.arange(num_layers):
         # Training responses with TR time points and M different responses
         zRresp, zPresp = load_subject_fmri(data_dir, subject, modality)
@@ -173,18 +172,17 @@ if __name__ == '__main__':
 
     # join input features (context representations and low-level textual features)
     base_features_train, base_features_val = load_low_level_textual_features()
-    print("base features train shape: ", np.shape(base_features_train))
-    print("base features val shape: ", np.shape(base_features_val))
 
     trim = 5
     np.random.seed(9)
-
     z_base_feature_train = np.vstack(
         [zscore(base_features_train[story][args.low_level_feature][5 + trim:-trim]) for story in
          base_features_train.keys()])
     z_base_feature_val = np.vstack(
         [zscore(base_features_val[story][args.low_level_feature][5 + trim:-trim]) for story in
          base_features_val.keys()])
+    print("base features train shape: ", np.shape(z_base_feature_train))
+    print("base features val shape: ", np.shape(z_base_feature_val))
 
     # join input features (context representations and low-level textual features)
     Rstim = [np.hstack((delayed_Rstim[layer_number], z_base_feature_train)) for layer_number in np.arange(args.layers)]
