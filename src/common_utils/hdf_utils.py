@@ -98,11 +98,9 @@ def load_subject_fmri(data_dir, subject, modality):
     """Load fMRI data for a subject, z-scored across stories"""
     fname_tr5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_trn.hdf'.format(subject, modality))
     trndata5 = load_data(fname_tr5)
-    print(trndata5.keys())
 
     fname_te5 = os.path.join(data_dir, 'subject{}_{}_fmri_data_val.hdf'.format(subject, modality))
     tstdata5 = load_data(fname_te5)
-    print(tstdata5.keys())
 
     trim = 5
     zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
