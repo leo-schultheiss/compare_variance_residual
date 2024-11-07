@@ -32,7 +32,7 @@ def load_data(fname, key=None):
     with h5py.File(fname) as hf:
         if key is None:
             for k in hf.keys():
-                print("{} will be loaded".format(k))
+                # print("{} will be loaded".format(k))
                 data[k] = hf[k][()]
         else:
             data[key] = hf[key][()]
