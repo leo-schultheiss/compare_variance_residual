@@ -22,21 +22,42 @@ def flatmap_subject_voxel_data(subject_number, data):
 modality = "reading"
 subject = "01"
 
+os.makedirs(f"../../plots/{modality}/{subject}", exist_ok=True)
 
-for layer in range(12):
-    joint_correlation = np.load(os.path.join("../../bert-predictions", modality, subject, f"layer_{layer}.npy"), allow_pickle=True)
-    standard_correlation = np.load(os.path.join("../../bert-joint-predictions", subject, modality, "letters", f"joint_model_prediction_voxelwise_correlation_layer{layer}.npy"), allow_pickle=True)
-    residual_correlation = np.load(os.path.join("../../bert-residuals", modality, "numwords", subject, f"layer_{layer}.npy"), allow_pickle=True)
 
-    # calculate average difference between the two
-    diff = np.nan_to_num(standard_correlation) - np.nan_to_num(joint_correlation)
-    print(f"Average difference between the two models: {np.mean(diff)}")
-    print(f"maximum difference between the two models: {np.max(diff)}")
-    print(f"minimum difference between the two models: {np.min(np.abs(diff))}")
-    print(f"number of voxels with difference equal to 0.0: {np.sum(diff == 0.0)}")
-    print(f"mean of the first model: {np.mean(np.nan_to_num(standard_correlation))}")
-    print(f"mean of the second model: {np.mean(np.nan_to_num(joint_correlation))}")
+low_level_correlation = np.load(os.path.join("../../bert-low-level-predictions", modality, subject, "letters", "low_level_model_prediction_voxelwise_correlation.npy"), allow_pickle=True)
+flatmap_subject_voxel_data(subject, low_level_correlation)
+low_level_correlation = np.nan_to_num(low_level_correlation)
+print(f"average correlation: {np.mean(low_level_correlation)}")
+print(f"max correlation: {np.max(low_level_correlation)}")
 
-    fig = flatmap_subject_voxel_data(subject, joint_correlation)
-    os.makedirs(f"../../plots/{modality}/{subject}", exist_ok=True)
-    fig.savefig(f"../../plots/{modality}/{subject}/joint_correlation_layer_{layer}.png")
+#
+# for layer in range(12):
+#     joint_correlation = np.load(os.path.join("../../bert-predictions", modality, subject, f"layer_{layer}.npy"), allow_pickle=True)
+#     standard_correlation = np.load(os.path.join("../../bert-joint-predictions", subject, modality, "letters", f"joint_model_prediction_voxelwise_correlation_layer{layer}.npy"), allow_pickle=True)
+#     residual_correlation = np.load(os.path.join("../../bert-residuals", modality, "numwords", subject, f"layer_{layer}.npy"), allow_pickle=True)
+#     joint_correlation = np.nan_to_num(joint_correlation)
+#     standard_correlation = np.nan_to_num(standard_correlation)
+#     residual_correlation = np.nan_to_num(residual_correlation)
+#
+#
+#     # calculate average difference between the two
+#     diff = standard_correlation - joint_correlation
+#     print(f"Average difference between the two models: {np.mean(diff)}")
+#     print(f"maximum difference between the two models: {np.max(diff)}")
+#     print(f"minimum difference between the two models: {np.min(np.abs(diff))}")
+#     print(f"number of voxels with difference equal to 0.0: {np.sum(diff == 0.0)}")
+#     print(f"mean of the first model: {np.mean(standard_correlation)}")
+#     print(f"mean of the second model: {np.mean(joint_correlation)}")
+#
+#     # fig = flatmap_subject_voxel_data(subject, joint_correlation)
+#     # fig.savefig(f"../../plots/{modality}/{subject}/joint_correlation_layer_{layer}.png")
+#
+#     fig = flatmap_subject_voxel_data(subject, standard_correlation)
+#     fig.savefig(f"../../plots/{modality}/{subject}/standard_correlation_layer_{layer}.png")
+#
+#     fig = flatmap_subject_voxel_data(subject, residual_correlation)
+#     fig.savefig(f"../../plots/{modality}/{subject}/residual_correlation_layer_{layer}.png")
+#
+#     # fig = flatmap_subject_voxel_data(subject, standard_correlation - joint_correlation)
+#     # fig.savefig(f"../../plots/{modality}/{subject}/difference_standard_joint_correlation_layer_{layer}.png")
