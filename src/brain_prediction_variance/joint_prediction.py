@@ -2,15 +2,17 @@ import os.path
 
 import h5py
 import numpy as np
+import logging
 from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
 
-from common_utils.SemanticModel import SemanticModel
+from common_utils.SemanticModel import SemanticModel, logger
 from common_utils.hdf_utils import load_subject_fmri
 from common_utils.npp import zscore
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 from common_utils.util import make_delayed
 
+logging.basicConfig(level=logging.DEBUG)
 data_dir = "data"
 
 
@@ -194,7 +196,7 @@ if __name__ == '__main__':
                                                     args.layers)
 
     # save voxelwise correlations and predictions
-    main_dir = os.path.join(args.output_dir, subject, args.modality, args.low_level_feature)
+    main_dir = os.path.join(args.output_dir, args.modality, subject, args.low_level_feature)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
 
