@@ -121,13 +121,13 @@ if __name__ == "__main__":
     print("delPstim shape: ", delayed_Pstim[0].shape)
 
     subject = f'0{args.subjectNum}'
+    main_dir = os.path.join(args.dirname, args.modality, subject)
+    if not os.path.exists(main_dir):
+        os.makedirs(main_dir)
     # Run regression
     nboots = 1  # Number of cross-validation runs.
     chunklen = 40  #
     nchunks = 20
-    main_dir = os.path.join(args.dirname, args.modality, subject)
-    if not os.path.exists(main_dir):
-        os.makedirs(main_dir)
     for layer in np.arange(args.layers):
         zRresp, zPresp = load_subject_fmri(data_dir, subject, args.modality)
         alphas = np.logspace(1, 3,
@@ -137,14 +137,8 @@ if __name__ == "__main__":
                                                              alphas, nboots, chunklen, nchunks,
                                                              singcutoff=1e-10, single_alpha=True)
         pred = np.dot(np.nan_to_num(delayed_Pstim[layer]), wt)
-
-        print("pred has shape: ", pred.shape)
-        # np.save(os.path.join(main_dir+'/'+save_dir, "test_"+str(eachlayer)),zPresp)
-        # np.save(os.path.join(main_dir+'/'+save_dir, "pred_"+str(eachlayer)),pred)
-        print("zPresp has shape: ", zPresp.shape)
         voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
         for vi in range(zPresp.shape[1]):
             voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
-        print(voxcorrs)
 
         np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
