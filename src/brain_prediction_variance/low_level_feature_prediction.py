@@ -35,23 +35,23 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    # use processes instead of threads
-    processes = []
-    import multiprocessing
+    train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir, 0)
 
-    for i in range(1, 15):
-        p = multiprocessing.Process(target=train_low_level_model, args=(
-            args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir, i))
-        p.start()
-        processes.append(p)
-
-    for p in processes:
-        p.join()
-
-    # compare results
-    for i in range(1, 15):
-        main_dir = os.path.join(args.output_dir, args.modality, f'0{args.subject_num}', args.low_level_feature)
-        voxelwise_correlations = np.load(
-            os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation_delays{i}.npy"))
-        print(
-            f"Voxelwise correlation for {args.low_level_feature} with {i} delays: {np.nan_to_num(voxelwise_correlations).mean()}")
+    # processes = []
+    # import multiprocessing
+    #
+    # for i in range(1, 15):
+    #     p = multiprocessing.Process(target=train_low_level_model, args=(
+    #         args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir, i))
+    #     p.start()
+    #     processes.append(p)
+    #
+    # for p in processes:
+    #     p.join()
+    #
+    # for i in range(1, 15):
+    #     main_dir = os.path.join(args.output_dir, args.modality, f'0{args.subject_num}', args.low_level_feature)
+    #     voxelwise_correlations = np.load(
+    #         os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation_delays{i}.npy"))
+    #     print(
+    #         f"Voxelwise correlation for {args.low_level_feature} with {i} delays: {np.nan_to_num(voxelwise_correlations).mean()}")
