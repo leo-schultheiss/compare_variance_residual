@@ -1,8 +1,11 @@
 import os.path
+import threading
 
 import h5py
 import numpy as np
 import logging
+
+from numpy import number
 from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
 
@@ -10,19 +13,9 @@ from common_utils.SemanticModel import SemanticModel, logger
 from common_utils.hdf_utils import load_subject_fmri
 from common_utils.npp import zscore
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
-from common_utils.util import make_delayed
+from common_utils.util import make_delayed, create_delayed_low_level_feature
 
 logging.basicConfig(level=logging.DEBUG)
-
-
-def load_low_level_textual_features(data_dir):
-    """
-    These files contain low-level textual and speech features
-    """
-    # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
-    base_features_train = h5py.File(os.path.join(data_dir, 'features_trn_NEW.hdf'), 'r')
-    base_features_val = h5py.File(os.path.join(data_dir, 'features_val_NEW.hdf'), 'r')
-    return base_features_train, base_features_val
 
 
 def prediction_joint_model(Rstim, Pstim, data_dir, subject, modality):
@@ -54,40 +47,20 @@ def prediction_joint_model(Rstim, Pstim, data_dir, subject, modality):
     return voxelwise_correlations
 
 
-def train_low_level_model(data_dir, subject_num, modality, low_level_feature, output_dir):
+def train_low_level_model(data_dir, subject_num, modality, low_level_feature, output_dir, numer_of_delays=6):
     # Delay stimuli to account for hemodynamic lag
-    numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
-    # join input features (context representations and low-level textual features)
-    base_features_train, base_features_val = load_low_level_textual_features(data_dir)
+    z_base_feature_train, z_base_feature_val = create_delayed_low_level_feature(data_dir, delays, low_level_feature)
 
-    # todo test if delays make a difference
-    delayed_features_train = []
-    for story in base_features_train.keys():
-        delayed = make_delayed(base_features_train[story][low_level_feature], delays)
-        delayed_features_train.append(delayed)
-
-    delayed_features_val = []
-    for story in base_features_val.keys():
-        delayed = make_delayed(base_features_val[story][low_level_feature], delays)
-        delayed_features_val.append(delayed)
-
-    trim = 5
-    np.random.seed(9)
-    z_base_feature_train = np.vstack(
-        [zscore(base_features_train[story][low_level_feature][5 + trim:-trim]) for story in base_features_train.keys()])
-    z_base_feature_val = np.vstack(
-        [zscore(base_features_val[story][low_level_feature][5 + trim:-trim]) for story in base_features_val.keys()])
-    print("base features train shape: ", np.shape(z_base_feature_train))
-    print("base features val shape: ", np.shape(z_base_feature_val))
     subject = f'0{subject_num}'
-    voxelxise_correlations = prediction_joint_model(z_base_feature_train, z_base_feature_val, data_dir, subject,
+    voxelwise_correlations = prediction_joint_model(z_base_feature_train, z_base_feature_val, data_dir, subject,
                                                     modality)
     # save voxelwise correlations and predictions
     main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    np.save(os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation"), voxelxise_correlations)
+    np.save(os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation_delays{numer_of_delays}"),
+            voxelwise_correlations)
 
 
 if __name__ == '__main__':
@@ -105,4 +78,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir)
+    threads = []
+    for i in range(1, 8):
+        thread = threading.Thread(
+            train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature,
+                                  args.output_dir, i))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
