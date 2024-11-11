@@ -14,7 +14,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/brain_prediction_standard/predict_brain_activity.py" />
-    <option name="PARAMETERS" value="1 bert_base20.npy reading bert-predictions 12" />
+    <option name="PARAMETERS" value="1 bert_base20.npy reading bert-predictions 11" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

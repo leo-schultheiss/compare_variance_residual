@@ -1,5 +1,4 @@
 import numpy as np
-import logging
 import argparse
 
 from common_utils.hdf_utils import load_subject_fmri
@@ -15,7 +14,7 @@ trim = 5
 data_dir = 'data'
 
 
-def predict_brain_activity(subjectNum, featurename, modality, dirname, layers):
+def predict_brain_activity(subjectNum, featurename, modality, dirname, layer):
     stimul_features = np.load(featurename, allow_pickle=True)
     print(stimul_features.item().keys())
     training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
@@ -38,59 +37,42 @@ def predict_brain_activity(subjectNum, featurename, modality, dirname, layers):
                        'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
     semanticseqs = dict()
     for i in np.arange(len(all_story_names)):
-        print(all_story_names[i])
         semanticseqs[all_story_names[i]] = []
-        for layer in np.arange(layers):
-            temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
-            temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
-            semanticseqs[all_story_names[i]].append(temp)
+        temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
+        temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
+        semanticseqs[all_story_names[i]] = temp
     # Downsample stimuli
     interptype = "lanczos"  # filter type
     window = 3  # number of lobes in Lanczos filter
-    # num_layers = 12
     downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
     for story in all_story_names:
-        downsampled_semanticseqs[story] = []
-        for layer in np.arange(layers):
-            temp = semanticseqs[story][layer].chunksums(interptype, window=window)
-            downsampled_semanticseqs[story].append(temp)
+        downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
     trim = 5
-    training_stim = {}
-    predicion_stim = {}
-    for layer in np.arange(layers):
-        training_stim[layer] = []
-        training_stim[layer].append(
-            np.vstack(
-                [zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in training_story_names]))
-    for layer in np.arange(layers):
-        predicion_stim[layer] = []
-        predicion_stim[layer].append(
-            np.vstack(
-                [zscore(downsampled_semanticseqs[story][layer][5 + trim:-trim]) for story in prediction_story_names]))
+
+    training_stim = np.vstack(
+        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
+    predicion_stim = np.vstack(
+        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
     story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
     print(story_lengths)
     #### save downsampled stimuli
     bert_downsampled_data = {}
     for eachstory in list(downsampled_semanticseqs.keys()):
-        bert_downsampled_data[eachstory] = []
-        for eachlayer in np.arange(12):
-            bert_downsampled_data[eachstory].append(np.array(downsampled_semanticseqs[eachstory][eachlayer].data))
+        bert_downsampled_data[eachstory] = np.array(downsampled_semanticseqs[eachstory].data)
     np.save('bert_downsampled_data', bert_downsampled_data)
     #########
     # Delay stimuli
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
+
     print("FIR model delays: ", delays)
-    print(np.array(training_stim[0]).shape)
-    delayed_Rstim = []
-    for layer in np.arange(layers):
-        delayed_Rstim.append(make_delayed(np.array(training_stim[layer])[0], delays))
-    delayed_Pstim = []
-    for layer in np.arange(layers):
-        delayed_Pstim.append(make_delayed(np.array(predicion_stim[layer])[0], delays))
-    # Print the sizes of these matrices
-    print("delRstim shape: ", delayed_Rstim[0].shape)
-    print("delPstim shape: ", delayed_Pstim[0].shape)
+    print(np.array(training_stim).shape)
+
+    delayed_Rstim = make_delayed(np.array(training_stim), delays)
+    delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
+
+    print("delRstim shape: ", delayed_Rstim.shape)
+    print("delPstim shape: ", delayed_Pstim.shape)
     subject = f'0{subjectNum}'
     main_dir = os.path.join(dirname, modality, subject)
     if not os.path.exists(main_dir):
@@ -99,20 +81,19 @@ def predict_brain_activity(subjectNum, featurename, modality, dirname, layers):
     nboots = 1  # Number of cross-validation runs.
     chunklen = 40  #
     nchunks = 20
-    for layer in np.arange(layers):
-        zRresp, zPresp = load_subject_fmri(data_dir, subject, modality)
-        alphas = np.logspace(1, 3,
-                             10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
-        wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim[layer]), zRresp,
-                                                             np.nan_to_num(delayed_Pstim[layer]), zPresp,
-                                                             alphas, nboots, chunklen, nchunks,
-                                                             singcutoff=1e-10, single_alpha=True)
-        pred = np.dot(np.nan_to_num(delayed_Pstim[layer]), wt)
-        voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
-        for vi in range(zPresp.shape[1]):
-            voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
+    zRresp, zPresp = load_subject_fmri(data_dir, subject, modality)
+    alphas = np.logspace(1, 3,
+                         10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
+    wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim), zRresp,
+                                                         np.nan_to_num(delayed_Pstim), zPresp,
+                                                         alphas, nboots, chunklen, nchunks,
+                                                         singcutoff=1e-10, single_alpha=True)
+    pred = np.dot(np.nan_to_num(delayed_Pstim), wt)
+    voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
+    for vi in range(zPresp.shape[1]):
+        voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
 
-        np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
+    np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
 
 
 if __name__ == "__main__":
@@ -121,8 +102,10 @@ if __name__ == "__main__":
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)
     parser.add_argument("dirname", help="Choose Directory", type=str)
-    parser.add_argument("layers", help="Choose layers", type=int)
+    parser.add_argument("layer",
+                        help="Internal layer of natural language model to use for semantic representation of words",
+                        type=int)
     args = parser.parse_args()
     print(args)
 
-    predict_brain_activity(args.subjectNum, args.featurename, args.modality, args.dirname, args.layers)
+    predict_brain_activity(args.subjectNum, args.featurename, args.modality, args.dirname, args.layer)
