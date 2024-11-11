@@ -13,10 +13,9 @@ from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trf
 from common_utils.util import make_delayed
 
 logging.basicConfig(level=logging.DEBUG)
-data_dir = "data"
 
 
-def load_low_level_textual_features():
+def load_low_level_textual_features(data_dir):
     """
     These files contain low-level textual and speech features
     """
@@ -55,26 +54,12 @@ def prediction_joint_model(Rstim, Pstim, data_dir, subject, modality):
     return voxelwise_correlations
 
 
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
-    parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="data")
-    parser.add_argument("-s", "--subjectNum", help="Subject number", type=int, required=True)
-    parser.add_argument("-m" ,"--modality", help="Choose modality", type=str, default="reading")
-    parser.add_argument("--low_level_feature",
-                        help="Low level feature to use. Possible options include:\n"
-                             "letters, numletters, numphonemes, numwords, phonemes, word_length_std",
-                        type=str, default="letters")
-    parser.add_argument("output_dir", help="Output directory", type=str)
-    args = parser.parse_args()
-
+def train_low_level_model(data_dir, subject_num, modality, low_level_feature, output_dir):
     # Delay stimuli to account for hemodynamic lag
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
-
     # join input features (context representations and low-level textual features)
-    base_features_train, base_features_val = load_low_level_textual_features()
+    base_features_train, base_features_val = load_low_level_textual_features(data_dir)
     # todo test if delays make a difference
     # delayed_features_train = []
     # for story in base_features_train.keys():
@@ -85,26 +70,36 @@ if __name__ == '__main__':
     # for story in base_features_val.keys():
     #     delayed = make_delayed(base_features_val[story], delays)
     #     delayed_features_val.append(delayed)
-
     trim = 5
     np.random.seed(9)
     z_base_feature_train = np.vstack(
-        [zscore(base_features_train[story][args.low_level_feature][5 + trim:-trim]) for story in
-         base_features_train.keys()])
+        [zscore(base_features_train[story][low_level_feature][5 + trim:-trim]) for story in base_features_train.keys()])
     z_base_feature_val = np.vstack(
-        [zscore(base_features_val[story][args.low_level_feature][5 + trim:-trim]) for story in
-         base_features_val.keys()])
+        [zscore(base_features_val[story][low_level_feature][5 + trim:-trim]) for story in base_features_val.keys()])
     print("base features train shape: ", np.shape(z_base_feature_train))
     print("base features val shape: ", np.shape(z_base_feature_val))
-
-    subject = f'0{args.subjectNum}'
-
-    voxelxise_correlations = prediction_joint_model(z_base_feature_train, z_base_feature_val, args.data_dir, subject,
-                                                    args.modality)
-
+    subject = f'0{subject_num}'
+    voxelxise_correlations = prediction_joint_model(z_base_feature_train, z_base_feature_val, data_dir, subject,
+                                                    modality)
     # save voxelwise correlations and predictions
-    main_dir = os.path.join(args.output_dir, args.modality, subject, args.low_level_feature)
+    main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-
     np.save(os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation"), voxelxise_correlations)
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
+    parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="data")
+    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, required=True)
+    parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
+    parser.add_argument("--low_level_feature",
+                        help="Low level feature to use. Possible options include:\n"
+                             "letters, numletters, numphonemes, numwords, phonemes, word_length_std",
+                        type=str, default="letters")
+    parser.add_argument("output_dir", help="Output directory", type=str)
+    args = parser.parse_args()
+
+    train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir)
