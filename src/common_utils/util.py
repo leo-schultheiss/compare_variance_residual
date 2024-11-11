@@ -9,28 +9,6 @@ from matplotlib.pyplot import figure, show
 from common_utils.npp import zscore
 
 
-def make_delayed(stim, delays, circpad=False):
-    """Creates non-interpolated concatenated delayed versions of [stim] with the given [delays] 
-    (in samples).
-    
-    If [circpad], instead of being padded with zeros, [stim] will be circularly shifted.
-    """
-    nt,ndim = stim.shape
-    dstims = []
-    for di,d in enumerate(delays):
-        dstim = np.zeros((nt, ndim))
-        if d<0: ## negative delay
-            dstim[:d,:] = stim[-d:,:]
-            if circpad:
-                dstim[d:,:] = stim[:-d,:]
-        elif d>0:
-            dstim[d:,:] = stim[:-d,:]
-            if circpad:
-                dstim[:d,:] = stim[-d:,:]
-        else: ## d==0
-            dstim = stim.copy()
-        dstims.append(dstim)
-    return np.hstack(dstims)
 
 def best_corr_vec(wvec, vocab, SU, n=10):
     """Returns the [n] words from [vocab] most similar to the given [wvec], where each word is represented
@@ -391,34 +369,3 @@ def save_table_file(filename, filedict):
     for vname, var in filedict.items():
         hf.createArray("/", vname, var)
     hf.close()
-
-
-def load_low_level_textual_features(data_dir):
-    """
-    These files contain low-level textual and speech features
-    """
-    # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
-    base_features_train = h5py.File(os.path.join(data_dir, 'features_trn_NEW.hdf'), 'r')
-    base_features_val = h5py.File(os.path.join(data_dir, 'features_val_NEW.hdf'), 'r')
-    return base_features_train, base_features_val
-
-
-def create_delayed_low_level_feature(data_dir, delays, low_level_feature):
-    base_features_train, base_features_val = load_low_level_textual_features(data_dir)
-    delayed_feature_train = []
-    for story in base_features_train.keys():
-        delayed = make_delayed(base_features_train[story][low_level_feature], delays)
-        delayed_feature_train.append(delayed)
-    delayed_feature_val = []
-    for story in base_features_val.keys():
-        delayed = make_delayed(base_features_val[story][low_level_feature], delays)
-        delayed_feature_val.append(delayed)
-    trim = 5
-    np.random.seed(9)
-    z_base_feature_train = np.vstack(
-        [zscore(delayed_feature_train[story][5 + trim:-trim]) for story in range(len(delayed_feature_train))])
-    z_base_feature_val = np.vstack(
-        [zscore(delayed_feature_val[story][5 + trim:-trim]) for story in range(len(delayed_feature_val))])
-    print("base features train shape: ", np.shape(z_base_feature_train))
-    print("base features val shape: ", np.shape(z_base_feature_val))
-    return z_base_feature_train, z_base_feature_val

@@ -8,6 +8,7 @@ from ridge_utils.ridge import bootstrap_ridge
 from common_utils.SemanticModel import SemanticModel
 import os
 from common_utils.npp import zscore
+from common_utils.training_utils import run_regression_and_predict
 from common_utils.util import make_delayed
 
 trim = 5
@@ -78,20 +79,7 @@ def predict_brain_activity(subjectNum, featurename, modality, dirname, layer):
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     # Run regression
-    nboots = 1  # Number of cross-validation runs.
-    chunklen = 40  #
-    nchunks = 20
-    zRresp, zPresp = load_subject_fmri(data_dir, subject, modality)
-    alphas = np.logspace(1, 3,
-                         10)  # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
-    wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(delayed_Rstim), zRresp,
-                                                         np.nan_to_num(delayed_Pstim), zPresp,
-                                                         alphas, nboots, chunklen, nchunks,
-                                                         singcutoff=1e-10, single_alpha=True)
-    pred = np.dot(np.nan_to_num(delayed_Pstim), wt)
-    voxcorrs = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
-    for vi in range(zPresp.shape[1]):
-        voxcorrs[vi] = np.corrcoef(zPresp[:, vi], pred[:, vi])[0, 1]
+    voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subjectNum, modality)
 
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
 
