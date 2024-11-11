@@ -10,7 +10,7 @@ from common_utils.SemanticModel import SemanticModel, logger
 from common_utils.hdf_utils import load_subject_fmri
 from common_utils.npp import zscore
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
-from common_utils.util import make_delayed
+from common_utils.util import make_delayed, create_delayed_low_level_feature
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -82,7 +82,6 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     for story in all_story_names:
         down_sampled_semantic_sequences[story] = semantic_sequence_representations[story].chunksums(interpolation_type,
                                                                                                     window=window)
-
     trim = 5
     training_stim = [np.vstack(
         [zscore(down_sampled_semantic_sequences[story][5 + trim:-trim]) for story in
@@ -105,26 +104,8 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     print("delayed_Rstim shape: ", delayed_Rstim[0].shape)
     print("delayed_Pstim shape: ", delayed_Pstim[0].shape)
     # join input features (context representations and low-level textual features)
-    base_features_train, base_features_val = load_low_level_textual_features(data_dir)
+    z_base_feature_train, z_base_feature_val = create_delayed_low_level_feature(data_dir, delays, low_level_feature)
 
-    delayed_feature_train = []
-    for story in base_features_train.keys():
-        delayed = make_delayed(base_features_train[story][low_level_feature], delays)
-        delayed_feature_train.append(delayed)
-
-    delayed_feature_val = []
-    for story in base_features_val.keys():
-        delayed = make_delayed(base_features_val[story][low_level_feature], delays)
-        delayed_feature_val.append(delayed)
-
-    trim = 5
-    np.random.seed(9)
-    z_base_feature_train = np.vstack(
-        [zscore(delayed_feature_train[story][5 + trim:-trim]) for story in range(len(delayed_feature_train))])
-    z_base_feature_val = np.vstack(
-        [zscore(delayed_feature_val[story][5 + trim:-trim]) for story in range(len(delayed_feature_val))])
-    print("base features train shape: ", np.shape(z_base_feature_train))
-    print("base features val shape: ", np.shape(z_base_feature_val))
     # join input features (context representations and low-level textual features)
     Rstim = np.hstack((delayed_Rstim, z_base_feature_train))
     Pstim = np.hstack([delayed_Pstim, z_base_feature_val])
@@ -146,8 +127,8 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--context_representations",
                         help="File with context representations from LM for each story", type=str, required=True)
     parser.add_argument("-s", "--subjectNum", help="Subject number", type=int, required=True)
-    parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
-    parser.add_argument("--layer", help="layer of the language model to use as input", type=int, default=9)
+    parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
+    parser.add_argument("-l", "--layer", help="layer of the language model to use as input", type=int, default=9)
     parser.add_argument("--low_level_feature",
                         help="Low level feature to use. Possible options include:\n"
                              "letters, numletters, numphonemes, numwords, phonemes, word_length_std",
