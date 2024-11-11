@@ -60,16 +60,18 @@ def train_low_level_model(data_dir, subject_num, modality, low_level_feature, ou
     delays = range(1, numer_of_delays + 1)
     # join input features (context representations and low-level textual features)
     base_features_train, base_features_val = load_low_level_textual_features(data_dir)
+
     # todo test if delays make a difference
-    # delayed_features_train = []
-    # for story in base_features_train.keys():
-    #     delayed = make_delayed(base_features_train[story], delays)
-    #     delayed_features_train.append(delayed)
-    #
-    # delayed_features_val = []
-    # for story in base_features_val.keys():
-    #     delayed = make_delayed(base_features_val[story], delays)
-    #     delayed_features_val.append(delayed)
+    delayed_features_train = []
+    for story in base_features_train.keys():
+        delayed = make_delayed(base_features_train[story][low_level_feature], delays)
+        delayed_features_train.append(delayed)
+
+    delayed_features_val = []
+    for story in base_features_val.keys():
+        delayed = make_delayed(base_features_val[story][low_level_feature], delays)
+        delayed_features_val.append(delayed)
+
     trim = 5
     np.random.seed(9)
     z_base_feature_train = np.vstack(
@@ -101,5 +103,6 @@ if __name__ == '__main__':
                         type=str, default="letters")
     parser.add_argument("output_dir", help="Output directory", type=str)
     args = parser.parse_args()
+    print(args)
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir)
