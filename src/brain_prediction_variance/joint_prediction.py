@@ -3,14 +3,14 @@ import os.path
 import h5py
 import numpy as np
 import logging
-from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
+from ridge_utils.dsutils import make_word_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
 
-from common_utils.SemanticModel import SemanticModel, logger
-from common_utils.hdf_utils import load_subject_fmri
+from common_utils.SemanticModel import SemanticModel
 from common_utils.npp import zscore
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
-from common_utils.util import make_delayed, create_delayed_low_level_feature
+from common_utils.training_utils import make_delayed, load_subject_fmri, \
+    load_low_level_textual_features
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -83,33 +83,43 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
         down_sampled_semantic_sequences[story] = semantic_sequence_representations[story].chunksums(interpolation_type,
                                                                                                     window=window)
     trim = 5
-    training_stim = [np.vstack(
+    training_stim = np.vstack(
         [zscore(down_sampled_semantic_sequences[story][5 + trim:-trim]) for story in
-         training_story_names])]
+         training_story_names])
 
-    prediction_stim = [np.vstack(
+    prediction_stim = np.vstack(
         [zscore(down_sampled_semantic_sequences[story][5 + trim:-trim]) for story in
-         testing_story_names])]
+         testing_story_names])
 
-    story_lengths = [len(down_sampled_semantic_sequences[story][0][5 + trim:-trim]) for story in training_story_names]
-    print(story_lengths)
+    print("Training stimuli shape: ", training_stim.shape)
+    print("Prediction stimuli shape: ", prediction_stim.shape)
+
+    # join input features (context representations and low-level textual features)
+    low_level_train, low_level_val = load_low_level_textual_features(data_dir)
+    z_score_train = np.vstack(
+        [zscore(low_level_train[story][low_level_feature][5 + 5:-5]) for story in low_level_train.keys()])
+    z_score_val = np.vstack(
+        [zscore(low_level_val[story][low_level_feature][5 + 5:-5]) for story in low_level_val.keys()])
+    z_base_feature_train, z_base_feature_val = z_score_train, z_score_val
+    print("z_base_feature_train shape: ", z_base_feature_train.shape)
+    print("z_base_feature_val shape: ", z_base_feature_val.shape)
+    Rstim = np.hstack((training_stim, z_base_feature_train))
+    Pstim = np.hstack((prediction_stim, z_base_feature_val))
+
     # Delay stimuli to account for hemodynamic lag
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
     print("FIR model delays: ", delays)
-    print(np.array(training_stim[0]).shape)
-    delayed_Rstim = make_delayed(np.array(training_stim)[0], delays)
-    delayed_Pstim = make_delayed(np.array(prediction_stim)[0], delays)
-    # Print the sizes of these matrices
-    print("delayed_Rstim shape: ", delayed_Rstim[0].shape)
-    print("delayed_Pstim shape: ", delayed_Pstim[0].shape)
-    # join input features (context representations and low-level textual features)
-    z_base_feature_train, z_base_feature_val = create_delayed_low_level_feature(data_dir, delays, low_level_feature)
+    print("Rstim shape: ", np.array(Rstim).shape)
+    print("Pstim shape: ", np.array(Pstim).shape)
 
-    # join input features (context representations and low-level textual features)
-    Rstim = np.hstack((delayed_Rstim, z_base_feature_train))
-    Pstim = np.hstack([delayed_Pstim, z_base_feature_val])
+    delayed_Rstim = make_delayed(np.array(Rstim), delays)
+    delayed_Pstim = make_delayed(np.array(Pstim), delays)
+    # Print the sizes of these matrices
+    print("delayed_Rstim shape: ", delayed_Rstim.shape)
+    print("delayed_Pstim shape: ", delayed_Pstim.shape)
     subject = f'0{subject_num}'
+
     voxelxise_correlations = prediction_joint_model(Rstim, Pstim, data_dir, subject, modality)
     # save voxelwise correlations and predictions
     main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
