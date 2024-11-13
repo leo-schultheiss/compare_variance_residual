@@ -13,8 +13,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/brain_prediction_variance/joint_prediction.py" />
-    <option name="PARAMETERS" value="-c bert_base20.npy -s 1 --layers 12 bert-joint-predictions" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/joint_prediction.py" />
+    <option name="PARAMETERS" value="-c bert_base20.npy -m listening --low_level_feature letters -s 1 -l 11 bert-joint-predictions" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

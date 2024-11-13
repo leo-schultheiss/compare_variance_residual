@@ -147,5 +147,26 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    predict_joint_model(args.data_dir, args.context_representations, args.subjectNum, args.modality, args.layer,
-                        args.low_level_feature, args.output_dir)
+    # predict_joint_model(args.data_dir, args.context_representations, args.subjectNum, args.modality, args.layer,
+    #                     args.low_level_feature, args.output_dir)
+
+    import multiprocessing
+    processes = []
+    low_level_features = ["letters", "numletters", "numphonemes", "numwords", "phonemes", "word_length_std"]
+
+    for low_level_feature in low_level_features:
+        p = multiprocessing.Process(target=predict_joint_model, args=(
+            args.data_dir, args.context_representations, args.subject_num, args.modality, args.layer, low_level_feature, args.output_dir))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
+
+    for low_level_feature in low_level_features:
+        main_dir = os.path.join(args.output_dir, args.modality, f'0{args.subject_num}', args.low_level_feature)
+        voxelwise_correlations = np.load(
+            os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation.npy"))
+        print(
+            f"Average correlation for {args.low_level_feature}: {np.nan_to_num(voxelwise_correlations).mean()}")
+
