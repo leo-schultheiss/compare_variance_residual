@@ -124,14 +124,14 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    np.save(os.path.join(str(main_dir), f"joint_model_prediction_voxelwise_correlation_layer{layer}"),
+    np.save(os.path.join(str(main_dir), f"layer_{layer}"),
             voxelxise_correlations)
 
 
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description="CheXpert NN argparser")
+    parser = argparse.ArgumentParser(description="Predict fMRI data using joint model")
     parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="data")
     parser.add_argument("-c", "--context_representations",
                         help="File with context representations from LM for each story", type=str, required=True)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     for low_level_feature in low_level_features:
         main_dir = os.path.join(args.output_dir, args.modality, f'0{args.subject_num}', args.low_level_feature)
         voxelwise_correlations = np.load(
-            os.path.join(str(main_dir), f"low_level_model_prediction_voxelwise_correlation.npy"))
+            os.path.join(str(main_dir), f"joint_model_prediction_voxelwise_correlation.npy"))
         print(
             f"Average correlation for {args.low_level_feature}: {np.nan_to_num(voxelwise_correlations).mean()}")
 
