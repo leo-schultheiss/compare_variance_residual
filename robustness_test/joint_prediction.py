@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="data")
     parser.add_argument("-c", "--context_representations",
                         help="File with context representations from LM for each story", type=str, required=True)
-    parser.add_argument("-s", "--subjectNum", help="Subject number", type=int, required=True)
+    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, required=True)
     parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
     parser.add_argument("-l", "--layer", help="layer of the language model to use as input", type=int, default=9)
     parser.add_argument("--low_level_feature",
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    # predict_joint_model(args.data_dir, args.context_representations, args.subjectNum, args.modality, args.layer,
+    # predict_joint_model(args.data_dir, args.context_representations, args.subject_num, args.modality, args.layer,
     #                     args.low_level_feature, args.output_dir)
 
     import multiprocessing
