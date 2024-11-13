@@ -9,7 +9,7 @@ from ridge_utils.ridge import bootstrap_ridge
 
 from predict_brain_activity import data_dir
 from common_utils.residuals_text_speech import *
-from common_utils.hdf_utils import load_subject_fmri
+from robustness_test.common_utils.training_utils import load_subject_fmri
 
 logging.basicConfig(level=logging.DEBUG)
 

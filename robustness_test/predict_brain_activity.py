@@ -3,7 +3,6 @@ import argparse
 
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 from ridge_utils.dsutils import make_word_ds, make_phoneme_ds, make_semantic_model
-from ridge_utils.ridge import bootstrap_ridge
 from common_utils.SemanticModel import SemanticModel
 import os
 from common_utils.npp import zscore
