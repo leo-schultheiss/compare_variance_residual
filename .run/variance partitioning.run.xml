@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="1 extract context representations" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="variance partitioning" type="PythonConfigurationType" factoryName="Python">
     <module name="Interpreting-Brain-Recordings-Through-the-Robustness-of-DNN-Model-Representations" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -13,8 +13,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model_context_extraction/extract_context_representations.py" />
-    <option name="PARAMETERS" value="--sequence_length 20 --output_file bert_base20" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/robustness_test/variance_partitioning.py" />
+    <option name="PARAMETERS" value="bert-predictions/listening/01/layer_11.npy bert-low-level-predictions/reading/01/letters/low_level_model_prediction_voxelwise_correlation.npy bert-joint-predictions/listening/01/letters/joint_model_prediction_voxelwise_correlation_layer11.npy bert-variance-partitioning" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
