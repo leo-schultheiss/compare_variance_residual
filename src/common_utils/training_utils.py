@@ -57,32 +57,16 @@ def load_low_level_textual_features(data_dir):
     return base_features_train, base_features_val
 
 
-def create_delayed_low_level_feature(data_dir, delays, low_level_feature):
-    base_features_train, base_features_val = load_low_level_textual_features(data_dir)
-    if delays > 0:
-        delayed_feature_train = []
-        for story in base_features_train.keys():
-            delayed = make_delayed(base_features_train[story][low_level_feature], delays)
-            delayed_feature_train.append(delayed)
-        delayed_feature_val = []
-        for story in base_features_val.keys():
-            delayed = make_delayed(base_features_val[story][low_level_feature], delays)
-            delayed_feature_val.append(delayed)
-        trim = 5
-        np.random.seed(9)
-        z_base_feature_train = np.vstack(
-            [zscore(delayed_feature_train[story][5 + trim:-trim]) for story in range(len(delayed_feature_train))])
-        z_base_feature_val = np.vstack(
-            [zscore(delayed_feature_val[story][5 + trim:-trim]) for story in range(len(delayed_feature_val))])
-        return z_base_feature_train, z_base_feature_val
-    else:
-        trim = 5
-        np.random.seed(9)
-        z_base_feature_train = np.vstack(
-            [zscore(base_features_train[story][5 + trim:-trim]) for story in base_features_train.keys()])
-        z_base_feature_val = np.vstack(
-            [zscore(base_features_val[story][5 + trim:-trim]) for story in base_features_val.keys()])
-        return z_base_feature_train, z_base_feature_val
+def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
+    """
+    Load low-level textual features and z-score them across stories
+    :param data_dir Directory containing fMRI data
+    :return z_score_train, z_score_val
+    """
+    low_level_train, low_level_val = load_low_level_textual_features(data_dir)
+    z_score_train = np.vstack([zscore(low_level_train[story][low_level_feature][5 + trim:-trim]) for story in low_level_train.keys()])
+    z_score_val = np.vstack([zscore(low_level_val[story][low_level_feature][5 + trim:-trim]) for story in low_level_val.keys()])
+    return z_score_train, z_score_val
 
 
 def run_regression_and_predict(Rstim, Pstim, data_dir, subject, modality):
