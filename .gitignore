@@ -1,8 +1,8 @@
 /venv/
-.idea
-.ipynb_checkpoints
-data/
+/.idea/
+/data/
 /cache/
+/build/
 
 *.npy
 *.png
