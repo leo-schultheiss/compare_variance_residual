@@ -2,16 +2,23 @@ import os.path
 
 import numpy as np
 
-from common_utils.training_utils import create_delayed_low_level_feature, run_regression_and_predict
+from common_utils.training_utils import load_z_low_level_feature, run_regression_and_predict, make_delayed
 
 
 def train_low_level_model(data_dir, subject_num, modality, low_level_feature, output_dir, numer_of_delays=6):
     # Delay stimuli to account for hemodynamic lag
     delays = range(1, numer_of_delays + 1)
-    z_base_feature_train, z_base_feature_val = create_delayed_low_level_feature(data_dir, delays, low_level_feature)
+    Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
+    print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
+
+    # delay stimuli to account for hemodynamic lag
+    delays = range(1, numer_of_delays + 1)
+    delayed_Rstim = make_delayed(np.array(Rstim), delays)
+    delayed_Pstim = make_delayed(np.array(Pstim), delays)
+
 
     subject = f'0{subject_num}'
-    voxelwise_correlations = run_regression_and_predict(z_base_feature_train, z_base_feature_val, data_dir, subject,
+    voxelwise_correlations = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subject,
                                                         modality)
     # save voxelwise correlations and predictions
     main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
