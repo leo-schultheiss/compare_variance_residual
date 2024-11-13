@@ -9,12 +9,11 @@ from common_utils.npp import zscore
 from common_utils.training_utils import run_regression_and_predict, make_delayed
 
 trim = 5
-data_dir = 'data'
 
 
-def predict_brain_activity(subjectNum, featurename, modality, dirname, layer):
+def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname, layer):
     stimul_features = np.load(featurename, allow_pickle=True)
-    print(stimul_features.item().keys())
+    # print(stimul_features.item().keys())
     training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
                             'life', 'myfirstdaywiththeyankees', 'naked',
                             'odetostepfather', 'souls', 'undertheinfluence']
@@ -51,8 +50,8 @@ def predict_brain_activity(subjectNum, featurename, modality, dirname, layer):
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
     predicion_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
-    story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
-    print(story_lengths)
+    # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
+    # print(story_lengths)
     #### save downsampled stimuli
     bert_downsampled_data = {}
     for eachstory in list(downsampled_semanticseqs.keys()):
@@ -63,27 +62,28 @@ def predict_brain_activity(subjectNum, featurename, modality, dirname, layer):
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
 
-    print("FIR model delays: ", delays)
-    print(np.array(training_stim).shape)
+    # print("FIR model delays: ", delays)
+    # print(np.array(training_stim).shape)
 
     delayed_Rstim = make_delayed(np.array(training_stim), delays)
     delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
 
-    print("delRstim shape: ", delayed_Rstim.shape)
-    print("delPstim shape: ", delayed_Pstim.shape)
-    subject = f'0{subjectNum}'
+    # print("delRstim shape: ", delayed_Rstim.shape)
+    # print("delPstim shape: ", delayed_Pstim.shape)
+    subject = f'0{subject_num}'
     main_dir = os.path.join(dirname, modality, subject)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     # Run regression
-    voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subjectNum, modality)
+    voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subject_num, modality)
 
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Predict brain activity")
-    parser.add_argument("subjectNum", help="Choose subject", type=int)
+    parser.add_argument("data_dir", help="Choose data directory", type=str, default="data")
+    parser.add_argument("subject_num", help="Choose subject", type=int)
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)
     parser.add_argument("dirname", help="Choose Directory", type=str)
@@ -93,4 +93,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    predict_brain_activity(args.subjectNum, args.featurename, args.modality, args.dirname, args.layer)
+    predict_brain_activity(args.data_dir, args.subject_num, args.featurename, args.modality, args.dirname, args.layer)
+
+    # import multiprocessing
+    # processes = []
+    # layer = 0
+    # subject = 1
+    #
+    # for modality in ['reading', 'listening']:
+    #     p = multiprocessing.Process(target=predict_brain_activity,
+    #                                 args=(args.data_dir, subject, 'bert_base20.npy', modality, 'bert_results', layer))
+    #     p.start()
+    #     processes.append(p)
+    #
+    # for process in processes:
+    #     process.join()
+    # print("All done")
