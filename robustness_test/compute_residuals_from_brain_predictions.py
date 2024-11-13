@@ -5,7 +5,6 @@ import os
 import h5py
 from ridge_utils.ridge import bootstrap_ridge
 
-from predict_brain_activity import data_dir
 from common_utils.residuals_text_speech import *
 from robustness_test.common_utils.training_utils import load_subject_fmri
 
@@ -46,6 +45,7 @@ fdir = 'data/'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute residuals from brain predictions")
+    parser.add_argument("data_dir", help="Choose data directory", type=str)
     parser.add_argument("subjectNum", help="Choose subject", type=int)
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)
