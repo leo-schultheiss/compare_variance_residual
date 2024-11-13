@@ -7,8 +7,8 @@ import os
 import h5py
 from ridge_utils.ridge import bootstrap_ridge
 
-from brain_prediction_standard.predict_brain_activity import data_dir
-from brain_prediction_residual.residuals_text_speech import *
+from predict_brain_activity import data_dir
+from common_utils.residuals_text_speech import *
 from common_utils.hdf_utils import load_subject_fmri
 
 logging.basicConfig(level=logging.DEBUG)

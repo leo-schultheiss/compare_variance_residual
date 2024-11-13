@@ -145,6 +145,7 @@ if __name__ == '__main__':
                         type=str, default="letters")
     parser.add_argument("output_dir", help="Output directory", type=str)
     args = parser.parse_args()
+    print(args)
 
     predict_joint_model(args.data_dir, args.context_representations, args.subjectNum, args.modality, args.layer,
                         args.low_level_feature, args.output_dir)

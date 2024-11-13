@@ -7,7 +7,7 @@ from common_utils.hdf_utils import map_to_flat
 
 def flatmap_subject_voxel_data(subject_number, data):
     # Get path to data files
-    fdir = os.path.abspath('../../data')
+    fdir = os.path.abspath('../data')
     # Map to subject flatmap
     map_file = os.path.join(fdir, f'subject{subject_number}_mappers.hdf')
     flatmap = map_to_flat(data, map_file)
@@ -25,7 +25,7 @@ subject = "01"
 os.makedirs(f"../../plots/{modality}/{subject}", exist_ok=True)
 
 
-low_level_correlation = np.load(os.path.join("../../bert-low-level-predictions", modality, subject, "letters", "low_level_model_prediction_voxelwise_correlation.npy"), allow_pickle=True)
+low_level_correlation = np.load(os.path.join("../bert-low-level-predictions", modality, subject, "letters", "low_level_model_prediction_voxelwise_correlation.npy"), allow_pickle=True)
 flatmap_subject_voxel_data(subject, low_level_correlation)
 low_level_correlation = np.nan_to_num(low_level_correlation)
 print(f"average correlation: {np.mean(low_level_correlation)}")
