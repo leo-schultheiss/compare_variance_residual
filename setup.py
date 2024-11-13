@@ -1,11 +1,7 @@
-import requests
-import os
+
 import logging
 
-from tqdm import tqdm
-from urllib.request import urlopen
 import re
-from pathlib import Path
 from setuptools import find_packages, setup
 
 # get version from voxelwise_tutorials/__init__.py
