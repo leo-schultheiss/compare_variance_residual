@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="2 predict brain activity based on context representations" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="predict brain activity on context representations" type="PythonConfigurationType" factoryName="Python">
     <module name="Interpreting-Brain-Recordings-Through-the-Robustness-of-DNN-Model-Representations" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -8,13 +8,14 @@
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
+    <option name="SDK_NAME" value="Python 3.10 (robustness_test)" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="IS_MODULE_SDK" value="true" />
+    <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/predict_brain_activity.py" />
-    <option name="PARAMETERS" value="1 bert_base20.npy reading bert-predictions 11" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/robustness_test/predict_brain_activity.py" />
+    <option name="PARAMETERS" value="data 1 bert_base20.npy reading bert-predictions 11" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
