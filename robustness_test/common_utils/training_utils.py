@@ -34,10 +34,10 @@ def make_delayed(stim, delays, circpad=False):
 
 def load_subject_fmri(data_dir, subject, modality):
     """Load fMRI data for a subject, z-scored across stories"""
-    fname_tr5 = os.path.join(data_dir, 'subject{:02d}_{}_fmri_data_trn.hdf'.format(subject, modality))
+    fname_tr5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_trn.hdf')
     trndata5 = load_data(fname_tr5)
 
-    fname_te5 = os.path.join(data_dir, 'subject{:02d}_{}_fmri_data_val.hdf'.format(subject, modality))
+    fname_te5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_val.hdf')
     tstdata5 = load_data(fname_te5)
 
     trim = 5
