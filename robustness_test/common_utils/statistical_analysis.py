@@ -191,5 +191,3 @@ def fixPCs(orig, new):
             flipped.append(-n)
 
     return np.vstack(flipped)
-
-
