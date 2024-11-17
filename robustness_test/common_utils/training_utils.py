@@ -4,8 +4,8 @@ import h5py
 import numpy as np
 from ridge_utils.ridge import bootstrap_ridge
 
-from hdf_utils import load_data
-from npp import zscore
+from robustness_test.common_utils.npp import zscore
+from robustness_test.common_utils.hdf_utils import load_data
 
 
 def make_delayed(stim, delays, circpad=False):
