@@ -108,17 +108,10 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     # Delay stimuli to account for hemodynamic lag
     numer_of_delays = 6
     delays = range(1, numer_of_delays + 1)
-    print("FIR model delays: ", delays)
-    print("Rstim shape: ", np.array(Rstim).shape)
-    print("Pstim shape: ", np.array(Pstim).shape)
+    Rstim = make_delayed(np.array(Rstim), delays)
+    Pstim = make_delayed(np.array(Pstim), delays)
 
-    delayed_Rstim = make_delayed(np.array(Rstim), delays)
-    delayed_Pstim = make_delayed(np.array(Pstim), delays)
-    # Print the sizes of these matrices
-    print("delayed_Rstim shape: ", delayed_Rstim.shape)
-    print("delayed_Pstim shape: ", delayed_Pstim.shape)
     subject = f'0{subject_num}'
-
     voxelxise_correlations = prediction_joint_model(Rstim, Pstim, data_dir, subject, modality)
     # save voxelwise correlations and predictions
     main_dir = os.path.join(output_dir, modality, subject, low_level_feature)
