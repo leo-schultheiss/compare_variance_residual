@@ -2,7 +2,7 @@ from common_utils.textgrid import TextGrid
 import os
 import numpy as np
 
-def load_grid(story, grid_dir="stimuli/grids"):
+def load_grid(story, grid_dir="../stimuli/grids"):
     """Loads the TextGrid for the given [story] from the directory [grid_dir].
     The first file that starts with [story] will be loaded, so if there are
     multiple versions of a grid for a story, beward.

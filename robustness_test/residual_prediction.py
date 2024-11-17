@@ -45,7 +45,7 @@ fdir = 'data/'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute residuals from brain predictions")
-    parser.add_argument("data_dir", help="Choose data directory", type=str)
+    parser.add_argument("data_dir", help="Choose data directory", type=str, default="../data")
     parser.add_argument("subjectNum", help="Choose subject", type=int)
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)

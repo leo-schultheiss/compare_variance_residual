@@ -199,7 +199,7 @@ if __name__ == "__main__":
                         type=str, default="bert-base")
     parser.add_argument("--sequence_length", help="number of consequent words passed to the model as context", type=int,
                         default=20)
-    parser.add_argument("--output_file", help="File name ", type=str)
+    parser.add_argument("--output_file", help="File name ", type=str, default="../bert_base20")
     args = parser.parse_args()
 
     print(args)
