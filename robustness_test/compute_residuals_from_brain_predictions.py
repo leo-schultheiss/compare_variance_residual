@@ -70,7 +70,7 @@ if __name__ == "__main__":
                                              args.lowlevelfeature)
 
     # Delay stimuli
-    from common_utils.util import make_delayed
+    from common_utils.statistical_analysis import make_delayed
 
     ndelays = 6
     delays = range(1, ndelays + 1)
