@@ -161,11 +161,4 @@ if __name__ == '__main__':
 
     for p in processes:
         p.join()
-
-    for low_level_feature in low_level_features:
-        main_dir = os.path.join(args.output_dir, args.modality, f'0{args.subject_num}', args.low_level_feature)
-        voxelwise_correlations = np.load(
-            os.path.join(str(main_dir), f"joint_model_prediction_voxelwise_correlation.npy"))
-        print(
-            f"Average correlation for {args.low_level_feature}: {np.nan_to_num(voxelwise_correlations).mean()}")
-
+    print("All processes finished")
