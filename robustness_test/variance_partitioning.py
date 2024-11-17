@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 
-
 def ssc(data: np.array):
     """
     Calculate the signed squared correlation of a matrix

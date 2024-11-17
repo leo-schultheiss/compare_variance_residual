@@ -9,8 +9,6 @@ import h5py
 import numpy as np
 import scipy.sparse
 
-from common_utils.npp import zscore
-
 
 def load_data(fname, key=None):
     """Function to load data from an hdf file.
