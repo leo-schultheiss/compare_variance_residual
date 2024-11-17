@@ -82,7 +82,7 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Predict brain activity")
-    parser.add_argument("data_dir", help="Choose data directory", type=str, default="data")
+    parser.add_argument("data_dir", help="Choose data directory", type=str, default="../data")
     parser.add_argument("subject_num", help="Choose subject", type=int)
     parser.add_argument("featurename", help="Choose feature", type=str)
     parser.add_argument("modality", help="Choose modality", type=str)

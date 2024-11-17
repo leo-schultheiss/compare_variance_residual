@@ -62,7 +62,7 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     all_story_names = training_story_names + testing_story_names
     grids = load_grids_for_stories(all_story_names)
     # Load TRfiles
-    trfiles = load_generic_trfiles(all_story_names, root="stimuli/trfiles")
+    trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
     # Make word and phoneme datasequences
     word_data_sequences = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
     eng1000 = SemanticModel.load(os.path.join(data_dir, "english1000sm.hf5"))
@@ -132,10 +132,10 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description="Predict fMRI data using joint model")
-    parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="data")
+    parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="../data")
     parser.add_argument("-c", "--context_representations",
                         help="File with context representations from LM for each story", type=str, required=True)
-    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, required=True)
+    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, default=1)
     parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
     parser.add_argument("-l", "--layer", help="layer of the language model to use as input", type=int, default=9)
     parser.add_argument("--low_level_feature",
