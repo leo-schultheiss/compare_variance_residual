@@ -82,30 +82,28 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Predict brain activity")
-    parser.add_argument("data_dir", help="Choose data directory", type=str, default="../data")
-    parser.add_argument("subject_num", help="Choose subject", type=int)
-    parser.add_argument("featurename", help="Choose feature", type=str)
-    parser.add_argument("modality", help="Choose modality", type=str)
-    parser.add_argument("dirname", help="Choose Directory", type=str)
-    parser.add_argument("layer",
-                        help="Internal layer of natural language model to use for semantic representation of words",
-                        type=int)
+    parser.add_argument("--data_dir", help="Choose data directory", type=str, default="../data")
+    parser.add_argument("--subject_num", help="Choose subject", type=int, default=1)
+    parser.add_argument("--featurename", help="Choose feature", type=str, default="../bert_base20.npy")
+    parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
+    parser.add_argument("--layer", help="Layer of natural language model to use for semantic representation of words",
+                        type=int, default=9)
+    parser.add_argument("--dirname", help="Choose Directory", type=str, default="../bert-semantic-predictions")
     args = parser.parse_args()
     print(args)
 
-    predict_brain_activity(args.data_dir, args.subject_num, args.featurename, args.modality, args.dirname, args.layer)
+    # predict_brain_activity(args.data_dir, args.subject_num, args.featurename, args.modality, args.dirname, args.layer)
 
-    # import multiprocessing
-    # processes = []
-    # layer = 0
-    # subject = 1
-    #
-    # for modality in ['reading', 'listening']:
-    #     p = multiprocessing.Process(target=predict_brain_activity,
-    #                                 args=(args.data_dir, subject, 'bert_base20.npy', modality, 'bert_results', layer))
-    #     p.start()
-    #     processes.append(p)
-    #
-    # for process in processes:
-    #     process.join()
-    # print("All done")
+    import multiprocessing
+
+    processes = []
+
+    for modality in ['reading', 'listening']:
+        p = multiprocessing.Process(target=predict_brain_activity,
+                                    args=(args.data_dir, args.subject_num, args.featurename, modality, 'bert_results', args.layer))
+        p.start()
+        processes.append(p)
+
+    for process in processes:
+        process.join()
+    print("All done")
