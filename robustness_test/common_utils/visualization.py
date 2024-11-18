@@ -141,12 +141,12 @@ def plot_model_histogram_comparison(corrs1, corrs2, name1, name2, thresh=0.35, a
     hist1 = np.histogram(corrs1, nbins, range=(-1, 1))
     hist2 = np.histogram(corrs2, nbins, range=(-1, 1))
 
-    ouhist1 = hist1[0][nbins / 2:] - hist1[0][:nbins / 2][::-1]
-    ouhist2 = hist2[0][nbins / 2:] - hist2[0][:nbins / 2][::-1]
+    ouhist1 = hist1[0][nbins // 2:] - hist1[0][:nbins // 2][::-1]
+    ouhist2 = hist2[0][nbins // 2:] - hist2[0][:nbins // 2][::-1]
 
     oud = ouhist2 - ouhist1
     bwidth = 2.0 / nbins
-    barlefts = hist1[1][nbins / 2:-1]
+    barlefts = hist1[1][nbins // 2:-1]
 
     # ax.fill_between(vals, 0, np.clip(oud, 0, 1e9), facecolor="blue")
     # ax.fill_between(vals, 0, np.clip(oud, -1e9, 0), facecolor="red")
