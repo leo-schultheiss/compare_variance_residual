@@ -59,7 +59,7 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     np.save('bert_downsampled_data', bert_downsampled_data)
     #########
     # Delay stimuli
-    numer_of_delays = 6
+    numer_of_delays = 4
     delays = range(1, numer_of_delays + 1)
 
     # print("FIR model delays: ", delays)
