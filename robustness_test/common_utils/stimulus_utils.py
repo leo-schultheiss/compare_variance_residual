@@ -1,8 +1,8 @@
-from common_utils.textgrid import TextGrid
+from robustness_test.common_utils.textgrid import TextGrid
 import os
 import numpy as np
 
-def load_grid(story, grid_dir="../stimuli/grids"):
+def load_grid(story, grid_dir):
     """Loads the TextGrid for the given [story] from the directory [grid_dir].
     The first file that starts with [story] will be loaded, so if there are
     multiple versions of a grid for a story, beward.
@@ -10,10 +10,10 @@ def load_grid(story, grid_dir="../stimuli/grids"):
     gridfile = [os.path.join(grid_dir, gf) for gf in os.listdir(grid_dir) if gf.startswith(story)][0]
     return TextGrid(open(gridfile).read())
 
-def load_grids_for_stories(stories):
+def load_grids_for_stories(stories, root):
     """Loads grids for the given [stories], puts them in a dictionary.
     """
-    return dict([(st, load_grid(st)) for st in stories])
+    return dict([(st, load_grid(st, root)) for st in stories])
 
 def load_5tier_grids_for_stories(stories, rootdir):
     grids = dict()
