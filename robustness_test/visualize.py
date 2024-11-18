@@ -1,47 +1,34 @@
-import os
-import h5py
 import numpy as np
+from matplotlib import pyplot as plt
 from voxelwise_tutorials.io import load_hdf5_array
 
-from robustness_test.common_utils.visualization import *
+import os
+from robustness_test.common_utils.visualization import flatmap_subject_voxel_data
 import voxelwise_tutorials.viz as viz
 
+language_model = "bert"
 modality = "reading"
 subject = "01"
 layer = 9
+feature = "low-level" # "low-level" "joint"
 low_level_feature = "numletters"
 
+
+filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
+joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
+path = os.path.join(f"../{language_model}-{feature}-predictions", modality, subject, joint_path_addition, filename)
+print("loading", path)
+correlation = np.load(path, allow_pickle=True)
 mapper = os.path.join("../data", f"subject{subject}_mappers.hdf")
 
-standard_correlation = np.load(os.path.join("../bert-predictions", modality, subject, f"layer_{layer}.npy"),
-                               allow_pickle=True)
-low_level_correlation = np.load(
-    os.path.join("../bert-low-level-predictions", modality, subject, f"{low_level_feature}.npy"), allow_pickle=True)
-joint_correlation = np.load(
-    os.path.join("../bert-joint-predictions", modality, subject, low_level_feature, f"layer_{layer}.npy"),
-    allow_pickle=True)
-intersection = np.load("../bert-variance-partitioning/intersection.npy", allow_pickle=True)
-standard_minus_low_level = np.load("../bert-variance-partitioning/variance_a_minus_b.npy", allow_pickle=True)
-low_level_minus_standard = np.load("../bert-variance-partitioning/variance_b_minus_a.npy", allow_pickle=True)
-
-# relace nans with zeros
-standard_correlation = np.nan_to_num(standard_correlation)
-low_level_correlation = np.nan_to_num(low_level_correlation)
-joint_correlation = np.nan_to_num(joint_correlation)
-intersection = np.nan_to_num(intersection)
-standard_minus_low_level = np.nan_to_num(standard_minus_low_level)
-low_level_minus_standard = np.nan_to_num(low_level_minus_standard)
-
-# plot_model_histogram_comparison(standard_correlation, joint_correlation, "semantic", "joint")
-# plot_model_histogram_comparison(standard_minus_low_level, low_level_minus_standard, "semantic - low-level", "low-level - semantic")
-# plot_model_comparison(standard_minus_low_level, low_level_minus_standard, "semantic - low-level", "low-level - semantic")
-# plot_model_overunder_comparison(standard_minus_low_level, low_level_minus_standard, "semantic - low-level", "low-level - semantic")
+# flatmap_subject_voxel_data(subject_number=subject, data=correlation)
 
 flatmap_mask = load_hdf5_array(mapper, key='flatmap_mask')
 figsize = np.array(flatmap_mask.shape) / 100.
 fig = plt.figure(figsize=figsize)
 ax = fig.add_axes((0, 0, 1, 1))
 ax.axis('off')
+viz.plot_flatmap_from_mapper(correlation, mapper, ax=ax)
 
-ax = viz.plot_flatmap_from_mapper(standard_correlation, mapper, ax=ax)
+fig.suptitle(f"{feature} - Subject {subject} - Layer {layer} - {modality} - {low_level_feature}")
 fig.show()
