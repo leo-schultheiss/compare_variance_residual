@@ -60,7 +60,7 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
                             'odetostepfather', 'souls', 'undertheinfluence']
     testing_story_names = ['wheretheressmoke']
     all_story_names = training_story_names + testing_story_names
-    grids = load_grids_for_stories(all_story_names)
+    grids = load_grids_for_stories(all_story_names, root="../stimuli/grids")
     # Load TRfiles
     trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
     # Make word and phoneme datasequences

@@ -20,9 +20,9 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
     prediction_story_names = ['wheretheressmoke']
     all_story_names = training_story_names + prediction_story_names
-    grids = load_grids_for_stories(all_story_names)
+    grids = load_grids_for_stories(all_story_names, root="../stimuli/grids")
     # Load TRfiles
-    trfiles = load_generic_trfiles(all_story_names, root="stimuli/trfiles")
+    trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
     # Make word and phoneme datasequences
     wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
     eng1000 = SemanticModel.load(os.path.join(data_dir, "english1000sm.hf5"))
