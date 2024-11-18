@@ -106,7 +106,7 @@ def predict_joint_model(data_dir, context_representations, subject_num, modality
     Pstim = np.hstack((prediction_stim, z_base_feature_val))
 
     # Delay stimuli to account for hemodynamic lag
-    numer_of_delays = 6
+    numer_of_delays = 4
     delays = range(1, numer_of_delays + 1)
     Rstim = make_delayed(np.array(Rstim), delays)
     Pstim = make_delayed(np.array(Pstim), delays)
