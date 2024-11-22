@@ -14,15 +14,15 @@ logging.basicConfig(level=logging.DEBUG)
 # These files contain low-level textual and speech features
 def load_low_level_textual_features():
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
-    base_features_train = h5py.File('data/features_trn_NEW.hdf', 'r+')
-    base_features_val = h5py.File('data/features_val_NEW.hdf', 'r+')
+    base_features_train = h5py.File(f'{data_dir}/features_trn_NEW.hdf', 'r+')
+    base_features_val = h5py.File(f'{data_dir}/features_val_NEW.hdf', 'r+')
     return base_features_train, base_features_val
 
 
 def load_low_level_speech_features(lowlevelfeature):
     # 'diphone', 'powspec', 'triphone'
     if lowlevelfeature in ['diphone', 'powspec', 'triphone']:
-        df = h5py.File('data/features_matrix.hdf')
+        df = h5py.File(f'{data_dir}/features_matrix.hdf')
         base_features_train = df[lowlevelfeature + '_train']
         base_features_val = df[lowlevelfeature + '_test']
     elif lowlevelfeature in 'articulation':
@@ -40,7 +40,7 @@ def load_low_level_visual_features():
 
 
 trim = 5
-fdir = 'data/'
+data_dir = '../data/'
 
 
 if __name__ == "__main__":
