@@ -44,6 +44,14 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
     for story in all_story_names:
         downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
+
+    #### save downsampled stimuli
+    # bert_downsampled_data = {}
+    # for eachstory in list(downsampled_semanticseqs.keys()):
+    #     bert_downsampled_data[eachstory] = np.array(downsampled_semanticseqs[eachstory].data)
+    np.save('../bert_downsampled_data', downsampled_semanticseqs)
+    #########
+
     trim = 5
 
     training_stim = np.vstack(
@@ -52,12 +60,7 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
     # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
     # print(story_lengths)
-    #### save downsampled stimuli
-    bert_downsampled_data = {}
-    for eachstory in list(downsampled_semanticseqs.keys()):
-        bert_downsampled_data[eachstory] = np.array(downsampled_semanticseqs[eachstory].data)
-    np.save('bert_downsampled_data', bert_downsampled_data)
-    #########
+
     # Delay stimuli
     numer_of_delays = 4
     delays = range(1, numer_of_delays + 1)
@@ -98,12 +101,10 @@ if __name__ == "__main__":
 
     processes = []
 
-    for modality in ['reading', 'listening']:
-        p = multiprocessing.Process(target=predict_brain_activity,
-                                    args=(args.data_dir, args.subject_num, args.featurename, modality, 'bert_results', args.layer))
-        p.start()
-        processes.append(p)
-
-    for process in processes:
-        process.join()
+    for layer in range(0, 5):
+        print(f"layer {layer}")
+        if layer == 9:
+            continue
+        for modality in ['reading', 'listening']:
+            predict_brain_activity(args.data_dir, args.subject_num, args.featurename, modality, args.dirname, args.layer)
     print("All done")
