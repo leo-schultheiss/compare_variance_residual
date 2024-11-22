@@ -6,6 +6,7 @@ from ridge_utils.ridge import bootstrap_ridge
 
 from robustness_test.common_utils.npp import zscore
 from robustness_test.common_utils.hdf_utils import load_data
+import git
 
 
 def make_delayed(stim, delays, circpad=False):
@@ -96,3 +97,19 @@ def run_regression_and_predict(Rstim, Pstim, data_dir, subject, modality):
     for voxel_index in range(zPresp.shape[1]):
         voxelwise_correlations[voxel_index] = np.corrcoef(zPresp[:, voxel_index], prediction[:, voxel_index])[0, 1]
     return voxelwise_correlations
+
+
+def get_prediction_path(language_model, feature, modality, subject, low_level_feature=None, layer=None):
+    if type(subject) == int:
+        subject = f"{subject:02}"
+
+    filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
+    joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
+
+    def get_git_root():
+        git_repo = git.Repo(".", search_parent_directories=True)
+        git_root = git_repo.git.rev_parse("--show-toplevel")
+        return git_root
+
+    path = os.path.join(get_git_root(), f"{language_model}-{feature}-predictions", modality, subject, joint_path_addition, filename)
+    return path
