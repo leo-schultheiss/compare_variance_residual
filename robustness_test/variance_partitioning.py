@@ -1,5 +1,5 @@
 import os
-
+from robustness_test.common_utils.training_utils import get_prediction_path
 import numpy as np
 
 def ssc(data: np.array):
@@ -8,14 +8,18 @@ def ssc(data: np.array):
     :param data: np.array
     :return: np.array
     """
+    # return data ** 2
     return (data ** 2) * np.sign(data)
 
 
-def variance_partitioning(model_a, model_b, joint_model, output_dir):
+def variance_partitioning(language_model, modality, subject, low_level_feature, layer):
     # load numpy correlation data
-    model_a = np.load(model_a, allow_pickle=True)
-    model_b = np.load(model_b, allow_pickle=True)
-    joint_model = np.load(joint_model, allow_pickle=True)
+    model_a_path = get_prediction_path(language_model, "semantic", modality, subject, low_level_feature, layer)
+    model_b_path = get_prediction_path(language_model, "low-level", modality, subject, low_level_feature, layer)
+    joint_model_path = get_prediction_path(language_model, "joint", modality, subject, low_level_feature, layer)
+    model_a = np.load(model_a_path, allow_pickle=True)
+    model_b = np.load(model_b_path, allow_pickle=True)
+    joint_model = np.load(joint_model_path, allow_pickle=True)
 
     # remove nan values
     model_a = np.nan_to_num(model_a)
@@ -32,23 +36,25 @@ def variance_partitioning(model_a, model_b, joint_model, output_dir):
     variance_a_minus_b = np.sqrt(squared_variance_a_minus_b)
     variance_b_minus_a = np.sqrt(squared_variance_b_minus_a)
 
+    # output directory
+    output_dir = os.path.join(f"{language_model}-variance-partitioning", modality, f"{subject:02}", low_level_feature, str(layer))
     # save the results
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     np.save(os.path.join(output_dir, "intersection.npy"), intersection)
-    np.save(os.path.join(output_dir, "variance_a_minus_b.npy"), variance_a_minus_b)
-    np.save(os.path.join(output_dir, "variance_b_minus_a.npy"), variance_b_minus_a)
+    np.save(os.path.join(output_dir, "semantic_minus_low.npy"), variance_a_minus_b)
+    np.save(os.path.join(output_dir, "low_minus_semantic.npy"), variance_b_minus_a)
 
 
 if __name__ == '__main__':
     import argparse
-
     parser = argparse.ArgumentParser(description="Perform variance partitioning on two models")
-    parser.add_argument("model_a", help="Model correlation data (Feature space A)", type=str)
-    parser.add_argument("model_b", help="Model correlation data (Feature space B)", type=str)
-    parser.add_argument("joint_model", help="Joint model correlation data (Feature space AUB)", type=str)
-    parser.add_argument("output_dir", help="Output directory", type=str)
+    parser.add_argument("--language_model", help="Language model e.g. bert, gpt", type=str, default="bert")
+    parser.add_argument("--modality", help="Modality of subject recording, reading or listening", type=str, default="listening")
+    parser.add_argument("--subject", help="Subject e.g. 1, 2, 3", type=int, default=1)
+    parser.add_argument("--low_level_feature", help="Low level feature e.g. mfcc, prosody", type=str, default="phonemes")
+    parser.add_argument("--layer", help="Layer of the model", type=int, default=9)
     args = parser.parse_args()
     print(args)
 
-    variance_partitioning(args.model_a, args.model_b, args.joint_model, args.output_dir)
+    variance_partitioning(args.language_model, args.modality, args.subject, args.low_level_feature, args.layer)
