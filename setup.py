@@ -28,7 +28,8 @@ requirements = [
     "scipy~=1.14.1",
     "h5py~=3.12.1",
     "ridge-utils~=0.2.0",
-    "gitpython"
+    "gitpython",
+    "himalaya",
 ]
 
 if __name__ == "__main__":
