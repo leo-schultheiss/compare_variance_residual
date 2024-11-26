@@ -30,12 +30,12 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="Train low level feature prediction model")
     parser.add_argument("-d", "--data_dir", help="Directory containing data", type=str, default="../data")
-    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, required=True)
+    parser.add_argument("-s", "--subject_num", help="Subject number", type=int, default=1)
     parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
     parser.add_argument("--low_level_feature", help="Low level feature to use. Possible options include:\n"
                                                     "letters, numletters, numphonemes, numwords, phonemes, word_length_std",
                         type=str, default="letters")
-    parser.add_argument("output_dir", help="Output directory", type=str)
+    parser.add_argument("--output_dir", help="Output directory", type=str, default="../bert-low-level-predictions")
     args = parser.parse_args()
     print(args)
 
@@ -46,12 +46,8 @@ if __name__ == '__main__':
 
     low_level_features = ["letters", "numletters", "numphonemes", "numwords", "phonemes", "word_length_std"]
 
-    for low_level_feature in low_level_features:
-        p = multiprocessing.Process(target=train_low_level_model, args=(
-            args.data_dir, args.subject_num, args.modality, low_level_feature, args.output_dir))
-        p.start()
-        processes.append(p)
+    for subject_num in range(1, 3):
+        for low_level_feature in low_level_features:
+            train_low_level_model(args.data_dir, subject_num, args.modality, low_level_feature, args.output_dir)
 
-    for p in processes:
-        p.join()
     print("All processes finished")
