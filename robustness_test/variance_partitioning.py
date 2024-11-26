@@ -1,4 +1,6 @@
 import os
+
+from build.lib.robustness_test.visualize import joint_correlation
 from robustness_test.common_utils.training_utils import get_prediction_path
 import numpy as np
 
@@ -45,6 +47,32 @@ def variance_partitioning(language_model, modality, subject, low_level_feature, 
     np.save(os.path.join(output_dir, "semantic_minus_low.npy"), variance_a_minus_b)
     np.save(os.path.join(output_dir, "low_minus_semantic.npy"), variance_b_minus_a)
 
+def variance_partitioning_3d(language_model, modality, subject, low_level_features, layer):
+    # single model correlations
+    low_level_correlations = []
+    for low_level_feature in low_level_features.split(","):
+        model_path = get_prediction_path(language_model, "low-level", modality, subject, low_level_feature, layer)
+        model = np.load(model_path, allow_pickle=True)
+        model = np.nan_to_num(model)
+        low_level_correlations.append(model)
+    semantic_correlation = np.load(get_prediction_path(language_model, "semantic", modality, subject, low_level_features, layer), allow_pickle=True)
+    # double model correlations
+    joint_correlations_bi = []
+    for low_level_feature in low_level_features.split(","):
+        model_path = get_prediction_path(language_model, "joint", modality, subject, "semantic," + low_level_feature, layer)
+        model = np.load(model_path, allow_pickle=True)
+        model = np.nan_to_num(model)
+        joint_correlations_bi.append(model)
+    model_path = get_prediction_path(language_model, "joint", modality, subject, low_level_features, layer)
+    model = np.load(model_path, allow_pickle=True)
+    model = np.nan_to_num(model)
+    joint_correlations_bi.append(model)
+    # triple model correlations
+    joint_correlation_tri = np.load(get_prediction_path(language_model, "joint", modality, subject, low_level_features, layer), allow_pickle=True)
+
+    # estimate the explained variance of each model using signed squared correlation
+    squared_intersection = ssc(joint_correlation_tri)
+
 
 if __name__ == '__main__':
     import argparse
@@ -52,9 +80,12 @@ if __name__ == '__main__':
     parser.add_argument("--language_model", help="Language model e.g. bert, gpt", type=str, default="bert")
     parser.add_argument("--modality", help="Modality of subject recording, reading or listening", type=str, default="listening")
     parser.add_argument("--subject", help="Subject e.g. 1, 2, 3", type=int, default=1)
-    parser.add_argument("--low_level_feature", help="Low level feature e.g. mfcc, prosody", type=str, default="phonemes")
+    parser.add_argument("--low_level_feature", help="Low level feature e.g. letters, phonemes...", type=str, default="phonemes")
     parser.add_argument("--layer", help="Layer of the model", type=int, default=9)
     args = parser.parse_args()
     print(args)
 
-    variance_partitioning(args.language_model, args.modality, args.subject, args.low_level_feature, args.layer)
+    if args.low_level_feature.__contains__(","):
+        variance_partitioning_3d(args.language_model, args.modality, args.subject, args.low_level_feature, args.layer)
+    else:
+        variance_partitioning(args.language_model, args.modality, args.subject, args.low_level_feature, args.layer)
