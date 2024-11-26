@@ -101,10 +101,8 @@ if __name__ == "__main__":
 
     processes = []
 
-    for layer in range(0, 5):
+    for layer in range(12):
         print(f"layer {layer}")
-        if layer == 9:
-            continue
         for modality in ['reading', 'listening']:
-            predict_brain_activity(args.data_dir, args.subject_num, args.featurename, modality, args.dirname, args.layer)
+            predict_brain_activity(args.data_dir, args.subject_num, args.featurename, modality, args.dirname, layer)
     print("All done")
