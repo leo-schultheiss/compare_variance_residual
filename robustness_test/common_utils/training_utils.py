@@ -1,15 +1,14 @@
 import os
 
+import git
 import h5py
 import numpy as np
 from ridge_utils.dsutils import make_word_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
 
 from robustness_test.common_utils.SemanticModel import SemanticModel
-from robustness_test.common_utils.npp import zscore
 from robustness_test.common_utils.hdf_utils import load_data
-import git
-
+from robustness_test.common_utils.npp import zscore
 from robustness_test.common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 
 
@@ -48,8 +47,10 @@ def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
     :return z_score_train, z_score_val
     """
     low_level_train, low_level_val = load_low_level_textual_features(data_dir)
-    z_score_train = np.vstack([zscore(low_level_train[story][low_level_feature][5 + trim:-trim]) for story in low_level_train.keys()])
-    z_score_val = np.vstack([zscore(low_level_val[story][low_level_feature][5 + trim:-trim]) for story in low_level_val.keys()])
+    z_score_train = np.vstack(
+        [zscore(low_level_train[story][low_level_feature][5 + trim:-trim]) for story in low_level_train.keys()])
+    z_score_val = np.vstack(
+        [zscore(low_level_val[story][low_level_feature][5 + trim:-trim]) for story in low_level_val.keys()])
     return z_score_train, z_score_val
 
 
@@ -83,18 +84,20 @@ def run_regression_and_predict(Rstim, Pstim, data_dir, subject, modality):
 
 
 def get_prediction_path(language_model, feature, modality, subject, low_level_feature=None, layer=None):
-    if type(subject) == int:
-        subject = f"{subject:02}"
-
-    filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
-    joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
-
     def get_git_root():
         git_repo = git.Repo(".", search_parent_directories=True)
         git_root = git_repo.git.rev_parse("--show-toplevel")
         return git_root
 
-    path = os.path.join(get_git_root(), f"{language_model}-{feature}-predictions", modality, subject, joint_path_addition, filename)
+    if type(subject) == int:
+        subject = f"{subject:02}"
+
+    path_base = os.path.join(get_git_root(), "predictions", language_model, feature, modality, subject)
+
+    filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
+    joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
+
+    path = os.path.join(str(path_base), joint_path_addition, filename)
     return path
 
 
