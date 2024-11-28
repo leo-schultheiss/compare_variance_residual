@@ -29,7 +29,7 @@ requirements = [
     "h5py~=3.12.1",
     "ridge-utils~=0.2.0",
     "gitpython",
-    "himalaya",
+    "himalaya~=0.4.6",
     "scikit-learn~=1.5.2"
 ]
 
