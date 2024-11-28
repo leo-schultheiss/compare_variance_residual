@@ -42,10 +42,8 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     model = RidgeCV()
     model.fit(delayed_Rstim, zRresp)
     voxcorrs = model.score(delayed_Pstim, zPresp)
-    raise NotImplementedError("This function is not implemented yet")
 
-    subject = f'0{subject_num}'
-    main_dir = os.path.join(output_directory, modality, subject)
+    main_dir = os.path.join(output_directory, modality, f'0{subject_num}')
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
@@ -59,7 +57,7 @@ if __name__ == "__main__":
                         type=int, default=9)
     parser.add_argument("--subject_num", help="Choose subject", type=int, default=1)
     parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
-    parser.add_argument("--dirname", help="Choose Directory", type=str, default="../bert-semantic-predictions")
+    parser.add_argument("--dirname", help="Choose Directory", type=str, default="../predictions/bert/semantic")
     args = parser.parse_args()
     print(args)
 
