@@ -30,7 +30,8 @@ requirements = [
     "ridge-utils~=0.2.0",
     "gitpython",
     "himalaya~=0.4.6",
-    "scikit-learn~=1.5.2"
+    "scikit-learn~=1.5.2",
+    "voxelwise_tutorials~=0.1.7",
 ]
 
 if __name__ == "__main__":
