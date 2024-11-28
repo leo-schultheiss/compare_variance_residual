@@ -1,6 +1,6 @@
 import logging
-
 import re
+
 from setuptools import find_packages, setup
 
 # get version from voxelwise_tutorials/__init__.py
@@ -11,7 +11,6 @@ for line in infos:
     if "__version__" in line:
         match = re.search(r"__version__ = '([^']*)'", line)
         __version__ = match.groups()[0]
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,10 +31,12 @@ requirements = [
     "scikit-learn~=1.5.2",
 ]
 
-extras_require = [
-    "matplotlib~=3.9.2",
-    "voxelwise-tutorials~=0.1.7",
-]
+extras_require = {
+    "plotting": [
+        "matplotlib~=3.9.2",
+        "voxelwise-tutorials~=0.1.7"
+    ]
+}
 
 if __name__ == "__main__":
     setup(
