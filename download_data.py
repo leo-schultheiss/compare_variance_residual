@@ -1,12 +1,12 @@
+import logging
 import os
-import requests
-import os
-from tqdm import tqdm
 from urllib.request import urlopen
 
-import logging
+import requests
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
+
 
 def download_file(file_url, download_path="data"):
     # extract file name from url
@@ -107,8 +107,9 @@ for url in [features_matrix_url, features_trn_new_url, features_val_new_url, art
             articulation_test_url]:
     urls.append(url)
 
-for url in urls:
-    try:
-        download_file(url)
-    except Exception as e:
-        print(f"unable to download file from {url}: {e}")
+if __name__ == "__main__":
+    for url in urls:
+        try:
+            download_file(url)
+        except Exception as e:
+            print(f"unable to download file from {url}: {e}")
