@@ -21,7 +21,8 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     :param modality: modality 'reading' or 'listening'
     :param output_directory: output directory
     """
-    predicion_stim, training_stim = load_context_representations_interpolated(data_dir, feature_filename, layer)
+    # Load data
+    predicion_stim, training_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
 
     # Delay stimuli
     numer_of_delays = 4
