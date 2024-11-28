@@ -3,6 +3,8 @@ from matplotlib import pyplot as plt
 
 import os
 
+import robustness_test.common_utils.training_utils
+
 
 def correlation_stat_analysis(correlation, savefig=False, alternate_title=None):
     # print statistics
@@ -46,16 +48,14 @@ def correlation_stat_analysis(correlation, savefig=False, alternate_title=None):
 
 if __name__ == "__main__":
     language_model = "bert"
-    feature = "joint"  # semantic low-level joint
+    feature = "semantic"  # semantic low-level joint
     modality = "reading"
-    subject = "01"
+    subject = 1
     layer = 9
     low_level_feature = "letters"
 
     # Load the data
-    filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
-    joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
-    path = os.path.join(f"../{language_model}-{feature}-predictions", modality, subject, joint_path_addition, filename)
+    path = robustness_test.common_utils.training_utils.get_prediction_path(language_model, feature, modality, subject, layer=layer)
     print("loading", path)
     correlation = np.nan_to_num(np.load(path, allow_pickle=True))
     correlation_stat_analysis(correlation)
