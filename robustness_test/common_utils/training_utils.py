@@ -151,4 +151,4 @@ def load_downsampled_context_representations(data_dir: str, feature_file: str, l
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
     prediction_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
-    return prediction_stim, training_stim
+    return training_stim, prediction_stim
