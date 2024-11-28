@@ -101,7 +101,7 @@ def get_prediction_path(language_model: str, feature: str, modality: str, subjec
     return path
 
 
-def load_context_representations_interpolated(data_dir: str, feature_file: str, layer: int, save_file=None):
+def load_downsampled_context_representations(data_dir: str, feature_file: str, layer: int, save_file=None):
     """
     Load context representations from a file and downsample them to match the TRs
     :param data_dir: directory where data is stored
@@ -132,10 +132,10 @@ def load_context_representations_interpolated(data_dir: str, feature_file: str, 
                        'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
     semanticseqs = dict()
     for i in np.arange(len(all_story_names)):
-        semanticseqs[all_story_names[i]] = []
         temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
         temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
         semanticseqs[all_story_names[i]] = temp
+
     # Downsample stimuli
     interptype = "lanczos"  # filter type
     window = 3  # number of lobes in Lanczos filter
@@ -149,6 +149,6 @@ def load_context_representations_interpolated(data_dir: str, feature_file: str, 
     trim = 5
     training_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
-    predicion_stim = np.vstack(
+    prediction_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
-    return predicion_stim, training_stim
+    return prediction_stim, training_stim
