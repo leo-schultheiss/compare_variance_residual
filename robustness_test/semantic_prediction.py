@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 
 import os
-from himalaya.ridge import RidgeCV
+from himalaya.ridge import RidgeCV, Ridge
 from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.training_utils import load_context_representations_interpolated, load_subject_fmri
@@ -39,9 +39,8 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     print("Presp.shape: ", zPresp.shape)
 
     # Run regression
-    model = RidgeCV(alphas=np.logspace(0, 4, 10))
+    model = Ridge(alpha=np.logspace(0, 4, 10))
     model.fit(delayed_Rstim, zRresp)
-    print("Model alpha: ", model.alphas)
     voxcorrs = model.score(delayed_Pstim, zPresp)
 
     main_dir = os.path.join(output_directory, modality, f'{subject_num:02}')
