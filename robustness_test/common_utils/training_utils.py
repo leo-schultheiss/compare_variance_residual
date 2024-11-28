@@ -4,7 +4,6 @@ import git
 import h5py
 import numpy as np
 from ridge_utils.dsutils import make_word_ds, make_semantic_model
-from ridge_utils.ridge import bootstrap_ridge
 
 from robustness_test.common_utils.SemanticModel import SemanticModel
 from robustness_test.common_utils.hdf_utils import load_data
@@ -37,7 +36,7 @@ def load_low_level_textual_features(data_dir):
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
     base_features_train = h5py.File(os.path.join(data_dir, 'features_trn_NEW.hdf'), 'r')
     base_features_val = h5py.File(os.path.join(data_dir, 'features_val_NEW.hdf'), 'r')
-    return np.nan_to_num(base_features_train), np.nan_to_num(base_features_val)
+    return base_features_train, base_features_val
 
 
 def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
@@ -51,10 +50,11 @@ def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
         [zscore(low_level_train[story][low_level_feature][5 + trim:-trim]) for story in low_level_train.keys()])
     z_score_val = np.vstack(
         [zscore(low_level_val[story][low_level_feature][5 + trim:-trim]) for story in low_level_val.keys()])
-    return z_score_train, z_score_val
+    return np.nan_to_num(z_score_train), np.nan_to_num(z_score_val)
 
 
-def get_prediction_path(language_model: str, feature: str, modality: str, subject: int, low_level_feature=None, layer=None):
+def get_prediction_path(language_model: str | None, feature: str, modality: str, subject: int, low_level_feature=None,
+                        layer=None):
     def get_git_root():
         git_repo = git.Repo(".", search_parent_directories=True)
         git_root = git_repo.git.rev_parse("--show-toplevel")
