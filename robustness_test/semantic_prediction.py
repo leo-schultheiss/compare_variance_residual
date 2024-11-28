@@ -39,8 +39,9 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     print("Presp.shape: ", zPresp.shape)
 
     # Run regression
-    model = RidgeCV()
+    model = RidgeCV(alphas=np.logspace(0, 4, 10))
     model.fit(delayed_Rstim, zRresp)
+    print("Model alpha: ", model.alphas)
     voxcorrs = model.score(delayed_Pstim, zPresp)
 
     main_dir = os.path.join(output_directory, modality, f'0{subject_num}')
