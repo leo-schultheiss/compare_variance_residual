@@ -25,6 +25,9 @@ def load_subject_fmri(data_dir: str, subject: int, modality: str):
     zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
     zPresp = np.vstack([zscore(tstdata5[story][1][5 + trim:-trim - 5]) for story in tstdata5.keys()])
 
+    zRresp = np.nan_to_num(zRresp)
+    zPresp = np.nan_to_num(zPresp)
+
     return zRresp, zPresp
 
 
