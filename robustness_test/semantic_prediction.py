@@ -9,8 +9,18 @@ from robustness_test.common_utils.training_utils import load_context_representat
 trim = 5
 
 
-def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname, layer):
-    predicion_stim, training_stim = load_context_representations_interpolated(data_dir, featurename, layer)
+def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, subject_num: int, modality: str,
+                           output_directory: str):
+    """
+    Predict brain activity using semantic representations of words
+    :param data_dir: data directory
+    :param feature_filename: feature name
+    :param layer: layer of natural language model to use for semantic representation of words
+    :param subject_num: subject number
+    :param modality: modality 'reading' or 'listening'
+    :param output_directory: output directory
+    """
+    predicion_stim, training_stim = load_context_representations_interpolated(data_dir, feature_filename, layer)
     # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
     # print(story_lengths)
 
@@ -27,7 +37,7 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     # print("delRstim shape: ", delayed_Rstim.shape)
     # print("delPstim shape: ", delayed_Pstim.shape)
     subject = f'0{subject_num}'
-    main_dir = os.path.join(dirname, modality, subject)
+    main_dir = os.path.join(output_directory, modality, subject)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     # Run regression
@@ -42,23 +52,14 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Predict brain activity")
     parser.add_argument("--data_dir", help="Choose data directory", type=str, default="../data")
-    parser.add_argument("--subject_num", help="Choose subject", type=int, default=1)
-    parser.add_argument("--featurename", help="Choose feature", type=str, default="../bert_base20.npy")
-    parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
+    parser.add_argument("--feature_filename", help="Choose feature", type=str, default="../bert_base20.npy")
     parser.add_argument("--layer", help="Layer of natural language model to use for semantic representation of words",
                         type=int, default=9)
+    parser.add_argument("--subject_num", help="Choose subject", type=int, default=1)
+    parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
     parser.add_argument("--dirname", help="Choose Directory", type=str, default="../bert-semantic-predictions")
     args = parser.parse_args()
     print(args)
 
-    # predict_brain_activity(args.data_dir, args.subject_num, args.featurename, args.modality, args.dirname, args.layer)
-
-    import multiprocessing
-
-    processes = []
-
-    for layer in range(12):
-        print(f"layer {layer}")
-        for modality in ['reading', 'listening']:
-            predict_brain_activity(args.data_dir, args.subject_num, args.featurename, modality, args.dirname, layer)
-    print("All done")
+    predict_brain_activity(args.data_dir, args.feature_filename, args.layer, args.subject_num, args.modality,
+                           args.dirname)
