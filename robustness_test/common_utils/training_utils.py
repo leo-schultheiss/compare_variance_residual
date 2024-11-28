@@ -9,30 +9,6 @@ from robustness_test.common_utils.hdf_utils import load_data
 import git
 
 
-def make_delayed(stim, delays, circpad=False):
-    """Creates non-interpolated concatenated delayed versions of [stim] with the given [delays]
-    (in samples).
-
-    If [circpad], instead of being padded with zeros, [stim] will be circularly shifted.
-    """
-    nt, ndim = stim.shape
-    dstims = []
-    for di, d in enumerate(delays):
-        dstim = np.zeros((nt, ndim))
-        if d < 0:  ## negative delay
-            dstim[:d, :] = stim[-d:, :]
-            if circpad:
-                dstim[d:, :] = stim[:-d, :]
-        elif d > 0:
-            dstim[d:, :] = stim[:-d, :]
-            if circpad:
-                dstim[:d, :] = stim[-d:, :]
-        else:  ## d==0
-            dstim = stim.copy()
-        dstims.append(dstim)
-    return np.hstack(dstims)
-
-
 def load_subject_fmri(data_dir, subject, modality):
     """Load fMRI data for a subject, z-scored across stories"""
     fname_tr5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_trn.hdf')
