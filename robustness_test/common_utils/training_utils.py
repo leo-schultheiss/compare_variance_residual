@@ -37,7 +37,7 @@ def load_low_level_textual_features(data_dir):
     # 'letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std'
     base_features_train = h5py.File(os.path.join(data_dir, 'features_trn_NEW.hdf'), 'r')
     base_features_val = h5py.File(os.path.join(data_dir, 'features_val_NEW.hdf'), 'r')
-    return base_features_train, base_features_val
+    return np.nan_to_num(base_features_train), np.nan_to_num(base_features_val)
 
 
 def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
@@ -54,35 +54,6 @@ def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
     return z_score_train, z_score_val
 
 
-def run_regression_and_predict(Rstim, Pstim, data_dir, subject, modality):
-    """
-    Train a joint model for two feature spaces
-    :param Rstim Training stimuli with TR time points and N features. Each feature should be Z-scored across time
-    :param Pstim Test stimuli with TP time points and M features. Each feature should be Z-scored across time
-    :param data_dir Directory containing fMRI data
-    :param subject number from 1 to 9
-    :param modality Type of modality of the data, reading or listening
-    :return voxelwise_correlations – Predictions of the joint model per layer
-    """
-    # Run regression
-    nboots = 1  # Number of cross-validation runs.
-    chunklen = 40  # Length of chunks to break data into.
-    nchunks = 20  # Number of chunks to use in the cross-validated training.
-    # Training responses with TR time points and M different responses
-    zRresp, zPresp = load_subject_fmri(data_dir, subject, modality)
-    # Equally log-spaced alphas between 10 and 1000. The third number is the number of alphas to test.
-    alphas = np.logspace(1, 3, 10)
-    wt, corr, alphas, bscorrs, valinds = bootstrap_ridge(np.nan_to_num(Rstim), zRresp,
-                                                         np.nan_to_num(Pstim), zPresp,
-                                                         alphas, nboots, chunklen, nchunks,
-                                                         singcutoff=1e-10, single_alpha=True)
-    prediction = np.dot(np.nan_to_num(Pstim), wt)
-    voxelwise_correlations = np.zeros((zPresp.shape[1],))  # create zero-filled array to hold correlations
-    for voxel_index in range(zPresp.shape[1]):
-        voxelwise_correlations[voxel_index] = np.corrcoef(zPresp[:, voxel_index], prediction[:, voxel_index])[0, 1]
-    return voxelwise_correlations
-
-
 def get_prediction_path(language_model: str, feature: str, modality: str, subject: int, low_level_feature=None, layer=None):
     def get_git_root():
         git_repo = git.Repo(".", search_parent_directories=True)
@@ -92,7 +63,10 @@ def get_prediction_path(language_model: str, feature: str, modality: str, subjec
     if type(subject) == int:
         subject = f"{subject:02}"
 
-    path_base = os.path.join(get_git_root(), "predictions", language_model, feature, modality, subject)
+    if language_model is None:
+        path_base = os.path.join(get_git_root(), "predictions", feature, modality, subject)
+    else:
+        path_base = os.path.join(get_git_root(), "predictions", language_model, feature, modality, subject)
 
     filename = f"{low_level_feature}.npy" if feature == "low-level" else f"layer_{layer}.npy"
     joint_path_addition = f"{low_level_feature}" if feature == "joint" else ""
@@ -111,7 +85,6 @@ def load_downsampled_context_representations(data_dir: str, feature_file: str, l
     :return: downsampled context representations
     """
     stimul_features = np.load(feature_file, allow_pickle=True)
-    # print(stimul_features.item().keys())
     training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
                             'life', 'myfirstdaywiththeyankees', 'naked',
                             'odetostepfather', 'souls', 'undertheinfluence']
@@ -119,7 +92,6 @@ def load_downsampled_context_representations(data_dir: str, feature_file: str, l
     prediction_story_names = ['wheretheressmoke']
     all_story_names = training_story_names + prediction_story_names
     grids = load_grids_for_stories(all_story_names, root="../stimuli/grids")
-    # Load TRfiles
     trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
     # Make word and phoneme datasequences
     wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
