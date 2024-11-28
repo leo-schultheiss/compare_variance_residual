@@ -30,6 +30,7 @@ requirements = [
     "ridge-utils~=0.2.0",
     "gitpython",
     "himalaya",
+    "scikit-learn~=1.5.2"
 ]
 
 if __name__ == "__main__":
