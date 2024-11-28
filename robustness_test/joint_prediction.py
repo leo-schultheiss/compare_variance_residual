@@ -4,11 +4,12 @@ import numpy as np
 import logging
 from ridge_utils.dsutils import make_word_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
+from ridge_utils.util import make_delayed
 
 from common_utils.SemanticModel import SemanticModel
 from common_utils.npp import zscore
 from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
-from common_utils.training_utils import make_delayed, load_subject_fmri, \
+from common_utils.training_utils import load_subject_fmri, \
     load_low_level_textual_features
 
 logging.basicConfig(level=logging.DEBUG)
