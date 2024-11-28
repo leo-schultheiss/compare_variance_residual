@@ -1,14 +1,14 @@
 import os.path
 
 import numpy as np
-from himalay.ridge import RidgeCV
+from himalaya.ridge import RidgeCV
 from ridge_utils.util import make_delayed
 
 from common_utils.training_utils import load_z_low_level_feature, load_subject_fmri
 from robustness_test.common_utils.training_utils import get_prediction_path
 
 
-def train_low_level_model(data_dir, subject_num, modality, low_level_feature, output_dir, numer_of_delays=4):
+def train_low_level_model(data_dir, subject_num, modality, low_level_feature, numer_of_delays=4):
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
     print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
@@ -21,6 +21,7 @@ def train_low_level_model(data_dir, subject_num, modality, low_level_feature, ou
     print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
     model = RidgeCV(alphas=np.logspace(0, 3, 10), cv=5)
     model.fit(Rstim, Rresp)
+    print(model.alpha)
     voxelwise_correlations = model.score(Pstim, Presp)
 
     # save voxelwise correlations and predictions
@@ -42,18 +43,7 @@ if __name__ == '__main__':
     parser.add_argument("--low_level_feature", help="Low level feature to use. Possible options include:\n"
                                                     "letters, numletters, numphonemes, numwords, phonemes, word_length_std",
                         type=str, default="letters")
-    parser.add_argument("--output_dir", help="Output directory", type=str, default="../bert-low-level-predictions")
     args = parser.parse_args()
     print(args)
 
-    # train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature, args.output_dir)
-
-    processes = []
-
-    low_level_features = ["letters", "numletters", "numphonemes", "numwords", "phonemes", "word_length_std"]
-
-    for subject_num in range(1, 3):
-        for low_level_feature in low_level_features:
-            train_low_level_model(args.data_dir, subject_num, args.modality, low_level_feature, args.output_dir)
-
-    print("All processes finished")
+    train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
