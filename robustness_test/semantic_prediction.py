@@ -21,15 +21,11 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     :param output_directory: output directory
     """
     predicion_stim, training_stim = load_context_representations_interpolated(data_dir, feature_filename, layer)
-    # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
-    # print(story_lengths)
 
     # Delay stimuli
     numer_of_delays = 4
     delays = range(1, numer_of_delays + 1)
-
-    # print("FIR model delays: ", delays)
-    # print(np.array(training_stim).shape)
+    print("FIR model delays: ", delays)
 
     delayed_Rstim = make_delayed(np.array(training_stim), delays)
     delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
