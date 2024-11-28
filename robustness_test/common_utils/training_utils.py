@@ -13,7 +13,7 @@ import git
 from robustness_test.common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 
 
-def load_subject_fmri(data_dir, subject, modality):
+def load_subject_fmri(data_dir: str, subject: int, modality: str):
     """Load fMRI data for a subject, z-scored across stories"""
     fname_tr5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_trn.hdf')
     trndata5 = load_data(fname_tr5)
@@ -95,7 +95,7 @@ def get_prediction_path(language_model, feature, modality, subject, low_level_fe
     return path
 
 
-def load_context_representations_interpolated(data_dir, feature_file, layer, save_file=None):
+def load_context_representations_interpolated(data_dir: str, feature_file: str, layer: int, save_file=None):
     """
     Load context representations from a file and downsample them to match the TRs
     :param data_dir: directory where data is stored
