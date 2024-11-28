@@ -17,8 +17,9 @@ def train_low_level_model(data_dir, subject_num, modality, low_level_feature, nu
     delays = range(1, numer_of_delays + 1)
     delayed_Rstim = make_delayed(np.array(Rstim), delays)
     delayed_Pstim = make_delayed(np.array(Pstim), delays)
-
     print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
+
+    # train model
     model = RidgeCV(alphas=np.logspace(0, 3, 10), cv=5)
     model.fit(Rstim, Rresp)
     print(model.alpha)
