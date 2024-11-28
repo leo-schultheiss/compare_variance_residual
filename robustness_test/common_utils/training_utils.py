@@ -55,6 +55,16 @@ def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
 
 def get_prediction_path(language_model: str | None, feature: str, modality: str, subject: int, low_level_feature=None,
                         layer=None):
+    """
+    Get the path to the predictions for a given subject, feature, modality, and language model
+    :param language_model: language model used for prediction
+    :param feature: feature used for prediction
+    :param modality: modality used for prediction
+    :param subject: subject number
+    :param low_level_feature: low-level feature used for prediction
+    :param layer: layer of the model used for prediction
+    :return: path to the predictions
+    """
     def get_git_root():
         git_repo = git.Repo(".", search_parent_directories=True)
         git_root = git_repo.git.rev_parse("--show-toplevel")
