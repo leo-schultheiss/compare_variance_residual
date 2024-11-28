@@ -24,14 +24,17 @@ requirements = [
     "pandas~=2.2.3",
     "numpy~=2.1.2",
     "tables~=3.10.1",
-    "matplotlib~=3.9.2",
     "scipy~=1.14.1",
     "h5py~=3.12.1",
     "ridge-utils~=0.2.0",
     "gitpython",
     "himalaya~=0.4.6",
     "scikit-learn~=1.5.2",
-    "voxelwise_tutorials~=0.1.7",
+]
+
+extras_require = [
+    "matplotlib~=3.9.2",
+    "voxelwise-tutorials~=0.1.7",
 ]
 
 if __name__ == "__main__":
@@ -44,7 +47,7 @@ if __name__ == "__main__":
         version=__version__,
         packages=find_packages(),
         install_requires=requirements,
-        # extras_require=extras_require,
+        extras_require=extras_require,
         # long_description=long_description,
         long_description_content_type='text/x-rst',
     )
