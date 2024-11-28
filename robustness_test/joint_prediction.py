@@ -20,7 +20,7 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
         if feature == "semantic":
             training_stim, prediction_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
         elif feature in ['letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std']:
-            prediction_stim, training_stim = load_z_low_level_feature(data_dir, feature)
+            training_stim, prediction_stim = load_z_low_level_feature(data_dir, feature)
         else:
             raise ValueError(f"Textual feature {feature} not found in the dataset")
         print("training_stim.shape: ", training_stim.shape)
