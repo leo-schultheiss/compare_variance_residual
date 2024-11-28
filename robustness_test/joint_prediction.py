@@ -5,15 +5,14 @@ import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
-from common_utils.npp import zscore
-from common_utils.training_utils import load_subject_fmri, load_low_level_textual_features, \
-    load_downsampled_context_representations, get_prediction_path, load_z_low_level_feature
-from plotting.display_rois_variance import language_model, subject
+from common_utils.training_utils import load_subject_fmri, load_downsampled_context_representations, \
+    get_prediction_path, load_z_low_level_feature
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-def predict_joint_model(data_dir, feature_filename, subject_num, modality, layer, textual_features, output_dir):
+def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
+                        output_dir):
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = [], []
     # join input features (context representations and low-level textual features)
@@ -41,7 +40,7 @@ def predict_joint_model(data_dir, feature_filename, subject_num, modality, layer
     voxelwise_correlations = model.score(Pstim, Presp)
 
     # save voxelwise correlations and predictions
-    output_file = get_prediction_path(language_model, "joint", modality, subject, textual_features, layer)
+    output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
     output_dir = os.path.dirname(output_file)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -56,6 +55,8 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--feature_filename",
                         help="File with context representations from LM for each story", type=str,
                         default="../bert_base20.npy")
+    parser.add_argument("--language_model", help="Language model, where the features are extracted from", type=str,
+                        default="bert")
     parser.add_argument("-s", "--subject_num", help="Subject number", type=int, default=1)
     parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="listening")
     parser.add_argument("-l", "--layer", help="layer of the language model to use as input", type=int, default=9)
@@ -67,5 +68,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    predict_joint_model(args.data_dir, args.feature_filename, args.subject_num, args.modality, args.layer,
-                        args.textual_features, args.output_dir)
+    predict_joint_model(args.data_dir, args.feature_filename, args.language_model, args.subject_num, args.modality,
+                        args.layer, args.textual_features, args.output_dir)
