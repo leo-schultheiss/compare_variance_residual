@@ -83,7 +83,7 @@ def run_regression_and_predict(Rstim, Pstim, data_dir, subject, modality):
     return voxelwise_correlations
 
 
-def get_prediction_path(language_model, feature, modality, subject, low_level_feature=None, layer=None):
+def get_prediction_path(language_model: str, feature: str, modality: str, subject: int, low_level_feature=None, layer=None):
     def get_git_root():
         git_repo = git.Repo(".", search_parent_directories=True)
         git_root = git_repo.git.rev_parse("--show-toplevel")
