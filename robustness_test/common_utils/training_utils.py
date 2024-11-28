@@ -2,11 +2,15 @@ import os
 
 import h5py
 import numpy as np
+from ridge_utils.dsutils import make_word_ds, make_semantic_model
 from ridge_utils.ridge import bootstrap_ridge
 
+from robustness_test.common_utils.SemanticModel import SemanticModel
 from robustness_test.common_utils.npp import zscore
 from robustness_test.common_utils.hdf_utils import load_data
 import git
+
+from robustness_test.common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 
 
 def load_subject_fmri(data_dir, subject, modality):
@@ -89,3 +93,56 @@ def get_prediction_path(language_model, feature, modality, subject, low_level_fe
 
     path = os.path.join(get_git_root(), f"{language_model}-{feature}-predictions", modality, subject, joint_path_addition, filename)
     return path
+
+
+def load_context_representations_interpolated(data_dir, feature_file, layer, save_file=None):
+    """
+    Load context representations from a file and downsample them to match the TRs
+    :param data_dir: directory where data is stored
+    :param feature_file: name of the file containing the context representations
+    :param layer: layer of the model to use
+    :param save_file: name of the file to save the downsampled context representations
+    :return: downsampled context representations
+    """
+    stimul_features = np.load(feature_file, allow_pickle=True)
+    # print(stimul_features.item().keys())
+    training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
+                            'life', 'myfirstdaywiththeyankees', 'naked',
+                            'odetostepfather', 'souls', 'undertheinfluence']
+    # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
+    prediction_story_names = ['wheretheressmoke']
+    all_story_names = training_story_names + prediction_story_names
+    grids = load_grids_for_stories(all_story_names, root="../stimuli/grids")
+    # Load TRfiles
+    trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
+    # Make word and phoneme datasequences
+    wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
+    eng1000 = SemanticModel.load(os.path.join(data_dir, "english1000sm.hf5"))
+    semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
+    for story in all_story_names:
+        semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
+    story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
+                       'life', 'myfirstdaywiththeyankees', 'naked',
+                       'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
+    semanticseqs = dict()
+    for i in np.arange(len(all_story_names)):
+        semanticseqs[all_story_names[i]] = []
+        temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
+        temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
+        semanticseqs[all_story_names[i]] = temp
+    # Downsample stimuli
+    interptype = "lanczos"  # filter type
+    window = 3  # number of lobes in Lanczos filter
+    downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
+    for story in all_story_names:
+        downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
+
+    if save_file:
+        np.save(save_file, downsampled_semanticseqs)
+
+    trim = 5
+    training_stim = np.vstack(
+        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
+    predicion_stim = np.vstack(
+        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
+    return predicion_stim, training_stim

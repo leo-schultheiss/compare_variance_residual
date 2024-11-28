@@ -1,15 +1,10 @@
 import numpy as np
 import argparse
 
-from common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
-from ridge_utils.dsutils import make_word_ds, make_semantic_model
-from common_utils.SemanticModel import SemanticModel
 import os
-from common_utils.npp import zscore
-from common_utils.training_utils import run_regression_and_predict, make_delayed
 from himalaya.ridge import GroupRidgeCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
+
+from robustness_test.common_utils.training_utils import load_context_representations_interpolated
 
 trim = 5
 
@@ -42,53 +37,6 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     raise NotImplementedError("This function is not implemented yet")
 
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
-
-
-def load_context_representations_interpolated(data_dir, featurename, layer):
-    stimul_features = np.load(featurename, allow_pickle=True)
-    # print(stimul_features.item().keys())
-    training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
-                            'life', 'myfirstdaywiththeyankees', 'naked',
-                            'odetostepfather', 'souls', 'undertheinfluence']
-    # Pstories are the test (or Prediction) stories (well, story), which we will use to test our models
-    prediction_story_names = ['wheretheressmoke']
-    all_story_names = training_story_names + prediction_story_names
-    grids = load_grids_for_stories(all_story_names, root="../stimuli/grids")
-    # Load TRfiles
-    trfiles = load_generic_trfiles(all_story_names, root="../stimuli/trfiles")
-    # Make word and phoneme datasequences
-    wordseqs = make_word_ds(grids, trfiles)  # dictionary of {storyname : word DataSequence}
-    eng1000 = SemanticModel.load(os.path.join(data_dir, "english1000sm.hf5"))
-    semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
-    for story in all_story_names:
-        semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
-    story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
-                       'life', 'myfirstdaywiththeyankees', 'naked',
-                       'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
-    semanticseqs = dict()
-    for i in np.arange(len(all_story_names)):
-        semanticseqs[all_story_names[i]] = []
-        temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
-        temp.data = np.nan_to_num(stimul_features.item()[story_filenames[i]][layer])
-        semanticseqs[all_story_names[i]] = temp
-    # Downsample stimuli
-    interptype = "lanczos"  # filter type
-    window = 3  # number of lobes in Lanczos filter
-    downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
-    for story in all_story_names:
-        downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
-    #### save downsampled stimuli
-    # bert_downsampled_data = {}
-    # for eachstory in list(downsampled_semanticseqs.keys()):
-    #     bert_downsampled_data[eachstory] = np.array(downsampled_semanticseqs[eachstory].data)
-    np.save('../bert_downsampled_data', downsampled_semanticseqs)
-    #########
-    trim = 5
-    training_stim = np.vstack(
-        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
-    predicion_stim = np.vstack(
-        [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
-    return predicion_stim, training_stim
 
 
 if __name__ == "__main__":
