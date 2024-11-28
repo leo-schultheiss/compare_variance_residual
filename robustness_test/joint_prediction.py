@@ -6,8 +6,8 @@ from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
 from common_utils.npp import zscore
-from common_utils.training_utils import load_subject_fmri, \
-    load_low_level_textual_features, load_downsampled_context_representations, get_prediction_path
+from common_utils.training_utils import load_subject_fmri, load_low_level_textual_features, \
+    load_downsampled_context_representations, get_prediction_path, load_z_low_level_feature
 from plotting.display_rois_variance import language_model, subject
 
 logging.basicConfig(level=logging.DEBUG)
@@ -17,28 +17,22 @@ def predict_joint_model(data_dir, feature_filename, subject_num, modality, layer
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = [], []
     # join input features (context representations and low-level textual features)
-    low_level_train, low_level_val = load_low_level_textual_features(data_dir)
     for feature in textual_features.split(","):
         if feature == "semantic":
             training_stim, prediction_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
-        elif feature in low_level_train['story_01'].keys():
-            training_stim = (
-                np.vstack([zscore(low_level_train[story][feature][5 + 5:-5]) for story in low_level_train.keys()]))
-            prediction_stim = (
-                np.vstack([zscore(low_level_val[story][feature][5 + 5:-5]) for story in low_level_val.keys()]))
+        elif feature in ['letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std']:
+            prediction_stim, training_stim = load_z_low_level_feature(data_dir, feature)
         else:
             raise ValueError(f"Textual feature {feature} not found in the dataset")
-
         print("training_stim.shape: ", training_stim.shape)
         print("prediction_stim.shape: ", prediction_stim.shape)
         Rstim.append(training_stim)
         Pstim.append(prediction_stim)
 
-
     # Delay stimuli to account for hemodynamic lag
     numer_of_delays = 4
     delays = range(1, numer_of_delays + 1)
-    for feature in len(Rstim):
+    for feature in range(len(Rstim)):
         Rstim[feature] = make_delayed(Rstim[feature], delays)
         Pstim[feature] = make_delayed(Pstim[feature], delays)
 
