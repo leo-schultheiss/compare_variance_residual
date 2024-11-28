@@ -7,11 +7,44 @@ from common_utils.SemanticModel import SemanticModel
 import os
 from common_utils.npp import zscore
 from common_utils.training_utils import run_regression_and_predict, make_delayed
+from himalaya.ridge import GroupRidgeCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 
 trim = 5
 
 
 def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname, layer):
+    predicion_stim, training_stim = load_context_representations_interpolated(data_dir, featurename, layer)
+    # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
+    # print(story_lengths)
+
+    # Delay stimuli
+    numer_of_delays = 4
+    delays = range(1, numer_of_delays + 1)
+
+    # print("FIR model delays: ", delays)
+    # print(np.array(training_stim).shape)
+
+    delayed_Rstim = make_delayed(np.array(training_stim), delays)
+    delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
+
+    # print("delRstim shape: ", delayed_Rstim.shape)
+    # print("delPstim shape: ", delayed_Pstim.shape)
+    subject = f'0{subject_num}'
+    main_dir = os.path.join(dirname, modality, subject)
+    if not os.path.exists(main_dir):
+        os.makedirs(main_dir)
+    # Run regression
+    model = GroupRidgeCV(alphas=np.logspace(0, 4, 10), groups=story_lengths, cv=5, n_jobs=1)
+    voxcorrs = None
+    # voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subject_num, modality)
+    raise NotImplementedError("This function is not implemented yet")
+
+    np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
+
+
+def load_context_representations_interpolated(data_dir, featurename, layer):
     stimul_features = np.load(featurename, allow_pickle=True)
     # print(stimul_features.item().keys())
     training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
@@ -44,43 +77,18 @@ def predict_brain_activity(data_dir, subject_num, featurename, modality, dirname
     downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
     for story in all_story_names:
         downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
-
     #### save downsampled stimuli
     # bert_downsampled_data = {}
     # for eachstory in list(downsampled_semanticseqs.keys()):
     #     bert_downsampled_data[eachstory] = np.array(downsampled_semanticseqs[eachstory].data)
     np.save('../bert_downsampled_data', downsampled_semanticseqs)
     #########
-
     trim = 5
-
     training_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in training_story_names])
     predicion_stim = np.vstack(
         [zscore(downsampled_semanticseqs[story][5 + trim:-trim]) for story in prediction_story_names])
-    # story_lengths = [len(downsampled_semanticseqs[story][0][5 + trim:-trim]) for story in training_story_names]
-    # print(story_lengths)
-
-    # Delay stimuli
-    numer_of_delays = 4
-    delays = range(1, numer_of_delays + 1)
-
-    # print("FIR model delays: ", delays)
-    # print(np.array(training_stim).shape)
-
-    delayed_Rstim = make_delayed(np.array(training_stim), delays)
-    delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
-
-    # print("delRstim shape: ", delayed_Rstim.shape)
-    # print("delPstim shape: ", delayed_Pstim.shape)
-    subject = f'0{subject_num}'
-    main_dir = os.path.join(dirname, modality, subject)
-    if not os.path.exists(main_dir):
-        os.makedirs(main_dir)
-    # Run regression
-    voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subject_num, modality)
-
-    np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
+    return predicion_stim, training_stim
 
 
 if __name__ == "__main__":
