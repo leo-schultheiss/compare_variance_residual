@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 
 import os
-from himalaya.ridge import GroupRidgeCV
+from himalaya.ridge import RidgeCV
 from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.training_utils import load_context_representations_interpolated, load_subject_fmri
@@ -39,7 +39,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     print("Presp.shape: ", zPresp.shape)
 
     # Run regression
-    model = GroupRidgeCV(groups="inputs", cv=5)
+    model = RidgeCV()
     model.fit(delayed_Rstim, zRresp)
     voxcorrs = model.score(delayed_Pstim, zPresp)
     raise NotImplementedError("This function is not implemented yet")
