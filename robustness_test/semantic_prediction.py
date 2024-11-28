@@ -44,7 +44,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     print("Model alpha: ", model.alphas)
     voxcorrs = model.score(delayed_Pstim, zPresp)
 
-    main_dir = os.path.join(output_directory, modality, f'0{subject_num}')
+    main_dir = os.path.join(output_directory, modality, f'{subject_num:02}')
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
