@@ -3,8 +3,9 @@ import argparse
 
 import os
 from himalaya.ridge import GroupRidgeCV
+from ridge_utils.util import make_delayed
 
-from robustness_test.common_utils.training_utils import load_context_representations_interpolated
+from robustness_test.common_utils.training_utils import load_context_representations_interpolated, load_subject_fmri
 
 trim = 5
 
@@ -30,18 +31,23 @@ def predict_brain_activity(data_dir: str, feature_filename: str, layer: int, sub
     delayed_Rstim = make_delayed(np.array(training_stim), delays)
     delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
 
-    # print("delRstim shape: ", delayed_Rstim.shape)
-    # print("delPstim shape: ", delayed_Pstim.shape)
+    zRresp, zPresp = load_subject_fmri(data_dir, subject_num, modality)
+
+    print("Rstim.shape: ", delayed_Rstim.shape)
+    print("Rresp.shape: ", zRresp.shape)
+    print("Pstim.shape: ", delayed_Pstim.shape)
+    print("Presp.shape: ", zPresp.shape)
+
+    # Run regression
+    model = GroupRidgeCV(groups="inputs", cv=5)
+    model.fit(delayed_Rstim, zRresp)
+    voxcorrs = model.score(delayed_Pstim, zPresp)
+    raise NotImplementedError("This function is not implemented yet")
+
     subject = f'0{subject_num}'
     main_dir = os.path.join(output_directory, modality, subject)
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
-    # Run regression
-    model = GroupRidgeCV(alphas=np.logspace(0, 4, 10), groups=story_lengths, cv=5, n_jobs=1)
-    voxcorrs = None
-    # voxcorrs = run_regression_and_predict(delayed_Rstim, delayed_Pstim, data_dir, subject_num, modality)
-    raise NotImplementedError("This function is not implemented yet")
-
     np.save(os.path.join(str(main_dir), "layer_" + str(layer)), voxcorrs)
 
 
