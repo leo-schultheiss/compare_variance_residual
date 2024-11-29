@@ -34,7 +34,8 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
 
     # Fit model
     solver_params = {
-        'alphas': np.logspace(1, 4, 10),
+        'n_iter': 3,
+        'alphas': np.logspace(0, 4, 10),
         'score_func': himalaya.scoring.correlation_score,
         'progress_bar': True,
     }
