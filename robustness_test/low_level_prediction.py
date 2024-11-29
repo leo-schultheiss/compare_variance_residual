@@ -5,8 +5,7 @@ import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
-from common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri
-from robustness_test.common_utils.feature_utils import get_prediction_path
+from robustness_test.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, get_prediction_path
 
 
 def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, number_of_delays=4):
