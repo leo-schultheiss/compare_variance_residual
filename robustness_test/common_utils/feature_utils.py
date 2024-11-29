@@ -73,7 +73,7 @@ def get_prediction_path(language_model: str | None, feature: str, modality: str,
     if type(subject) == int:
         subject = f"{subject:02}"
 
-    if language_model is None:
+    if feature == "low-level":
         path_base = os.path.join(get_git_root(), "predictions", feature, modality, subject)
     else:
         path_base = os.path.join(get_git_root(), "predictions", language_model, feature, modality, subject)
