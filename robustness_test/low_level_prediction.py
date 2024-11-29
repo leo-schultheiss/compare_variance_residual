@@ -1,7 +1,8 @@
 import os.path
 
+import himalaya
 import numpy as np
-from himalaya.ridge import RidgeCV
+from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
 from common_utils.training_utils import load_z_low_level_feature, load_subject_fmri
@@ -29,11 +30,14 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
 
     # train model
     solver_params = {
+        'n_iter': 1,
         'alphas': np.logspace(1, 4, 10),
+        'score_func': himalaya.scoring.correlation_score,
+        'progress_bar': True,
     }
-    model = RidgeCV(cv=5, solver_params=solver_params)
+    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=solver_params)
     model.fit(Rstim, Rresp)
-    print(model.alpha)
+    print(model.best_alphas_)
     voxelwise_correlations = model.score(Pstim, Presp)
 
     # save voxelwise correlations and predictions

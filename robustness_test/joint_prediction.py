@@ -1,5 +1,6 @@
 import os.path
 
+import himalaya
 import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
@@ -34,9 +35,10 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     # Fit model
     solver_params = {
         'alphas': np.logspace(1, 4, 10),
+        'score_func': himalaya.scoring.correlation_score,
         'progress_bar': True,
     }
-    model = GroupRidgeCV(groups="input", cv=5, random_state=12345, solver_params=solver_params)
+    model = GroupRidgeCV(groups="input", random_state=12345, solver_params=solver_params)
     model.fit(Rstim, Rresp)
     print("deltas: ", model.deltas_)
     voxelwise_correlations = model.score(Pstim, Presp)
