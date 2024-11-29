@@ -12,22 +12,23 @@ trim = 5
 
 
 def predict_brain_activity(data_dir: str, feature_filename: str, language_model: str, layer: int, subject_num: int,
-                           modality: str):
+                           modality: str, number_of_delays=4):
     """
     Predict brain activity using semantic representations of words
     :param data_dir: data directory
     :param feature_filename: feature name
+    :param language_model: language model
     :param layer: layer of natural language model to use for semantic representation of words
     :param subject_num: subject number
     :param modality: modality 'reading' or 'listening'
+    :param number_of_delays: number of delays to account for hemodynamic response
     """
     # Load data
     training_stim, predicion_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
     zRresp, zPresp = load_subject_fmri(data_dir, subject_num, modality)
 
     # Delay stimuli
-    numer_of_delays = 4
-    delays = range(1, numer_of_delays + 1)
+    delays = range(1, number_of_delays + 1)
     print("FIR model delays: ", delays)
 
     delayed_Rstim = make_delayed(np.array(training_stim), delays)
@@ -38,8 +39,11 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     print("Pstim.shape: ", delayed_Pstim.shape)
     print("Presp.shape: ", zPresp.shape)
 
-    # Run regression
-    model = RidgeCV(alphas=np.logspace(1, 3, 10))
+    # Fit model
+    solver_params = {
+        'alphas': np.logspace(1, 4, 10),
+    }
+    model = RidgeCV(solver_params=solver_params)
     model.fit(delayed_Rstim, zRresp)
     voxelwise_correlations = model.score(delayed_Pstim, zPresp)
 

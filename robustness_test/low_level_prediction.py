@@ -8,7 +8,15 @@ from common_utils.training_utils import load_z_low_level_feature, load_subject_f
 from robustness_test.common_utils.training_utils import get_prediction_path
 
 
-def train_low_level_model(data_dir, subject_num, modality, low_level_feature, numer_of_delays=4):
+def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, numer_of_delays=4):
+    """
+    Train a model to predict fMRI responses from low level features
+    :param data_dir: str, path to data directory
+    :param subject_num: int, subject number
+    :param modality: str, choose modality (reading or listening)
+    :param low_level_feature: str, low level feature to use
+    :param numer_of_delays: int, number of delays to use
+    """
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
     print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
@@ -20,7 +28,10 @@ def train_low_level_model(data_dir, subject_num, modality, low_level_feature, nu
     print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
 
     # train model
-    model = RidgeCV(alphas=np.logspace(0, 3, 10), cv=5)
+    solver_params = {
+        'alphas': np.logspace(1, 4, 10),
+    }
+    model = RidgeCV(cv=5, solver_params=solver_params)
     model.fit(Rstim, Rresp)
     print(model.alpha)
     voxelwise_correlations = model.score(Pstim, Presp)

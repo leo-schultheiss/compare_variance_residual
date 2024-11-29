@@ -1,4 +1,3 @@
-import logging
 import os.path
 
 import numpy as np
@@ -8,11 +7,9 @@ from ridge_utils.util import make_delayed
 from common_utils.training_utils import load_subject_fmri, load_downsampled_context_representations, \
     get_prediction_path, load_z_low_level_feature
 
-logging.basicConfig(level=logging.DEBUG)
-
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
-                        output_dir):
+                        number_of_delays=4):
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = [], []
     # join input features (context representations and low-level textual features)
@@ -29,17 +26,22 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
         Pstim.append(prediction_stim)
 
     # Delay stimuli to account for hemodynamic lag
-    numer_of_delays = 4
-    delays = range(1, numer_of_delays + 1)
+    delays = range(1, number_of_delays + 1)
     for feature in range(len(Rstim)):
         Rstim[feature] = make_delayed(Rstim[feature], delays)
         Pstim[feature] = make_delayed(Pstim[feature], delays)
 
-    model = GroupRidgeCV(groups="input", cv=5, random_state=12345)
+    # Fit model
+    solver_params = {
+        'alphas': np.logspace(1, 4, 10),
+        'progress_bar': True,
+    }
+    model = GroupRidgeCV(groups="input", cv=5, random_state=12345, solver_params=solver_params)
     model.fit(Rstim, Rresp)
+    print("deltas: ", model.deltas_)
     voxelwise_correlations = model.score(Pstim, Presp)
 
-    # save voxelwise correlations and predictions
+    # save voxelwise correlations
     output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
     output_dir = os.path.dirname(output_file)
     if not os.path.exists(output_dir):
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     parser.add_argument("--language_model", help="Language model, where the features are extracted from", type=str,
                         default="bert")
     parser.add_argument("-s", "--subject_num", help="Subject number", type=int, default=1)
-    parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="listening")
+    parser.add_argument("-m", "--modality", help="Choose modality", type=str, default="reading")
     parser.add_argument("-l", "--layer", help="layer of the language model to use as input", type=int, default=9)
     parser.add_argument("--textual_features",
                         help="Comma separated, textual feature to use as input. Possible options include:\n"
@@ -70,3 +72,4 @@ if __name__ == '__main__':
 
     predict_joint_model(args.data_dir, args.feature_filename, args.language_model, args.subject_num, args.modality,
                         args.layer, args.textual_features, args.output_dir)
+    print("All done!")
