@@ -43,7 +43,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     # Fit model
     solver_params = {
         'n_iter': 1,
-        'alphas': np.logspace(1, 4, 10),
+        'alphas': np.logspace(0, 4, 10),
         'score_func': himalaya.scoring.correlation_score,
         'progress_bar': True,
     }
