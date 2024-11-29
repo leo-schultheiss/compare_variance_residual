@@ -5,7 +5,7 @@ import voxelwise_tutorials.viz as viz
 from matplotlib import pyplot as plt
 from voxelwise_tutorials.io import load_hdf5_array
 
-from robustness_test.common_utils.training_utils import get_prediction_path
+from robustness_test.common_utils.feature_utils import get_prediction_path
 
 language_model = "bert"
 feature = "semantic"
