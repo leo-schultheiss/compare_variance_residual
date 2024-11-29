@@ -9,21 +9,21 @@ from common_utils.training_utils import load_z_low_level_feature, load_subject_f
 from robustness_test.common_utils.training_utils import get_prediction_path
 
 
-def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, numer_of_delays=4):
+def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, number_of_delays=4):
     """
     Train a model to predict fMRI responses from low level features
     :param data_dir: str, path to data directory
     :param subject_num: int, subject number
     :param modality: str, choose modality (reading or listening)
     :param low_level_feature: str, low level feature to use
-    :param numer_of_delays: int, number of delays to use
+    :param number_of_delays: int, number of delays to use
     """
-    Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
     print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
+    Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
     # delay stimuli to account for hemodynamic lag
-    delays = range(1, numer_of_delays + 1)
+    delays = range(1, number_of_delays + 1)
     delayed_Rstim = make_delayed(np.array(Rstim), delays)
     delayed_Pstim = make_delayed(np.array(Pstim), delays)
     print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
@@ -63,3 +63,4 @@ if __name__ == '__main__':
     print(args)
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
+    print("All done!")
