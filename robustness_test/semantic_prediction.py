@@ -1,8 +1,9 @@
 import argparse
 import os
 
+import himalaya.scoring
 import numpy as np
-from himalaya.ridge import RidgeCV
+from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.training_utils import load_downsampled_context_representations, load_subject_fmri, \
