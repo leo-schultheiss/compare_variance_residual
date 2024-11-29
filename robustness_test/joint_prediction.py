@@ -5,7 +5,7 @@ import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
-from common_utils.feature_utils import load_subject_fmri, load_downsampled_context_representations, \
+from robustness_test.common_utils.feature_utils import load_subject_fmri, load_downsampled_context_representations, \
     get_prediction_path, load_z_low_level_feature
 
 
