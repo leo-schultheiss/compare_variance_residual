@@ -68,10 +68,9 @@ if __name__ == '__main__':
                         help="Comma separated, textual feature to use as input. Possible options include:\n"
                              "semantic, letters, numletters, numphonemes, numwords, phonemes, word_length_std",
                         type=str, default="semantic,letters")
-    parser.add_argument("--output_dir", help="Output directory", type=str, default="../bert-joint-predictions")
     args = parser.parse_args()
     print(args)
 
     predict_joint_model(args.data_dir, args.feature_filename, args.language_model, args.subject_num, args.modality,
-                        args.layer, args.textual_features, args.output_dir)
+                        args.layer, args.textual_features)
     print("All done!")
