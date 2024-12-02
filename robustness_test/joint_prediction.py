@@ -41,7 +41,6 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     }
     model = GroupRidgeCV(groups="input", random_state=12345, solver_params=solver_params)
     model.fit(Rstim, Rresp)
-    print("deltas: ", model.deltas_)
     voxelwise_correlations = model.score(Pstim, Presp)
 
     # save voxelwise correlations
