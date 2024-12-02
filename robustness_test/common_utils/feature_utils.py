@@ -13,20 +13,25 @@ from robustness_test.common_utils.stimulus_utils import load_grids_for_stories, 
 
 def load_subject_fmri(data_dir: str, subject: int, modality: str):
     """Load fMRI data for a subject, z-scored across stories"""
-    fname_tr5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_trn.hdf')
-    trndata5 = load_data(fname_tr5)
+    fname_tr = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_trn.hdf')
+    trn_data = load_data(fname_tr)
 
-    fname_te5 = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_val.hdf')
-    tstdata5 = load_data(fname_te5)
+    fname_te = os.path.join(data_dir, f'subject{subject:02}_{modality}_fmri_data_val.hdf')
+    tst_data = load_data(fname_te)
 
     trim = 5
-    zRresp = np.vstack([zscore(trndata5[story][5 + trim:-trim - 5]) for story in trndata5.keys()])
-    zPresp = np.vstack([zscore(tstdata5[story][1][5 + trim:-trim - 5]) for story in tstdata5.keys()])
+    zRresp = np.vstack([zscore(trn_data[story][5 + trim:-trim - 5]) for story in trn_data.keys()])
+    zPresp = np.vstack([zscore(tst_data[story][1][5 + trim:-trim - 5]) for story in tst_data.keys()])
 
     zRresp = np.nan_to_num(zRresp)
     zPresp = np.nan_to_num(zPresp)
 
-    return zRresp, zPresp
+    # indice of first sample of each run
+    run_onsets = np.cumsum([0] + [trn_data[story].shape[0] - (5 + 5 + 2 * trim) for story in trn_data.keys()])
+    # remove the last run onset as it is not needed
+    run_onsets = run_onsets[:-1]
+
+    return zRresp, zPresp, run_onsets
 
 
 def load_low_level_textual_features(data_dir):
@@ -42,7 +47,10 @@ def load_low_level_textual_features(data_dir):
 def load_z_low_level_feature(data_dir, low_level_feature, trim=5):
     """
     Load low-level textual features and z-score them across stories
+
     :param data_dir Directory containing fMRI data
+    :param low_level_feature: low-level feature to load
+    :param trim: Number of TRs to trim from the beginning and end of each story
     :return z_score_train, z_score_val
     """
     low_level_train, low_level_val = load_low_level_textual_features(data_dir)

@@ -26,7 +26,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     """
     # Load data
     training_stim, predicion_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
-    zRresp, zPresp = load_subject_fmri(data_dir, subject_num, modality)
+    zRresp, zPresp, run_onsets = load_subject_fmri(data_dir, subject_num, modality)
 
     # Delay stimuli
     delays = range(1, number_of_delays + 1)
