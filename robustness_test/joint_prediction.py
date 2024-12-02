@@ -11,7 +11,7 @@ from robustness_test.common_utils.feature_utils import load_subject_fmri, load_d
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
                         number_of_delays=4):
-    Rresp, Presp, run_onsets = load_subject_fmri(data_dir, subject_num, modality)
+    Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     Rstim, Pstim = [], []
     # join input features (context representations and low-level textual features)
     for feature in textual_features.split(","):
