@@ -101,14 +101,16 @@ def display_flatmap(language_model: str, feature: str, modality: str, subject: i
     ax = fig.add_axes((0, 0, 1, 1))
     ax.axis('off')
     plot_flatmap_from_mapper(correlation, mapper_path, ax=ax, with_curvature=False, alpha=1, cmap='inferno',
-                                 vmin=np.min(correlation),
+                                 vmin=0,
+                                 # vmin=np.min(correlation),
                                  vmax=np.max(correlation),
                                  colorbar_location=[0.75, 0.05, 0.2, 0.05])
 
     fig.suptitle(title, fontsize=16)
     if save_fig:
         path = os.path.relpath(path, start="../predictions")
-        plt.savefig(f"../plots/flatmap_{path.replace(os.path.sep, '_')}.png")
+        os.makedirs("plots", exist_ok=True)
+        plt.savefig(f"plots/flatmap_{path.replace(os.path.sep, '_')}.png")
     plt.show()
 
 
