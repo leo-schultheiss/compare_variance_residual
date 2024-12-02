@@ -27,16 +27,15 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     print(f"run_onsets: {run_onsets}")
 
     # delay stimuli to account for hemodynamic lag
-    delays = list(range(1, number_of_delays + 1))
-    delayer = Delayer(delays=delays)
+    delayer = Delayer(delays=range(1, number_of_delays + 1))
 
     # create Ridge model
-    n_samples_train = Rresp.shape[0]
-    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
-    cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
-    solver_params = dict(n_iter=1, alphas=np.logspace(0, 4, 10), score_func=himalaya.scoring.correlation_score,
-                         progress_bar=True)
-    group_ridge_cv = GroupRidgeCV(cv=cv, groups=None, random_state=12345, solver_params=solver_params)
+    solver_params = dict(
+        n_iter=1,
+        alphas=np.logspace(0, 4, 10), score_func=himalaya.scoring.correlation_score,
+        progress_bar=True,
+    )
+    group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=solver_params)
 
     # train model
     pipeline = make_pipeline(
