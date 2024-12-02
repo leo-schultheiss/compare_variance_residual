@@ -40,7 +40,7 @@ extras_require = {
 
 if __name__ == "__main__":
     setup(
-        name='robustness_test',
+        name='compare_variance_residual',
         maintainer="Leo Schultheiß",
         maintainer_email="leo.schultheiss@tum.de",
         description="Tools for robustness testing of fMRI models using variance partitioning and residual analysis",
