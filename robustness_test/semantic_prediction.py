@@ -8,6 +8,7 @@ from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
     get_prediction_path
+from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
 
 trim = 5
 
@@ -41,13 +42,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     print("Presp.shape: ", zPresp.shape)
 
     # Fit model
-    solver_params = {
-        'n_iter': 1,
-        'alphas': np.logspace(0, 4, 10),
-        'score_func': himalaya.scoring.correlation_score,
-        'progress_bar': True,
-    }
-    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=solver_params)
+    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOVER_PARAMS)
     model.fit(delayed_Rstim, zRresp)
     voxelwise_correlations = model.score(delayed_Pstim, zPresp)
 
