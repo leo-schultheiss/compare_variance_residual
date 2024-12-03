@@ -1,7 +1,8 @@
 import os.path
 
-import himalaya
 import numpy as np
+
+from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
@@ -28,13 +29,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
 
     # train model
-    solver_params = {
-        'n_iter': 1,
-        'alphas': np.logspace(0, 4, 10),
-        'score_func': himalaya.scoring.correlation_score,
-        'progress_bar': True,
-    }
-    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=solver_params)
+    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=(GROUP_CV_SOVER_PARAMS))
     model.fit(Rstim, Rresp)
     print(model.best_alphas_)
     voxelwise_correlations = model.score(Pstim, Presp)
@@ -60,6 +55,9 @@ if __name__ == '__main__':
                         type=str, default="letters")
     args = parser.parse_args()
     print(args)
+
+    from himalaya import backend
+    backend.set_backend('torch', on_error='warn')
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
     print("All done!")
