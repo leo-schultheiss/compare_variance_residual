@@ -5,10 +5,10 @@ import h5py
 import numpy as np
 from ridge_utils.dsutils import make_word_ds, make_semantic_model
 
-from robustness_test.common_utils.SemanticModel import SemanticModel
-from robustness_test.common_utils.hdf_utils import load_data
-from robustness_test.common_utils.npp import zscore
-from robustness_test.common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
+from compare_variance_residual.common_utils.SemanticModel import SemanticModel
+from compare_variance_residual.common_utils.hdf_utils import load_data
+from compare_variance_residual.common_utils.npp import zscore
+from compare_variance_residual.common_utils.stimulus_utils import load_grids_for_stories, load_generic_trfiles
 
 
 def load_subject_fmri(data_dir: str, subject: int, modality: str):
