@@ -7,7 +7,7 @@ from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.feature_utils import load_subject_fmri, load_downsampled_context_representations, \
     get_prediction_path, load_z_low_level_feature
-from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
+from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,

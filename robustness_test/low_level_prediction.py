@@ -2,7 +2,7 @@ import os.path
 
 import numpy as np
 
-from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
+from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
