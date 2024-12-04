@@ -4,7 +4,10 @@ import numpy as np
 
 from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 from himalaya.ridge import GroupRidgeCV
-from ridge_utils.util import make_delayed
+from sklearn.model_selection import check_cv
+from sklearn.pipeline import make_pipeline
+from voxelwise_tutorials.delayer import Delayer
+from voxelwise_tutorials.utils import generate_leave_one_run_out
 
 from robustness_test.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, get_prediction_path
 
@@ -23,16 +26,18 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
     # delay stimuli to account for hemodynamic lag
-    delays = range(1, number_of_delays + 1)
-    delayed_Rstim = make_delayed(np.array(Rstim), delays)
-    delayed_Pstim = make_delayed(np.array(Pstim), delays)
-    print(f"delayed_Rstim shape: {delayed_Rstim.shape}\ndelayed_Pstim shape: {delayed_Pstim.shape}")
+    delayer = Delayer(delays=range(1, number_of_delays + 1))
+
+    # create Ridge model
+    group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
 
     # train model
-    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=(GROUP_CV_SOVER_PARAMS))
-    model.fit(Rstim, Rresp)
-    print(model.best_alphas_)
-    voxelwise_correlations = model.score(Pstim, Presp)
+    pipeline = make_pipeline(
+        delayer,
+        group_ridge_cv,
+    )
+    pipeline.fit(Rstim, Rresp)
+    voxelwise_correlations = pipeline.score(Pstim, Presp)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
