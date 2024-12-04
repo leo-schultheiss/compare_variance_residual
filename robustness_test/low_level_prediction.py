@@ -1,7 +1,8 @@
 import os.path
 
-import himalaya
 import numpy as np
+
+from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 from himalaya.ridge import GroupRidgeCV
 from sklearn.model_selection import check_cv
 from sklearn.pipeline import make_pipeline
@@ -28,12 +29,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     delayer = Delayer(delays=range(1, number_of_delays + 1))
 
     # create Ridge model
-    solver_params = dict(
-        n_iter=1,
-        alphas=np.logspace(0, 4, 10), score_func=himalaya.scoring.correlation_score,
-        progress_bar=True,
-    )
-    group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=solver_params)
+    group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
 
     # train model
     pipeline = make_pipeline(
@@ -64,6 +60,9 @@ if __name__ == '__main__':
                         type=str, default="letters")
     args = parser.parse_args()
     print(args)
+
+    from himalaya import backend
+    backend.set_backend('torch', on_error='warn')
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
     print("All done!")

@@ -7,6 +7,7 @@ from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.feature_utils import load_subject_fmri, load_downsampled_context_representations, \
     get_prediction_path, load_z_low_level_feature
+from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
 
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
@@ -33,13 +34,7 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
         Pstim[feature] = make_delayed(Pstim[feature], delays)
 
     # Fit model
-    solver_params = {
-        'n_iter': 3,
-        'alphas': np.logspace(0, 4, 10),
-        'score_func': himalaya.scoring.correlation_score,
-        'progress_bar': True,
-    }
-    model = GroupRidgeCV(groups="input", random_state=12345, solver_params=solver_params)
+    model = GroupRidgeCV(groups="input", random_state=12345, solver_params=(GROUP_CV_SOVER_PARAMS))
     model.fit(Rstim, Rresp)
     voxelwise_correlations = model.score(Pstim, Presp)
 
