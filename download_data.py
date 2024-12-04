@@ -7,8 +7,10 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
+DATA_DIR = "data"
 
-def download_file(file_url, download_path="data"):
+
+def download_file(file_url, download_path):
     # extract file name from url
     file_name = os.path.basename(file_url)
 
@@ -40,7 +42,7 @@ def is_file_complete(file_path, file_url):
                     return False
             except Exception as e:
                 logger.warning(f"unable to get file size for {file_url}: {e}")
-                return False
+                return True
     else:
         return False
 
@@ -115,6 +117,6 @@ if __name__ == "__main__":
     for url in urls:
         logger.info(f"Downloading data from {url}")
         try:
-            download_file(url)
+            download_file(url, DATA_DIR)
         except Exception as e:
             logger.error(f"unable to download file from {url}: {e}")
