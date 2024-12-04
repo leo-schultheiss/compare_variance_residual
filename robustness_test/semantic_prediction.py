@@ -8,7 +8,7 @@ from ridge_utils.util import make_delayed
 
 from robustness_test.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
     get_prediction_path
-from robustness_test.common_utils.parameters import GROUP_CV_SOVER_PARAMS
+from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 
 trim = 5
 
@@ -65,6 +65,9 @@ if __name__ == "__main__":
     parser.add_argument("--modality", help="Choose modality", type=str, default="reading")
     args = parser.parse_args()
     print(args)
+
+    from himalaya.backend import set_backend
+    backend = set_backend("torch", on_error="warn")
 
     predict_brain_activity(data_dir=args.data_dir, feature_filename=args.feature_filename,
                            language_model=args.language_model, layer=args.layer, subject_num=args.subject_num,
