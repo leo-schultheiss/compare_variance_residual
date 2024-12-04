@@ -2,12 +2,10 @@ import os.path
 
 import numpy as np
 
-from compare_variance_residual.common_utils.ridge import GROUP_CV_SOVER_PARAMS
+from compare_variance_residual.common_utils.ridge import GROUP_CV_SOLVER_PARAMS
 from himalaya.ridge import GroupRidgeCV
-from sklearn.model_selection import check_cv
 from sklearn.pipeline import make_pipeline
 from voxelwise_tutorials.delayer import Delayer
-from voxelwise_tutorials.utils import generate_leave_one_run_out
 
 from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, get_prediction_path
 
