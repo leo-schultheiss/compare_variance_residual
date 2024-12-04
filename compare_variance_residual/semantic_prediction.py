@@ -6,9 +6,9 @@ import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.util import make_delayed
 
-from robustness_test.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
+from compare_variance_residual.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
     get_prediction_path
-from robustness_test.common_utils.ridge import GROUP_CV_SOVER_PARAMS
+from compare_variance_residual.common_utils.ridge import GROUP_CV_SOVER_PARAMS
 
 trim = 5
 

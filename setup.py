@@ -4,7 +4,7 @@ import re
 from setuptools import find_packages, setup
 
 # get version from voxelwise_tutorials/__init__.py
-with open('robustness_test/__init__.py') as f:
+with open('compare_variance_residual/__init__.py') as f:
     infos = f.readlines()
 __version__ = ''
 for line in infos:

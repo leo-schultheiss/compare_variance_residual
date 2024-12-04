@@ -1,6 +1,6 @@
 import itertools
 
-from robustness_test import low_level_prediction, semantic_prediction, joint_prediction
+from compare_variance_residual import low_level_prediction, semantic_prediction, joint_prediction
 
 def start_batch_run():
     print("Batch run started")

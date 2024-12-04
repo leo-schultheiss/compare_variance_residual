@@ -5,7 +5,7 @@ import voxelwise_tutorials.viz as viz
 from matplotlib import pyplot as plt
 from voxelwise_tutorials.io import load_hdf5_array
 
-from robustness_test.common_utils.feature_utils import get_prediction_path
+from compare_variance_residual.common_utils.feature_utils import get_prediction_path
 
 
 def plot_flatmap_from_mapper(voxels, mapper_file, ax=None, alpha=0.7,
