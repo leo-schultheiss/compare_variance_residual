@@ -1,13 +1,11 @@
 import os.path
 
 import numpy as np
+from ridge_utils.util import make_delayed
 
-from compare_variance_residual.common_utils.ridge import GROUP_CV_SOLVER_PARAMS
-from himalaya.ridge import GroupRidgeCV
-from sklearn.pipeline import make_pipeline
-from voxelwise_tutorials.delayer import Delayer
-
-from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, get_prediction_path
+from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, \
+    get_prediction_path
+from compare_variance_residual.common_utils.ridge import bootstrap_ridge
 
 
 def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, number_of_delays=4):
@@ -24,18 +22,28 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
     # delay stimuli to account for hemodynamic lag
-    delayer = Delayer(delays=range(1, number_of_delays + 1))
+    delays = range(1, number_of_delays + 1)
+    Rstim, Pstim = make_delayed(Rstim, delays), make_delayed(Pstim, delays)
 
     # create Ridge model
-    group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
+    n_boots = 1  # Number of cross-validation runs.
+    chunklen = 40  # Length of chunks to break data into.
+    n_chunks = 20  # Number of chunks to use in the cross-validated training.
+    voxelwise_correlations = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, np.logspace(0, 4, 10), n_boots, chunklen,
+                                             n_chunks)
+
+    # delayer = Delayer(delays=range(1, number_of_delays + 1))
+
+    # create Ridge model
+    # group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
 
     # train model
-    pipeline = make_pipeline(
-        delayer,
-        group_ridge_cv,
-    )
-    pipeline.fit(Rstim, Rresp)
-    voxelwise_correlations = pipeline.score(Pstim, Presp)
+    # pipeline = make_pipeline(
+    #     delayer,
+    #     group_ridge_cv,
+    # )
+    # pipeline.fit(Rstim, Rresp)
+    # voxelwise_correlations = pipeline.score(Pstim, Presp)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
@@ -60,6 +68,7 @@ if __name__ == '__main__':
     print(args)
 
     from himalaya import backend
+
     backend.set_backend('torch', on_error='warn')
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
