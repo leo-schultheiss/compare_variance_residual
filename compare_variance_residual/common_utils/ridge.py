@@ -8,9 +8,6 @@ from himalaya.ridge import GroupRidgeCV
 from ridge_utils.utils import counter
 
 
-GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100, alphas=np.logspace(0, 4, 10),
-                              score_func=himalaya.scoring.correlation_score, progress_bar=True)
-
 def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int, num_chunks: int, seed=42):
     rng = np.random.RandomState(seed)
     all_indexes = range(num_examples)
@@ -110,6 +107,10 @@ def bootstrap_ridge(
         nboots, nresp, chunklen, nchunks)
     valinds = [splits[1] for splits in splits]
 
+    GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100,
+                                  alphas=alphas,
+                                  score_func=himalaya.scoring.correlation_score, progress_bar=True)
+
     correlation_matrices = []
     for bi in counter(range(nboots), countevery=1, total=nboots):
         logger.debug("Selecting held-out test set..")
@@ -130,6 +131,7 @@ def bootstrap_ridge(
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
+        logger.info(f"{time.time()} Running ridge regression on bootstrap {bi:02}")
         model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
         model.fit(stim_train_, resp_train_)
         correlation_matrix_ = model.score(stim_test_, resp_test_)
@@ -181,15 +183,18 @@ def bootstrap_ridge(
             bestalphaind = np.argmax(meanbootcorr)
             bestalpha = alphas[bestalphaind]
 
-        valphas = np.array([bestalpha]*nvox)
+        valphas = np.array([bestalpha] * nvox)
         logger.debug("Best alpha = %0.3f" % bestalpha)
 
     if return_wt:
         # Find weights
-        logger.debug(
-            "Computing weights for each response using entire training set..")
-        wt = ridge(stim_train, resp_train, valphas,
-                   singcutoff=singcutoff, normalpha=normalpha)
+        logger.debug("Computing weights for each response using entire training set..")
+        # wt = ridge(stim_train, resp_train, valphas,
+        #            singcutoff=singcutoff, normalpha=normalpha)
+        deltas, wt, cv_scores, intercept = himalaya.ridge.solve_group_ridge_random_search([stim_train], resp_train,
+                                                                                          alphas=valphas,
+                                                                                          score_func=himalaya.scoring.correlation_score,
+                                                                                          progress_bar=True)
 
         # Predict responses on prediction set
         logger.debug("Predicting responses for predictions set..")
@@ -201,17 +206,20 @@ def bootstrap_ridge(
             corrs = np.nan_to_num(np.array([np.corrcoef(resp_test[:, ii], nnpred[:, ii].ravel())[0, 1]
                                             for ii in range(resp_test.shape[1])]))
         else:
-            residual_variance = (resp_test-pred).var(0)
+            residual_variance = (resp_test - pred).var(0)
             residual_sum_of_squares = 1 - \
-                (residual_variance / resp_test.var(0))
+                                      (residual_variance / resp_test.var(0))
             corrs = np.sqrt(np.abs(residual_sum_of_squares)) * \
-                np.sign(residual_sum_of_squares)
+                    np.sign(residual_sum_of_squares)
 
         return wt, corrs, valphas, all_correlation_matrices, valinds
     else:
         # get correlations for prediction dataset directly
-        corrs = ridge_corr_pred(
-            stim_train, stim_test, resp_train, stim_test, valphas,
-            normalpha=normalpha, use_corr=use_corr, logger=logger, singcutoff=singcutoff)
+        model = GroupRidgeCV(groups=None, random_state=12345, solver_params=dict(alphas=valphas, **GROUP_CV_SOLVER_PARAMS))
+        model.fit(stim_train, resp_train)
+        corrs = model.score(stim_test, resp_test)
+        # corrs = ridge_corr_pred(
+        #     stim_train, stim_test, resp_train, stim_test, valphas,
+        #     normalpha=normalpha, use_corr=use_corr, logger=logger, singcutoff=singcutoff)
 
         return [], corrs, valphas, all_correlation_matrices, valinds
