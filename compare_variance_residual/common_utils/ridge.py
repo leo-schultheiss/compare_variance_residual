@@ -1,8 +1,11 @@
+import itertools as itools
+import logging
+import time
+
 import himalaya
 import numpy as np
 from himalaya.ridge import GroupRidgeCV
 from ridge_utils.utils import counter
-import itertools as itools
 
 
 GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100, alphas=np.logspace(0, 4, 10),
@@ -16,7 +19,7 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     for _ in range(num_splits):
         rng.shuffle(index_chunks)
         tune_indexes_ = list(itools.chain(*index_chunks[:num_chunks]))
-        train_indexes_ = list(set(all_indexes)-set(tune_indexes_))
+        train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
         splits_list.append((train_indexes_, tune_indexes_))
     return splits_list
 
