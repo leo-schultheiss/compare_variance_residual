@@ -26,8 +26,8 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
 
 def bootstrap_ridge(
         stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-        corrmin=0.2, joined=None, singcutoff=1e-10, normalpha=False, single_alpha=False,
-        use_corr=True, return_wt=True, logger=None):
+        joined=None, singcutoff=1e-10, normalpha=False, single_alpha=False,
+        use_corr=True, return_wt=True, logger=logging.Logger("bootstrap_ridge")):
     """Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
     run.  [nboots] total regression runs will be performed.  The best alpha value for each response will be
@@ -59,10 +59,6 @@ def bootstrap_ridge(
         The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
         of nchunks and chunklen is the total number of training samples held out for each sample, and this
         product should be about 20 percent of the total length of the training data.
-    corrmin : float in [0..1], default 0.2
-        Purely for display purposes. After each alpha is tested for each bootstrap sample, the number of
-        responses with correlation greater than this value will be printed. For long-running regressions this
-        can give a rough sense of how well the model works before it's done.
     joined : None or list of array_like indices, default None
         If you want the STRFs for two (or more) responses to be directly comparable, you need to ensure that
         the regularization parameter that they use is the same. To do that, supply a list of the response sets
@@ -91,6 +87,7 @@ def bootstrap_ridge(
         alpha parameter for each voxel. However, for very large models this can lead to memory issues.
         If false, this function will _not_ compute weights, but will still compute prediction performance
         on the prediction dataset (Pstim, Presp).
+    logger : logging.Logger, default logging.Logger("bootstrap_ridge")
 
     Returns
     -------
