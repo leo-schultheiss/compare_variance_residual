@@ -32,9 +32,10 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     n_boots = 3  # Number of cross-validation runs.
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
-    logger = logging.getLogger(__name__)
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, np.logspace(0, 4, 10), n_boots, chunklen,
-                                             n_chunks, return_wt=False, logger=logger)
+    alphas = np.logspace(0, 4, 10)
+    logger = logging.getLogger("ridge")
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen,
+                                                        n_chunks, return_wt=False, logger=logger)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
