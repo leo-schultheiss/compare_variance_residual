@@ -161,6 +161,7 @@ def bootstrap_ridge(
                 jcorrs = all_correlation_matrices[:, jl, :].mean(1).mean(1)
                 bestalpha = np.argmax(jcorrs)
                 valphas[jl] = alphas[bestalpha]
+        logger.debug("Best alphas = %s" % valphas)
     else:
         logger.debug("Finding single best alpha..")
         if nboots == 0:
@@ -211,6 +212,7 @@ def bootstrap_ridge(
 
         return wt, corrs, valphas, all_correlation_matrices, valinds
     else:
+        logger.info("Calculating overall correlation based on optimal alphas")
         # get correlations for prediction dataset directly
         corrs = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
         # corrs = ridge_corr_pred(
