@@ -107,10 +107,6 @@ def bootstrap_ridge(
         nboots, nresp, chunklen, nchunks)
     valinds = [splits[1] for splits in splits]
 
-    GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100,
-                                  alphas=alphas,
-                                  score_func=himalaya.scoring.correlation_score, progress_bar=True)
-
     correlation_matrices = []
     for bi in counter(range(nboots), countevery=1, total=nboots):
         logger.debug("Selecting held-out test set..")
@@ -132,10 +128,7 @@ def bootstrap_ridge(
 
         # Run ridge regression using this test set
         logger.info(f"{time.time()} Running ridge regression on bootstrap {bi:02}")
-        model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
-        model.fit(stim_train_, resp_train_)
-        correlation_matrix_ = model.score(stim_test_, resp_test_)
-
+        correlation_matrix_ = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
         # correlation_matrix_ = _ridge_corr(
         #     stim_train_, stim_test_, resp_train_, resp_test_, alphas,
         #     corrmin=corrmin, singcutoff=singcutoff,
@@ -192,12 +185,13 @@ def bootstrap_ridge(
         # wt = ridge(stim_train, resp_train, valphas,
         #            singcutoff=singcutoff, normalpha=normalpha)
         deltas, wt, cv_scores, intercept = solve_group_ridge_random_search([stim_train], resp_train,
-                                                                                 alphas=valphas,
-                                                                                 score_func=himalaya.scoring.correlation_score,
-                                                                                 progress_bar=True,
-                                                                                 n_targets_batch=100,
-                                                                                 n_targets_batch_refit=100,
-                                                                                 random_state=12345)
+                                                                           n_iter=1,
+                                                                           alphas=valphas,
+                                                                           score_func=himalaya.scoring.correlation_score,
+                                                                           progress_bar=True,
+                                                                           n_targets_batch=100,
+                                                                           n_targets_batch_refit=100,
+                                                                           random_state=12345)
 
         # Predict responses on prediction set
         logger.debug("Predicting responses for predictions set..")
@@ -218,12 +212,22 @@ def bootstrap_ridge(
         return wt, corrs, valphas, all_correlation_matrices, valinds
     else:
         # get correlations for prediction dataset directly
-        model = GroupRidgeCV(groups=None, random_state=12345,
-                             solver_params=dict(alphas=valphas, **GROUP_CV_SOLVER_PARAMS))
-        model.fit(stim_train, resp_train)
-        corrs = model.score(stim_test, resp_test)
+        corrs = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
         # corrs = ridge_corr_pred(
         #     stim_train, stim_test, resp_train, stim_test, valphas,
         #     normalpha=normalpha, use_corr=use_corr, logger=logger, singcutoff=singcutoff)
 
         return [], corrs, valphas, all_correlation_matrices, valinds
+
+
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas):
+    GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100,
+                                  alphas=alphas,
+                                  score_func=himalaya.scoring.correlation_score, progress_bar=True)
+
+    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
+    model.fit(stim_train, resp_train)
+    predictions = model.predict(stim_test)
+    pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
+                                     for ii in range(resp_test.shape[1])])
+    return pearson_correlations
