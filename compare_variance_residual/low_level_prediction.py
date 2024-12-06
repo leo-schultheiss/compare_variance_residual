@@ -29,8 +29,8 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     n_boots = 1  # Number of cross-validation runs.
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
-    voxelwise_correlations = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, np.logspace(0, 4, 10), n_boots, chunklen,
-                                             n_chunks)
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, np.logspace(0, 4, 10), n_boots, chunklen,
+                                             n_chunks, return_wt=False)
 
     # delayer = Delayer(delays=range(1, number_of_delays + 1))
 
@@ -51,7 +51,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     output_dir = os.path.dirname(output_file)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    np.save(output_file, voxelwise_correlations)
+    np.save(output_file, corrs)
 
 
 if __name__ == '__main__':
@@ -68,8 +68,11 @@ if __name__ == '__main__':
     print(args)
 
     from himalaya import backend
+    import logging
 
     backend.set_backend('torch', on_error='warn')
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
     print("All done!")
