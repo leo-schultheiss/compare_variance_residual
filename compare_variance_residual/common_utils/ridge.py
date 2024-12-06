@@ -4,7 +4,7 @@ import time
 
 import himalaya
 import numpy as np
-from himalaya.ridge import GroupRidgeCV
+from himalaya.ridge import GroupRidgeCV, solve_group_ridge_random_search
 from ridge_utils.utils import counter
 
 
@@ -191,10 +191,11 @@ def bootstrap_ridge(
         logger.debug("Computing weights for each response using entire training set..")
         # wt = ridge(stim_train, resp_train, valphas,
         #            singcutoff=singcutoff, normalpha=normalpha)
-        deltas, wt, cv_scores, intercept = himalaya.ridge.solve_group_ridge_random_search([stim_train], resp_train,
-                                                                                          alphas=valphas,
-                                                                                          score_func=himalaya.scoring.correlation_score,
-                                                                                          progress_bar=True)
+        deltas, wt, cv_scores, intercept = solve_group_ridge_random_search([stim_train], resp_train,
+                                                                                 alphas=valphas,
+                                                                                 score_func=himalaya.scoring.correlation_score,
+                                                                                 progress_bar=True,
+                                                                                 **GROUP_CV_SOLVER_PARAMS)
 
         # Predict responses on prediction set
         logger.debug("Predicting responses for predictions set..")
@@ -215,7 +216,8 @@ def bootstrap_ridge(
         return wt, corrs, valphas, all_correlation_matrices, valinds
     else:
         # get correlations for prediction dataset directly
-        model = GroupRidgeCV(groups=None, random_state=12345, solver_params=dict(alphas=valphas, **GROUP_CV_SOLVER_PARAMS))
+        model = GroupRidgeCV(groups=None, random_state=12345,
+                             solver_params=dict(alphas=valphas, **GROUP_CV_SOLVER_PARAMS))
         model.fit(stim_train, resp_train)
         corrs = model.score(stim_test, resp_test)
         # corrs = ridge_corr_pred(
