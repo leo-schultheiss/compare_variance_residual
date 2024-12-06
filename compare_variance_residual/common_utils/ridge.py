@@ -195,7 +195,9 @@ def bootstrap_ridge(
                                                                                  alphas=valphas,
                                                                                  score_func=himalaya.scoring.correlation_score,
                                                                                  progress_bar=True,
-                                                                                 **GROUP_CV_SOLVER_PARAMS)
+                                                                                 n_targets_batch=100,
+                                                                                 n_targets_batch_refit=100,
+                                                                                 random_state=12345)
 
         # Predict responses on prediction set
         logger.debug("Predicting responses for predictions set..")
