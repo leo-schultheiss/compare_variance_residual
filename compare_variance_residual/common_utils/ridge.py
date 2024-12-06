@@ -129,11 +129,9 @@ def bootstrap_ridge(
         # Run ridge regression using this test set
         logger.info(f"{time.time()} Running ridge regression on bootstrap {bi:02}")
         correlation_matrix_ = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
-        # correlation_matrix_ = _ridge_corr(
-        #     stim_train_, stim_test_, resp_train_, resp_test_, alphas,
-        #     corrmin=corrmin, singcutoff=singcutoff,
-        #     normalpha=normalpha, use_corr=use_corr,
-        #     logger=logger)
+        # print some statistics
+        logger.debug(
+            f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}")
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas
@@ -215,10 +213,8 @@ def bootstrap_ridge(
         logger.info("Calculating overall correlation based on optimal alphas")
         # get correlations for prediction dataset directly
         corrs = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
-        # corrs = ridge_corr_pred(
-        #     stim_train, stim_test, resp_train, stim_test, valphas,
-        #     normalpha=normalpha, use_corr=use_corr, logger=logger, singcutoff=singcutoff)
-
+        logger.debug(
+            f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}")
         return [], corrs, valphas, all_correlation_matrices, valinds
 
 
