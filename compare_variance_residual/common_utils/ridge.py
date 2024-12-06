@@ -224,7 +224,7 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, 
                                   n_targets_batch_refit=n_targets_batch_refit,
                                   alphas=alphas, score_func=himalaya.scoring.correlation_score, progress_bar=True)
 
-    model = GroupRidgeCV(groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
+    model = GroupRidgeCV(cv=1, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     model.fit(stim_train, resp_train)
     predictions = model.predict(stim_test)
     pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
