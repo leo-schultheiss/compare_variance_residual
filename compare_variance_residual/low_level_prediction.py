@@ -35,7 +35,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     alphas = np.logspace(0, 4, 10)
     logger = logging.getLogger("ridge")
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen,
-                                                        n_chunks, return_wt=False, logger=logger)
+                                                        n_chunks, logger=logger)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
