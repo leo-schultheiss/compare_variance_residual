@@ -6,6 +6,19 @@ import himalaya
 import numpy as np
 from himalaya.ridge import GroupRidgeCV, solve_group_ridge_random_search
 from ridge_utils.utils import counter
+from sklearn.model_selection import BaseCrossValidator
+
+
+class WholeDatasetSplitter(BaseCrossValidator):
+    """Yields the whole dataset as training and testing set.
+    We use this since himalaya only provides a cross-validation solver for group ridge regression. Instead, we want to be able to use bootstrap sampling."""
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return 1
+
+    def split(self, X, y=None, groups=None):
+        indices = np.arange(len(X))
+        yield indices, indices
 
 
 def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int, num_chunks: int, seed=42):
@@ -224,7 +237,9 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, 
                                   n_targets_batch_refit=n_targets_batch_refit,
                                   alphas=alphas, score_func=himalaya.scoring.correlation_score, progress_bar=True)
 
-    model = GroupRidgeCV(cv=1, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
+    # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
+    cv = WholeDatasetSplitter()
+    model = GroupRidgeCV(cv=cv, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     model.fit(stim_train, resp_train)
     predictions = model.predict(stim_test)
     pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
