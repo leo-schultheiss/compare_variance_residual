@@ -23,9 +23,9 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
 
 def bootstrap_ridge(
         stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-        joined=None, singcutoff=1e-10, normalpha=False, single_alpha=False,
-        use_corr=True, return_wt=True, logger=logging.Logger("bootstrap_ridge")):
-    """Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
+        joined=None, single_alpha=False, use_corr=True, return_wt=True, logger=logging.Logger(__name__)):
+    """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
+    Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
     run.  [nboots] total regression runs will be performed.  The best alpha value for each response will be
     averaged across the bootstraps to estimate the best alpha for that response.
@@ -220,12 +220,13 @@ def bootstrap_ridge(
         return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas):
-    GROUP_CV_SOLVER_PARAMS = dict(n_iter=1, n_targets_batch=100, n_targets_batch_refit=100,
-                                  alphas=alphas,
-                                  score_func=himalaya.scoring.correlation_score, progress_bar=True)
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, n_targets_batch=100,
+                n_targets_batch_refit=100, random_state=12345):
+    GROUP_CV_SOLVER_PARAMS = dict(n_iter=n_iter, n_targets_batch=n_targets_batch,
+                                  n_targets_batch_refit=n_targets_batch_refit,
+                                  alphas=alphas, score_func=himalaya.scoring.correlation_score, progress_bar=True)
 
-    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
+    model = GroupRidgeCV(groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     model.fit(stim_train, resp_train)
     predictions = model.predict(stim_test)
     pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
