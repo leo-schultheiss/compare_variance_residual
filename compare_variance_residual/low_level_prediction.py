@@ -20,30 +20,21 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
     print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
+    print(f"Rresp shape: {Rresp.shape}\nPresp shape: {Presp.shape}")
 
     # delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
-    Rstim, Pstim = make_delayed(Rstim, delays), make_delayed(Pstim, delays)
+    Rstim = make_delayed(Rstim, delays)
+    Pstim = make_delayed(Pstim, delays)
+    print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
 
     # create Ridge model
-    n_boots = 1  # Number of cross-validation runs.
+    n_boots = 3  # Number of cross-validation runs.
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
+    logger = logging.getLogger(__name__)
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, np.logspace(0, 4, 10), n_boots, chunklen,
-                                             n_chunks, return_wt=False)
-
-    # delayer = Delayer(delays=range(1, number_of_delays + 1))
-
-    # create Ridge model
-    # group_ridge_cv = GroupRidgeCV(cv=1, groups=None, random_state=12345, solver_params=GROUP_CV_SOLVER_PARAMS)
-
-    # train model
-    # pipeline = make_pipeline(
-    #     delayer,
-    #     group_ridge_cv,
-    # )
-    # pipeline.fit(Rstim, Rresp)
-    # voxelwise_correlations = pipeline.score(Pstim, Presp)
+                                             n_chunks, return_wt=False, logger=logger)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
@@ -72,7 +63,6 @@ if __name__ == '__main__':
 
     backend.set_backend('torch', on_error='warn')
     logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
 
     train_low_level_model(args.data_dir, args.subject_num, args.modality, args.low_level_feature)
     print("All done!")
