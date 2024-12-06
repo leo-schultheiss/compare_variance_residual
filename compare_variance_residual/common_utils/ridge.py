@@ -36,7 +36,7 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
 
 def bootstrap_ridge(
         stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-        joined=None, single_alpha=False, use_corr=True, return_wt=True, logger=logging.Logger(__name__)):
+        joined=None, single_alpha=False, use_corr=True, logger=logging.Logger(__name__)):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
@@ -75,15 +75,6 @@ def bootstrap_ridge(
         that should use the same ridge parameter here. For example, if you have four responses, joined could
         be [np.array([0,1]), np.array([2,3])], in which case responses 0 and 1 will use the same ridge parameter
         (which will be parameter that is best on average for those two), and likewise for responses 2 and 3.
-    singcutoff : float, default 1e-10
-        The first step in ridge regression is computing the singular value decomposition (SVD) of the
-        stimulus Rstim. If Rstim is not full rank, some singular values will be approximately equal
-        to zero and the corresponding singular vectors will be noise. These singular values/vectors
-        should be removed both for speed (the fewer multiplications the better!) and accuracy. Any
-        singular values less than singcutoff will be removed.
-    normalpha : boolean, default False
-        Whether ridge parameters (alphas) should be normalized by the largest singular value (LSV)
-        norm of Rstim. Good for rigorously comparing models with different numbers of parameters.
     single_alpha : boolean, default False
         Whether to use a single alpha for all responses. Good for identification/decoding.
     use_corr : boolean, default True
@@ -92,11 +83,6 @@ def bootstrap_ridge(
         this can make a big difference -- highly regularized solutions will have very small norms and
         will thus explain very little variance while still leading to high correlations, as correlation
         is scale-free while R**2 is not.
-    return_wt : boolean, default True
-        If True, this function will compute and return the regression weights after finding the best
-        alpha parameter for each voxel. However, for very large models this can lead to memory issues.
-        If false, this function will _not_ compute weights, but will still compute prediction performance
-        on the prediction dataset (Pstim, Presp).
     logger : logging.Logger, default logging.Logger("bootstrap_ridge")
 
     Returns
@@ -141,10 +127,10 @@ def bootstrap_ridge(
 
         # Run ridge regression using this test set
         logger.info(f"{time.time()} Running ridge regression on bootstrap {bi:02}")
-        correlation_matrix_ = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
+        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
         # print some statistics
         logger.debug(
-            f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}")
+            f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}, best alphas: {model_best_alphas}")
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas
@@ -178,7 +164,6 @@ def bootstrap_ridge(
         if nboots == 0:
             if len(alphas) == 1:
                 bestalphaind = 0
-                bestalpha = alphas[0]
             else:
                 raise ValueError("You must run at least one cross-validation step "
                                  "to choose best overall alpha, or only supply one"
@@ -186,49 +171,16 @@ def bootstrap_ridge(
         else:
             meanbootcorr = all_correlation_matrices.mean(2).mean(1)
             bestalphaind = np.argmax(meanbootcorr)
-            bestalpha = alphas[bestalphaind]
-
+        bestalpha = alphas[bestalphaind]
         valphas = np.array([bestalpha] * nvox)
         logger.debug("Best alpha = %0.3f" % bestalpha)
 
-    if return_wt:
-        # Find weights
-        logger.debug("Computing weights for each response using entire training set..")
-        # wt = ridge(stim_train, resp_train, valphas,
-        #            singcutoff=singcutoff, normalpha=normalpha)
-        deltas, wt, cv_scores, intercept = solve_group_ridge_random_search([stim_train], resp_train,
-                                                                           n_iter=1,
-                                                                           alphas=valphas,
-                                                                           score_func=himalaya.scoring.correlation_score,
-                                                                           progress_bar=True,
-                                                                           n_targets_batch=100,
-                                                                           n_targets_batch_refit=100,
-                                                                           random_state=12345)
-
-        # Predict responses on prediction set
-        logger.debug("Predicting responses for predictions set..")
-        pred = np.dot(stim_test, wt)
-
-        # Find prediction correlations
-        nnpred = np.nan_to_num(pred)
-        if use_corr:
-            corrs = np.nan_to_num(np.array([np.corrcoef(resp_test[:, ii], nnpred[:, ii].ravel())[0, 1]
-                                            for ii in range(resp_test.shape[1])]))
-        else:
-            residual_variance = (resp_test - pred).var(0)
-            residual_sum_of_squares = 1 - \
-                                      (residual_variance / resp_test.var(0))
-            corrs = np.sqrt(np.abs(residual_sum_of_squares)) * \
-                    np.sign(residual_sum_of_squares)
-
-        return wt, corrs, valphas, all_correlation_matrices, valinds
-    else:
-        logger.info("Calculating overall correlation based on optimal alphas")
-        # get correlations for prediction dataset directly
-        corrs = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
-        logger.debug(
-            f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}")
-        return [], corrs, valphas, all_correlation_matrices, valinds
+    logger.info("Calculating overall correlation based on optimal alphas")
+    # get correlations for prediction dataset directly
+    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
+    logger.debug(
+        f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
+    return [], corrs, valphas, all_correlation_matrices, valinds
 
 
 def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, n_targets_batch=30,
@@ -244,4 +196,4 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, 
     predictions = model.predict(stim_test)
     pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
                                      for ii in range(resp_test.shape[1])])
-    return pearson_correlations
+    return pearson_correlations, model.best_alphas_
