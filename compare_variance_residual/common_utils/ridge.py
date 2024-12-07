@@ -4,7 +4,7 @@ import time
 
 import himalaya
 import numpy as np
-from himalaya.ridge import GroupRidgeCV, solve_group_ridge_random_search
+from himalaya.ridge import GroupRidgeCV
 from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 
@@ -126,7 +126,7 @@ def bootstrap_ridge(
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
-        logger.info(f"{time.time()} Running ridge regression on bootstrap {bi:02}")
+        logger.info(f"{time.time()} Running ridge regression on bootstrap sample {bi}")
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
         # print some statistics
         logger.debug(
@@ -143,7 +143,6 @@ def bootstrap_ridge(
         if nboots == 0:
             raise ValueError("You must run at least one cross-validation step to assign "
                              "different alphas to each response.")
-
         logger.info("Finding best alpha for each voxel..")
         if joined is None:
             # Find best alpha for each voxel
