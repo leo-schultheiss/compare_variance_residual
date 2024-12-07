@@ -109,14 +109,6 @@ def bootstrap_ridge(
     correlation_matrices = []
     for bi in counter(range(nboots), countevery=1, total=nboots):
         logger.debug("Selecting held-out test set..")
-
-        # get indices for training / testing
-        # all_indexes = range(nresp)
-        # index_chunks = list(zip(*[iter(all_indexes)]*chunklen))
-        # random.shuffle(index_chunks)
-        # tune_indexes_ = list(itools.chain(*index_chunks[:nchunks]))
-        # train_indexes_ = list(set(all_indexes)-set(tune_indexes_))
-        # valinds.append(tune_indexes_)
         train_indexes_, tune_indexes_ = splits[bi]
 
         # Select data
@@ -126,7 +118,7 @@ def bootstrap_ridge(
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
-        logger.info(f"{time.time()} Running ridge regression on bootstrap sample {bi}")
+        logger.info(f"Running ridge regression on bootstrap sample {bi}")
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
         # print some statistics
         logger.debug(
@@ -139,7 +131,22 @@ def bootstrap_ridge(
     else:
         all_correlation_matrices = None
 
-    if not single_alpha:
+    if single_alpha:
+        logger.debug("Finding single best alpha..")
+        if nboots == 0:
+            if len(alphas) == 1:
+                bestalphaind = 0
+            else:
+                raise ValueError("You must run at least one cross-validation step "
+                                 "to choose best overall alpha, or only supply one"
+                                 "possible alpha value.")
+        else:
+            meanbootcorr = all_correlation_matrices.mean(2).mean(1)
+            bestalphaind = np.argmax(meanbootcorr)
+        bestalpha = alphas[bestalphaind]
+        valphas = np.array([bestalpha] * nvox)
+        logger.debug("Best alpha = %0.3f" % bestalpha)
+    else:
         if nboots == 0:
             raise ValueError("You must run at least one cross-validation step to assign "
                              "different alphas to each response.")
@@ -158,21 +165,6 @@ def bootstrap_ridge(
                 bestalpha = np.argmax(jcorrs)
                 valphas[jl] = alphas[bestalpha]
         logger.debug("Best alphas = %s" % valphas)
-    else:
-        logger.debug("Finding single best alpha..")
-        if nboots == 0:
-            if len(alphas) == 1:
-                bestalphaind = 0
-            else:
-                raise ValueError("You must run at least one cross-validation step "
-                                 "to choose best overall alpha, or only supply one"
-                                 "possible alpha value.")
-        else:
-            meanbootcorr = all_correlation_matrices.mean(2).mean(1)
-            bestalphaind = np.argmax(meanbootcorr)
-        bestalpha = alphas[bestalphaind]
-        valphas = np.array([bestalpha] * nvox)
-        logger.debug("Best alpha = %0.3f" % bestalpha)
 
     logger.info("Calculating overall correlation based on optimal alphas")
     # get correlations for prediction dataset directly
