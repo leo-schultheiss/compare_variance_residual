@@ -183,11 +183,12 @@ def bootstrap_ridge(
     return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, n_targets_batch=30,
-                n_targets_batch_refit=30, random_state=12345):
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, n_targets_batch=1,
+                n_targets_batch_refit=1, random_state=12345):
     GROUP_CV_SOLVER_PARAMS = dict(n_iter=n_iter, n_targets_batch=n_targets_batch,
-                                  n_targets_batch_refit=n_targets_batch_refit,
-                                  alphas=alphas, score_func=himalaya.scoring.correlation_score, progress_bar=True)
+                                  n_targets_batch_refit=n_targets_batch_refit, alphas=alphas,
+                                  score_func=himalaya.scoring.correlation_score, local_alpha=False,
+                                  progress_bar=True)
 
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
     cv = WholeDatasetSplitter()
