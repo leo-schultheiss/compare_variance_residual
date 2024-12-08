@@ -9,6 +9,8 @@ from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 
 
+ridge_logger = logging.getLogger("ridge_corr")
+
 class WholeDatasetSplitter(BaseCrossValidator):
     """Yields the whole dataset as training and testing set.
     We use this since himalaya only provides a cross-validation solver for group ridge regression. Instead, we want to be able to use bootstrap sampling."""
@@ -36,7 +38,7 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
 
 def bootstrap_ridge(
         stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-        joined=None, single_alpha=False, use_corr=True, logger=logging.Logger(__name__)):
+        joined=None, single_alpha=False, use_corr=True, logger=ridge_logger):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
