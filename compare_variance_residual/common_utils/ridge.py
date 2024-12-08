@@ -1,6 +1,5 @@
 import itertools as itools
 import logging
-import time
 
 import himalaya
 import numpy as np
@@ -8,8 +7,8 @@ from himalaya.ridge import GroupRidgeCV
 from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 
-
 ridge_logger = logging.getLogger("ridge_corr")
+
 
 class WholeDatasetSplitter(BaseCrossValidator):
     """Yields the whole dataset as training and testing set.
@@ -36,9 +35,9 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     return splits_list
 
 
-def bootstrap_ridge(
-        stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-        joined=None, single_alpha=False, use_corr=True, logger=ridge_logger):
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks, joined=None,
+                    single_alpha=False, use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10,
+                    n_alphas_batch=5, logger=ridge_logger, random_state=12345):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
@@ -85,7 +84,17 @@ def bootstrap_ridge(
         this can make a big difference -- highly regularized solutions will have very small norms and
         will thus explain very little variance while still leading to high correlations, as correlation
         is scale-free while R**2 is not.
+    n_iter : int, default 1
+        Number of feature-space weights combination to search. If an array is given, the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
+    n_targets_batch : int, default 10
+        Number of targets to use in each batch. If None, all targets are used.
+    n_targets_batch_refit : int, default 10
+        Number of targets to use in each batch for refit. If None, all targets are used.
+    n_alphas_batch : int, default 5
+        Number of alphas to try in each batch.
     logger : logging.Logger, default logging.Logger("bootstrap_ridge")
+    random_state : int, default 12345
+        Random seed for reproducibility.
 
     Returns
     -------
@@ -121,7 +130,9 @@ def bootstrap_ridge(
 
         # Run ridge regression using this test set
         logger.info(f"Running ridge regression on bootstrap sample {bi}")
-        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas)
+        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
+                                                             n_iter, n_targets_batch, n_targets_batch_refit,
+                                                             random_state, n_alphas_batch, use_corr)
         # print some statistics
         logger.debug(
             f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}, best alphas: {model_best_alphas}")
@@ -146,7 +157,7 @@ def bootstrap_ridge(
             meanbootcorr = all_correlation_matrices.mean(2).mean(1)
             bestalphaind = np.argmax(meanbootcorr)
         bestalpha = alphas[bestalphaind]
-        valphas = np.array([bestalpha] * nvox)
+        valphas = bestalpha
         logger.debug("Best alpha = %0.3f" % bestalpha)
     else:
         if nboots == 0:
@@ -170,17 +181,19 @@ def bootstrap_ridge(
 
     logger.info("Calculating overall correlation based on optimal alphas")
     # get correlations for prediction dataset directly
-    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas)
+    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas, n_iter,
+                                           n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
+                                           use_corr)
     logger.debug(
         f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
     return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, n_targets_batch=10,
-                n_targets_batch_refit=10, random_state=12345, n_alphas_batch=5):
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter, n_targets_batch, n_targets_batch_refit,
+                random_state, n_alphas_batch, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
                                   score_func=himalaya.scoring.correlation_score, local_alpha=False,
-                                  progress_bar=True,n_iter=n_iter, n_targets_batch=n_targets_batch,
+                                  progress_bar=True, n_iter=n_iter, n_targets_batch=n_targets_batch,
                                   n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch)
 
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
@@ -188,6 +201,11 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter=1, 
     model = GroupRidgeCV(cv=cv, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     model.fit(stim_train, resp_train)
     predictions = model.predict(stim_test)
-    pearson_correlations = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
-                                     for ii in range(resp_test.shape[1])])
-    return pearson_correlations, model.best_alphas_
+    if use_corr:
+        score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
+                          for ii in range(resp_test.shape[1])])
+    else:
+        # compute R^2
+        score = np.array([1 - np.mean((resp_test[:, ii] - predictions[:, ii].ravel()) ** 2) / np.var(resp_test[:, ii])
+                          for ii in range(resp_test.shape[1])])
+    return score, model.best_alphas_
