@@ -1,6 +1,5 @@
 import itertools as itools
 import logging
-import time
 
 import himalaya
 import numpy as np
@@ -39,7 +38,7 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
 
 def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTransformerNoStack,
                     alphas=np.logspace(0, 4, 10), nboots=15, chunklen=40, nchunks=10, joined=None, single_alpha=True,
-                    use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10, n_alphas_batch=5,
+                    use_corr=True, n_iter=1, n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=10,
                     logger=ridge_logger, random_state=42):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
@@ -135,8 +134,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
-        logger.info(f"Running ridge regression on bootstrap sample {bi}/{nboots}")
-        start = time.time()
+        logger.info(f"Running ridge regression on bootstrap sample {bi + 1}/{nboots}")
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
                                                              ct, n_iter, n_targets_batch, n_targets_batch_refit,
                                                              random_state, n_alphas_batch, logger, single_alpha,
@@ -145,10 +143,10 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
         # count frequency of best alphas
         model_best_alphas = np.array(model_best_alphas)
         unique, counts = np.unique(model_best_alphas, return_counts=True)
-        # print some statistics
-        logging_template = "Time taken {0:02}s: mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alpha(s): {4}"
-        logger.debug(logging_template.format(time.time() - start, correlation_matrix_.mean(), correlation_matrix_.max(),
-                                             correlation_matrix_.min(), f"{unique}: {counts}"))
+        logging_template = "mean correlation: {0}, max correlation: {1}, min correlation: {2}, best alpha(s): {3}"
+        logger.debug(
+            logging_template.format(correlation_matrix_.mean(), correlation_matrix_.max(), correlation_matrix_.min(),
+                                    f"{unique}: {counts}"))
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas
@@ -197,6 +195,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
     corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
                                            n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
                                            logger, single_alpha, use_corr)
+    corrs = np.nan_to_num(corrs)
     logger.debug(
         f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
     return [], corrs, valphas, all_correlation_matrices, valinds
