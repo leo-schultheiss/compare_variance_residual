@@ -137,7 +137,8 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
         logger.info(f"Running ridge regression on bootstrap sample {bi}/{nboots}")
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
                                                              ct, n_iter, n_targets_batch, n_targets_batch_refit,
-                                                             random_state, n_alphas_batch, logger, use_corr)
+                                                             random_state, n_alphas_batch, logger, single_alpha,
+                                                             use_corr)
         correlation_matrix_ = np.nan_to_num(correlation_matrix_)
         # print some statistics
         logging_template = "mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alphas: {4}"
@@ -200,9 +201,9 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
 
 def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
-                n_targets_batch_refit, random_state, n_alphas_batch, logger, use_corr=True):
+                n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
-                                  score_func=himalaya.scoring.correlation_score, local_alpha=False,
+                                  score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
                                   progress_bar=True, n_iter=n_iter, n_targets_batch=n_targets_batch,
                                   n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch)
 
