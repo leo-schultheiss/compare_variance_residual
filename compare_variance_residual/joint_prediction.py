@@ -4,6 +4,7 @@ import numpy as np
 from himalaya.ridge import ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
 from sklearn.preprocessing import StandardScaler
+from voxelwise_tutorials.delayer import Delayer
 
 from compare_variance_residual.common_utils.feature_utils import load_subject_fmri, \
     load_downsampled_context_representations, \
@@ -55,11 +56,6 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
             raise ValueError(f"Textual feature {feature} not found in the dataset")
         print("training_stim.shape: ", training_stim.shape)
         print("prediction_stim.shape: ", prediction_stim.shape)
-        training_stim = make_delayed(training_stim, delays)
-        prediction_stim = make_delayed(prediction_stim, delays)
-        print("delayed training_stim.shape: ", prediction_stim.shape)
-        print("delayed prediction_stim.shape: ", training_stim.shape)
-
         if Rstim is None:
             Rstim, Pstim = training_stim, prediction_stim
         else:
@@ -67,7 +63,7 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
             Pstim = np.hstack((Pstim, prediction_stim))
         print("Rstim.shape: ", Rstim.shape)
         print("Pstim.shape: ", Pstim.shape)
-        transformers.append((feature, StandardScaler(), slice(begin_ind, begin_ind + (training_stim.shape[1]) - 1)))
+        transformers.append((feature, Delayer(delays), slice(begin_ind, begin_ind + (training_stim.shape[1]) - 1)))
         begin_ind += training_stim.shape[1]
     return Pstim, Rstim, transformers
 

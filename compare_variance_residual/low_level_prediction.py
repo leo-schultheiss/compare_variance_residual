@@ -4,6 +4,7 @@ import numpy as np
 from himalaya.ridge import ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
 from sklearn.preprocessing import StandardScaler
+from voxelwise_tutorials.delayer import Delayer
 
 from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, \
     get_prediction_path
@@ -26,16 +27,13 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
 
     # delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
-    Rstim = make_delayed(Rstim, delays)
-    Pstim = make_delayed(Pstim, delays)
-    print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
 
     # fit bootstrapped ridge regression model
     n_boots = 20  # Number of cross-validation runs.
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
     alphas = np.logspace(0, 4, 10)
-    ct = ColumnTransformerNoStack([("low_level", StandardScaler(), slice(0, Rstim.shape[1] - 1))])
+    ct = ColumnTransformerNoStack([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
                                                         ct, use_corr=True, single_alpha=True)
 
