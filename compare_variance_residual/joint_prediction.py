@@ -40,32 +40,30 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
 
 
 def prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays):
-    # Delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
-    # create column transformer listing all column indices for each feature group
-    Rstim, Pstim = None, None
+    all_Rstim, all_Pstim = None, None
     transformers = []
     begin_ind = 0
     # join input features (context representations and low-level textual features)
     for feature in textual_features:
         if feature == "semantic":
-            training_stim, prediction_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
+            Rstim, Pstim = load_downsampled_context_representations(data_dir, feature_filename, layer)
         elif feature in ['letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std']:
-            training_stim, prediction_stim = load_z_low_level_feature(data_dir, feature)
+            Rstim, Pstim = load_z_low_level_feature(data_dir, feature)
         else:
             raise ValueError(f"Textual feature {feature} not found in the dataset")
-        print("training_stim.shape: ", training_stim.shape)
-        print("prediction_stim.shape: ", prediction_stim.shape)
-        if Rstim is None:
-            Rstim, Pstim = training_stim, prediction_stim
-        else:
-            Rstim = np.hstack((Rstim, training_stim))
-            Pstim = np.hstack((Pstim, prediction_stim))
         print("Rstim.shape: ", Rstim.shape)
         print("Pstim.shape: ", Pstim.shape)
-        transformers.append((feature, Delayer(delays), slice(begin_ind, begin_ind + (training_stim.shape[1]) - 1)))
-        begin_ind += training_stim.shape[1]
-    return Pstim, Rstim, transformers
+        if all_Rstim is None or all_Pstim is None:
+            all_Rstim, all_Pstim = Rstim, Pstim
+        else:
+            all_Rstim = np.hstack((all_Rstim, Rstim))
+            all_Pstim = np.hstack((all_Pstim, Pstim))
+        print("all_Rstim.shape: ", all_Rstim.shape)
+        print("all_Pstim.shape: ", all_Pstim.shape)
+        transformers.append((feature, Delayer(delays), slice(begin_ind, begin_ind + Rstim.shape[1] - 1)))
+        begin_ind += Rstim.shape[1]
+    return all_Pstim, all_Rstim, transformers
 
 
 if __name__ == '__main__':
