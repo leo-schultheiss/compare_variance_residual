@@ -212,8 +212,8 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter
     model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     pipeline = make_pipeline(ct, model)
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
-    logger.debug(
-        f"running group ridge regression on feature space of shape {stim_train.shape} sliced into columns {columns}")
+    logger.debug(f"banded ridge regression on feature space of shape {stim_train.shape} "
+                 f"with column groups (bands) {columns} predicting shape {resp_train.shape}")
     pipeline.fit(stim_train, resp_train)
     predictions = pipeline.predict(stim_test)
     if use_corr:
