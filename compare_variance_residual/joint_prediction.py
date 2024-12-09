@@ -16,18 +16,12 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     textual_features = textual_features.split(",")
 
     # load features
-    Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features)
+    Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     print("Rresp.shape: ", Rresp.shape)
-    # create column transformer listing all column indices for each feature group
+
     ct = ColumnTransformerNoStack(transformers=transformers)
 
-    # Delay stimuli to account for hemodynamic lag
-    delays = range(1, number_of_delays + 1)
-    Rstim = make_delayed(Rstim, delays)
-    Pstim = make_delayed(Pstim, delays)
-    print("Rstim.shape: ", Rstim.shape)
-    print("Pstim.shape: ", Pstim.shape)
 
     # fit bootstrapped ridge regression model
     n_boots = 20  # Number of cross-validation runs.
@@ -45,7 +39,10 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     np.save(output_file, corrs)
 
 
-def prepare_features(data_dir, feature_filename, layer, textual_features):
+def prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays):
+    # Delay stimuli to account for hemodynamic lag
+    delays = range(1, number_of_delays + 1)
+    # create column transformer listing all column indices for each feature group
     Rstim, Pstim = None, None
     transformers = []
     begin_ind = 0
@@ -59,6 +56,11 @@ def prepare_features(data_dir, feature_filename, layer, textual_features):
             raise ValueError(f"Textual feature {feature} not found in the dataset")
         print("training_stim.shape: ", training_stim.shape)
         print("prediction_stim.shape: ", prediction_stim.shape)
+        training_stim = make_delayed(training_stim, delays)
+        prediction_stim = make_delayed(prediction_stim, delays)
+        print("delayed training_stim.shape: ", Rstim.shape)
+        print("delayed prediction_stim.shape: ", Pstim.shape)
+
         if Rstim is None:
             Rstim, Pstim = training_stim, prediction_stim
         else:
@@ -66,7 +68,7 @@ def prepare_features(data_dir, feature_filename, layer, textual_features):
             Pstim = np.hstack((Pstim, prediction_stim))
         print("Rstim.shape: ", Rstim.shape)
         print("Pstim.shape: ", Pstim.shape)
-        transformers.append((feature, StandardScaler(), slice(begin_ind, begin_ind + training_stim.shape[1] - 1)))
+        transformers.append((feature, StandardScaler(), slice(begin_ind, begin_ind + (training_stim.shape[1]) - 1)))
         begin_ind += training_stim.shape[1]
     return Pstim, Rstim, transformers
 
