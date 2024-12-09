@@ -134,13 +134,18 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
-        logger.info(f"Running ridge regression on bootstrap sample {bi}")
+        logger.info(f"Running ridge regression on bootstrap sample {bi}/{nboots}")
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
                                                              ct, n_iter, n_targets_batch, n_targets_batch_refit,
                                                              random_state, n_alphas_batch, logger, use_corr)
+        correlation_matrix_ = np.nan_to_num(correlation_matrix_)
         # print some statistics
-        logger.debug(
-            f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}, best alphas: {model_best_alphas}")
+        logging_template = "mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alphas: {4}"
+        # count frequency of best alphas
+        model_best_alphas = np.array(model_best_alphas)
+        unique, counts = np.unique(model_best_alphas, return_counts=True)
+        logger.debug(logging_template.format(bi, correlation_matrix_.mean(), correlation_matrix_.max(),
+                                             correlation_matrix_.min(), {dict(zip(unique, counts))}))
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas
@@ -195,8 +200,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
 
 def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
-                n_targets_batch_refit,
-                random_state, n_alphas_batch, logger, use_corr=True):
+                n_targets_batch_refit, random_state, n_alphas_batch, logger, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
                                   score_func=himalaya.scoring.correlation_score, local_alpha=False,
                                   progress_bar=True, n_iter=n_iter, n_targets_batch=n_targets_batch,
