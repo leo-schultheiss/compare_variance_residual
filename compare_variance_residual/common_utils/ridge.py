@@ -207,7 +207,8 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter
                 n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas, score_func=himalaya.scoring.correlation_score,
                                   local_alpha=not single_alpha, n_iter=n_iter, n_targets_batch=n_targets_batch,
-                                  n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch)
+                                  n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch,
+                                  progress_bar=False)
 
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
     cv = WholeDatasetSplitter()
