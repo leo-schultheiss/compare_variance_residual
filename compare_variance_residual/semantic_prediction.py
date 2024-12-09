@@ -1,15 +1,15 @@
 import argparse
 import os
 
-import himalaya.scoring
 import numpy as np
-from himalaya.ridge import GroupRidgeCV, ColumnTransformerNoStack
+from himalaya.ridge import ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
 from sklearn.preprocessing import StandardScaler
 
-from compare_variance_residual.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
+from compare_variance_residual.common_utils.feature_utils import load_downsampled_context_representations, \
+    load_subject_fmri, \
     get_prediction_path
-from compare_variance_residual.common_utils.ridge import GROUP_CV_SOVER_PARAMS, bootstrap_ridge
+from compare_variance_residual.common_utils.ridge import bootstrap_ridge
 
 trim = 5
 
@@ -46,7 +46,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
     alphas = np.logspace(0, 4, 10)
-    ct = ColumnTransformerNoStack([("semantic", StandardScaler(), slice(0, Rstim.shape[1]))])
+    ct = ColumnTransformerNoStack([("semantic", StandardScaler(), slice(0, Rstim.shape[1] - 1))])
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
                                                         ct, use_corr=True, single_alpha=True)
 
@@ -71,7 +71,10 @@ if __name__ == "__main__":
     print(args)
 
     from himalaya.backend import set_backend
+    import logging
+
     backend = set_backend("torch", on_error="warn")
+    logging.basicConfig(level=logging.DEBUG)
 
     predict_brain_activity(data_dir=args.data_dir, feature_filename=args.feature_filename,
                            language_model=args.language_model, layer=args.layer, subject_num=args.subject_num,

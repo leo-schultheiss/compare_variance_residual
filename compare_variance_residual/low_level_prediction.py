@@ -35,7 +35,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
     alphas = np.logspace(0, 4, 10)
-    ct = ColumnTransformerNoStack([("low_level", StandardScaler(), slice(0, Rstim.shape[1]))])
+    ct = ColumnTransformerNoStack([("low_level", StandardScaler(), slice(0, Rstim.shape[1] - 1))])
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
                                                         ct, use_corr=True, single_alpha=True)
 
