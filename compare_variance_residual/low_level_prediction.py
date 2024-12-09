@@ -29,13 +29,8 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     delays = range(1, number_of_delays + 1)
 
     # fit bootstrapped ridge regression model
-    n_boots = 20  # Number of cross-validation runs.
-    chunklen = 40  # Length of chunks to break data into.
-    n_chunks = 20  # Number of chunks to use in the cross-validated training.
-    alphas = np.logspace(0, 4, 10)
     ct = ColumnTransformerNoStack([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
-                                                        ct, use_corr=True, single_alpha=True)
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,

@@ -39,13 +39,8 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     delays = range(1, number_of_delays + 1)
 
     # fit bootstrapped ridge regression model
-    n_boots = 20  # Number of cross-validation runs.
-    chunklen = 40  # Length of chunks to break data into.
-    n_chunks = 20  # Number of chunks to use in the cross-validated training.
-    alphas = np.logspace(0, 4, 10)
     ct = ColumnTransformerNoStack([("semantic", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
-                                                        ct, use_corr=True, single_alpha=True)
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save results
     output_file = get_prediction_path(language_model, "semantic", modality, subject_num, layer=layer)

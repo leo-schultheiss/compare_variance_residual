@@ -37,10 +37,10 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     return splits_list
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
-                    ct: ColumnTransformerNoStack, joined=None,
-                    single_alpha=False, use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10,
-                    n_alphas_batch=5, logger=ridge_logger, random_state=12345):
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTransformerNoStack,
+                    alphas=np.logspace(0, 4, 10), nboots=15, chunklen=40, nchunks=10, joined=None, single_alpha=True,
+                    use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10, n_alphas_batch=5,
+                    logger=ridge_logger, random_state=42):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
@@ -62,20 +62,20 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
     resp_test : array_like, shape (TP, M)
         Test responses with TP time points and M different responses. Each response should be Z-scored across
         time.
-    alphas : list or array_like, shape (A,)
-        Ridge parameters that will be tested. Should probably be log-spaced. np.logspace(0, 3, 20) works well.
-    nboots : int
-        The number of bootstrap samples to run. 15 to 30 works well.
-    chunklen : int
-        On each sample, the training data is broken into chunks of this length. This should be a few times
-        longer than your delay/STRF. e.g. for a STRF with 3 delays, I use chunks of length 10.
-    nchunks : int
-        The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
-        of nchunks and chunklen is the total number of training samples held out for each sample, and this
-        product should be about 20 percent of the total length of the training data.
     ct : ColumnTransformerNoStack with a list of transformers with entries (feature_name, transformer, columns)
         This estimator allows different columns or column subsets of the input to be transformed separately.
         The columns represent the indices of the separate feature groups fit in the banded ridge regression.
+    alphas : list or array_like, shape (A,)
+        Ridge parameters that will be tested. Should probably be log-spaced. np.logspace(0, 3, 20) works well.
+    nboots : int, default 15
+        The number of bootstrap samples to run. 15 to 30 works well.
+    chunklen : int, default 40
+        On each sample, the training data is broken into chunks of this length. This should be a few times
+        longer than your delay/STRF. e.g. for a STRF with 3 delays, I use chunks of length 10.
+    nchunks : int, default 10
+        The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
+        of nchunks and chunklen is the total number of training samples held out for each sample, and this
+        product should be about 20 percent of the total length of the training data.
     joined : None or list of array_like indices, default None
         If you want the STRFs for two (or more) responses to be directly comparable, you need to ensure that
         the regularization parameter that they use is the same. To do that, supply a list of the response sets
@@ -99,7 +99,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
     n_alphas_batch : int, default 5
         Number of alphas to try in each batch.
     logger : logging.Logger, default logging.Logger("bootstrap_ridge")
-    random_state : int, default 12345
+    random_state : int, default 42
         Random seed for reproducibility.
 
     Returns
@@ -142,14 +142,13 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
                                                              random_state, n_alphas_batch, logger, single_alpha,
                                                              use_corr)
         correlation_matrix_ = np.nan_to_num(correlation_matrix_)
-        # print some statistics
-        logging_template = "Time taken {0}s: mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alpha(s): {4}"
         # count frequency of best alphas
         model_best_alphas = np.array(model_best_alphas)
         unique, counts = np.unique(model_best_alphas, return_counts=True)
-        logger.debug(
-            logging_template.format(time.time() - start, correlation_matrix_.mean(), correlation_matrix_.max(),
-                                    correlation_matrix_.min(), f"{unique}: {counts}"))
+        # print some statistics
+        logging_template = "Time taken {0:02}s: mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alpha(s): {4}"
+        logger.debug(logging_template.format(time.time() - start, correlation_matrix_.mean(), correlation_matrix_.max(),
+                                             correlation_matrix_.min(), f"{unique}: {counts}"))
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas

@@ -23,13 +23,8 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     print("Presp.shape: ", Presp.shape)
 
     # fit bootstrapped ridge regression model
-    n_boots = 20  # Number of cross-validation runs.
-    chunklen = 40  # Length of chunks to break data into.
-    n_chunks = 20  # Number of chunks to use in the cross-validated training.
-    alphas = np.logspace(0, 4, 10)
     ct = ColumnTransformerNoStack(transformers=transformers)
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
-                                                        ct, use_corr=True, single_alpha=True)
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations
     output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
