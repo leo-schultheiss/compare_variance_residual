@@ -1,5 +1,6 @@
 import itertools as itools
 import logging
+import time
 
 import himalaya
 import numpy as np
@@ -135,18 +136,20 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
         # Run ridge regression using this test set
         logger.info(f"Running ridge regression on bootstrap sample {bi}/{nboots}")
+        start = time.time()
         correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
                                                              ct, n_iter, n_targets_batch, n_targets_batch_refit,
                                                              random_state, n_alphas_batch, logger, single_alpha,
                                                              use_corr)
         correlation_matrix_ = np.nan_to_num(correlation_matrix_)
         # print some statistics
-        logging_template = "mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alphas: {4}"
+        logging_template = "Time taken {1}s: mean correlation: {2}, max correlation: {3}, min correlation: {4}, best alpha(s): {5}"
         # count frequency of best alphas
         model_best_alphas = np.array(model_best_alphas)
         unique, counts = np.unique(model_best_alphas, return_counts=True)
-        logger.debug(logging_template.format(bi, correlation_matrix_.mean(), correlation_matrix_.max(),
-                                             correlation_matrix_.min(), {dict(zip(unique, counts))}))
+        logger.debug(
+            logging_template.format((time.time() - start), correlation_matrix_.mean(), correlation_matrix_.max(),
+                                    correlation_matrix_.min(), f"{unique}: {counts}"))
         correlation_matrices.append(correlation_matrix_)
 
     # Find best alphas
@@ -202,9 +205,8 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
 def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
                 n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr=True):
-    GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
-                                  score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
-                                  progress_bar=True, n_iter=n_iter, n_targets_batch=n_targets_batch,
+    GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas, score_func=himalaya.scoring.correlation_score,
+                                  local_alpha=not single_alpha, n_iter=n_iter, n_targets_batch=n_targets_batch,
                                   n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch)
 
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
