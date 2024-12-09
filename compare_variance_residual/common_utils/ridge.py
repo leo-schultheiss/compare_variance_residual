@@ -3,9 +3,10 @@ import logging
 
 import himalaya
 import numpy as np
-from himalaya.ridge import GroupRidgeCV
+from himalaya.ridge import GroupRidgeCV, ColumnTransformerNoStack
 from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
+from sklearn.pipeline import make_pipeline
 
 ridge_logger = logging.getLogger("ridge_corr")
 
@@ -35,7 +36,7 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     return splits_list
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks, joined=None,
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks, ct: ColumnTransformerNoStack, joined=None,
                     single_alpha=False, use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10,
                     n_alphas_batch=5, logger=ridge_logger, random_state=12345):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
@@ -70,6 +71,9 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
         The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
         of nchunks and chunklen is the total number of training samples held out for each sample, and this
         product should be about 20 percent of the total length of the training data.
+    ct : ColumnTransformerNoStack with a list of transformers with entries (feature_name, transformer, columns)
+        This estimator allows different columns or column subsets of the input to be transformed separately.
+        The columns represent the indices of the separate feature groups fit in the banded ridge regression.
     joined : None or list of array_like indices, default None
         If you want the STRFs for two (or more) responses to be directly comparable, you need to ensure that
         the regularization parameter that they use is the same. To do that, supply a list of the response sets
@@ -130,7 +134,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
         # Run ridge regression using this test set
         logger.info(f"Running ridge regression on bootstrap sample {bi}")
-        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
+        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas, ct,
                                                              n_iter, n_targets_batch, n_targets_batch_refit,
                                                              random_state, n_alphas_batch, use_corr)
         # print some statistics
@@ -189,7 +193,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
     return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter, n_targets_batch, n_targets_batch_refit,
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch, n_targets_batch_refit,
                 random_state, n_alphas_batch, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
                                   score_func=himalaya.scoring.correlation_score, local_alpha=False,
@@ -199,8 +203,9 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, n_iter, n_
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
     cv = WholeDatasetSplitter()
     model = GroupRidgeCV(cv=cv, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
-    model.fit(stim_train, resp_train)
-    predictions = model.predict(stim_test)
+    pipeline = make_pipeline(ct, model)
+    pipeline.fit(stim_train, resp_train)
+    predictions = pipeline.predict(stim_test)
     if use_corr:
         score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
                           for ii in range(resp_test.shape[1])])
