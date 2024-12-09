@@ -143,12 +143,12 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
                                                              use_corr)
         correlation_matrix_ = np.nan_to_num(correlation_matrix_)
         # print some statistics
-        logging_template = "Time taken {1}s: mean correlation: {2}, max correlation: {3}, min correlation: {4}, best alpha(s): {5}"
+        logging_template = "Time taken {0}s: mean correlation: {1}, max correlation: {2}, min correlation: {3}, best alpha(s): {4}"
         # count frequency of best alphas
         model_best_alphas = np.array(model_best_alphas)
         unique, counts = np.unique(model_best_alphas, return_counts=True)
         logger.debug(
-            logging_template.format((time.time() - start), correlation_matrix_.mean(), correlation_matrix_.max(),
+            logging_template.format(time.time() - start, correlation_matrix_.mean(), correlation_matrix_.max(),
                                     correlation_matrix_.min(), f"{unique}: {counts}"))
         correlation_matrices.append(correlation_matrix_)
 
