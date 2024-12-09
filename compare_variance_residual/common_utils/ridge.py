@@ -36,7 +36,8 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     return splits_list
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks, ct: ColumnTransformerNoStack, joined=None,
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots, chunklen, nchunks,
+                    ct: ColumnTransformerNoStack, joined=None,
                     single_alpha=False, use_corr=True, n_iter=1, n_targets_batch=10, n_targets_batch_refit=10,
                     n_alphas_batch=5, logger=ridge_logger, random_state=12345):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
@@ -134,9 +135,9 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
         # Run ridge regression using this test set
         logger.info(f"Running ridge regression on bootstrap sample {bi}")
-        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas, ct,
-                                                             n_iter, n_targets_batch, n_targets_batch_refit,
-                                                             random_state, n_alphas_batch, use_corr)
+        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
+                                                             ct, n_iter, n_targets_batch, n_targets_batch_refit,
+                                                             random_state, n_alphas_batch, logger, use_corr)
         # print some statistics
         logger.debug(
             f"Mean correlation: {correlation_matrix_.mean()}, max correlation: {correlation_matrix_.max()}, min correlation: {correlation_matrix_.min()}, best alphas: {model_best_alphas}")
@@ -193,8 +194,9 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
     return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch, n_targets_batch_refit,
-                random_state, n_alphas_batch, use_corr=True):
+def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
+                n_targets_batch_refit,
+                random_state, n_alphas_batch, logger, use_corr=True):
     GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas,
                                   score_func=himalaya.scoring.correlation_score, local_alpha=False,
                                   progress_bar=True, n_iter=n_iter, n_targets_batch=n_targets_batch,
@@ -202,8 +204,10 @@ def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter
 
     # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
     cv = WholeDatasetSplitter()
-    model = GroupRidgeCV(cv=cv, groups=None, random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
+    model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
     pipeline = make_pipeline(ct, model)
+    logger.debug(
+        f"running group ridge regression on feature space of shape {stim_train.shape} sliced into columns {[(t[2].start, t[2].stop) for t in ct.transformers]}")
     pipeline.fit(stim_train, resp_train)
     predictions = pipeline.predict(stim_test)
     if use_corr:
