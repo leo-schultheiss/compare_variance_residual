@@ -19,15 +19,14 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
     print("Rresp.shape: ", Rresp.shape)
-
-    ct = ColumnTransformerNoStack(transformers=transformers)
-
+    print("Presp.shape: ", Presp.shape)
 
     # fit bootstrapped ridge regression model
     n_boots = 20  # Number of cross-validation runs.
     chunklen = 40  # Length of chunks to break data into.
     n_chunks = 20  # Number of chunks to use in the cross-validated training.
     alphas = np.logspace(0, 4, 10)
+    ct = ColumnTransformerNoStack(transformers=transformers)
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
                                                         ct, use_corr=True, single_alpha=True)
 
@@ -58,8 +57,8 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
         print("prediction_stim.shape: ", prediction_stim.shape)
         training_stim = make_delayed(training_stim, delays)
         prediction_stim = make_delayed(prediction_stim, delays)
-        print("delayed training_stim.shape: ", Rstim.shape)
-        print("delayed prediction_stim.shape: ", Pstim.shape)
+        print("delayed training_stim.shape: ", prediction_stim.shape)
+        print("delayed prediction_stim.shape: ", training_stim.shape)
 
         if Rstim is None:
             Rstim, Pstim = training_stim, prediction_stim
