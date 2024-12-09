@@ -195,7 +195,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, alphas, nboots
 
     logger.info("Calculating overall correlation based on optimal alphas")
     # get correlations for prediction dataset directly
-    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas, n_iter,
+    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
                                            n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
                                            use_corr)
     logger.debug(
