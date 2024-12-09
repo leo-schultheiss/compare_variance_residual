@@ -3,12 +3,13 @@ import os
 
 import himalaya.scoring
 import numpy as np
-from himalaya.ridge import GroupRidgeCV
+from himalaya.ridge import GroupRidgeCV, ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
+from sklearn.preprocessing import StandardScaler
 
 from compare_variance_residual.common_utils.feature_utils import load_downsampled_context_representations, load_subject_fmri, \
     get_prediction_path
-from compare_variance_residual.common_utils.ridge import GROUP_CV_SOVER_PARAMS
+from compare_variance_residual.common_utils.ridge import GROUP_CV_SOVER_PARAMS, bootstrap_ridge
 
 trim = 5
 
@@ -26,32 +27,35 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     :param number_of_delays: number of delays to account for hemodynamic response
     """
     # Load data
-    training_stim, predicion_stim = load_downsampled_context_representations(data_dir, feature_filename, layer)
-    zRresp, zPresp = load_subject_fmri(data_dir, subject_num, modality)
+    Rstim, Pstim = load_downsampled_context_representations(data_dir, feature_filename, layer)
+    print("Rstim.shape: ", Rstim.shape)
+    print("Pstim.shape: ", Pstim.shape)
+    Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
+    print("Rresp.shape: ", Rresp.shape)
+    print("Presp.shape: ", Presp.shape)
 
     # Delay stimuli
     delays = range(1, number_of_delays + 1)
-    print("FIR model delays: ", delays)
+    Rstim = make_delayed(np.array(Rstim), delays)
+    Pstim = make_delayed(np.array(Pstim), delays)
+    print("Rstim.shape: ", Rstim.shape)
+    print("Pstim.shape: ", Pstim.shape)
 
-    delayed_Rstim = make_delayed(np.array(training_stim), delays)
-    delayed_Pstim = make_delayed(np.array(predicion_stim), delays)
-
-    print("Rstim.shape: ", delayed_Rstim.shape)
-    print("Rresp.shape: ", zRresp.shape)
-    print("Pstim.shape: ", delayed_Pstim.shape)
-    print("Presp.shape: ", zPresp.shape)
-
-    # Fit model
-    model = GroupRidgeCV(groups=None, random_state=12345, solver_params=GROUP_CV_SOVER_PARAMS)
-    model.fit(delayed_Rstim, zRresp)
-    voxelwise_correlations = model.score(delayed_Pstim, zPresp)
+    # fit bootstrapped ridge regression model
+    n_boots = 20  # Number of cross-validation runs.
+    chunklen = 40  # Length of chunks to break data into.
+    n_chunks = 20  # Number of chunks to use in the cross-validated training.
+    alphas = np.logspace(0, 4, 10)
+    ct = ColumnTransformerNoStack([("semantic", StandardScaler(), slice(0, Rstim.shape[1]))])
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, alphas, n_boots, chunklen, n_chunks,
+                                                        ct, use_corr=True, single_alpha=True)
 
     # save results
     output_file = get_prediction_path(language_model, "semantic", modality, subject_num, layer=layer)
     output_directory = os.path.dirname(output_file)
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
-    np.save(output_file, voxelwise_correlations)
+    np.save(output_file, corrs)
 
 
 if __name__ == "__main__":
