@@ -34,9 +34,8 @@ class TemporalChunkSplitter(BaseCrossValidator):
 
 
 def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(0, 3, 20), nboots=15,
-                    chunklen=40, nchunks=20, joined=None, single_alpha=True, use_corr=True, n_iter=50,
-                    n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger,
-                    random_state=42):
+                    chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=50, n_targets_batch=None,
+                    n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
@@ -72,12 +71,6 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
         The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
         of nchunks and chunklen is the total number of training samples held out for each sample, and this
         product should be about 20 percent of the total length of the training data.
-    joined : None or list of array_like indices, default None
-        If you want the STRFs for two (or more) responses to be directly comparable, you need to ensure that
-        the regularization parameter that they use is the same. To do that, supply a list of the response sets
-        that should use the same ridge parameter here. For example, if you have four responses, joined could
-        be [np.array([0,1]), np.array([2,3])], in which case responses 0 and 1 will use the same ridge parameter
-        (which will be parameter that is best on average for those two), and likewise for responses 2 and 3.
     single_alpha : boolean, default False
         Whether to use a single alpha for all responses. Good for identification/decoding.
     use_corr : boolean, default True
