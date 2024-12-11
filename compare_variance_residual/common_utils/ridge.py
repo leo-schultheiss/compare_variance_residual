@@ -33,7 +33,7 @@ class TemporalChunkSplitter(BaseCrossValidator):
             yield train_indexes_, tune_indexes_
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(0, 3, 20), nboots=15,
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(-5, 15, 20), nboots=15,
                     chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=50, n_targets_batch=None,
                     n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
     """Adapted from https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py to use himalaya
@@ -99,6 +99,8 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
         Predicted responses for the validation set are obtained using the regression weights: pred = np.dot(Pstim, wt),
         and then the correlation between each predicted response and each
         column in Presp is found.
+    weights : array_like, shape (N, M)
+        The weights for each feature and response. These are the weights that are used to predict the responses.
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
     """
@@ -120,7 +122,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
         model = RidgeCV(cv=cv, alphas=alphas, solver_params=solver_params)
     else:  # use banded ridge regression
         logger.info("Using group solver")
-        group_solver_params = dict(n_iter=n_iter, progress_bar=True)
+        group_solver_params = dict(n_iter=n_iter, alphas=alphas, progress_bar=True)
         solver_params = {**common_solver_params, **group_solver_params}
         model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=solver_params)
 
@@ -131,7 +133,6 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     )
     pipeline.fit(stim_train, resp_train)
     predictions = pipeline.predict(stim_test)
-    model_best_alphas = model.best_alphas_
 
     if use_corr:  # compute pearson correlation
         evaluation_type = "correlation"
@@ -144,6 +145,6 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
 
     score = np.nan_to_num(score)
     logger.debug(
-        f"Mean {evaluation_type}: {score.mean()}, max {evaluation_type}: {score.max()}, min {evaluation_type}: {score.min()}, best alpha(s): {model_best_alphas}")
+        f"Mean {evaluation_type}: {score.mean()}, max {evaluation_type}: {score.max()}, min {evaluation_type}: {score.min()}, best alpha(s): {model.best_alphas_}")
 
-    return score, model_best_alphas
+    return score, model.coef_, model.best_alphas_
