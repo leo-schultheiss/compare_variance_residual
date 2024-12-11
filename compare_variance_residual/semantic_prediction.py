@@ -2,8 +2,7 @@ import argparse
 import os
 
 import numpy as np
-from himalaya.ridge import ColumnTransformerNoStack
-from ridge_utils.util import make_delayed
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
@@ -36,11 +35,11 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     print("Presp.shape: ", Presp.shape)
 
     # Delay stimuli
-    delays = range(1, number_of_delays + 1)
+    delays = list(range(1, number_of_delays + 1))
+    ct = ColumnTransformer([("semantic", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
 
     # fit bootstrapped ridge regression model
-    ct = ColumnTransformerNoStack([("semantic", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct, nboots=2)
 
     # save results
     output_file = get_prediction_path(language_model, "semantic", modality, subject_num, layer=layer)
