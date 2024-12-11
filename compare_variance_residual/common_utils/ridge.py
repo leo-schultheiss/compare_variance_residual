@@ -122,14 +122,12 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
                                 n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
     if len(ct.transformers) == 1:  # use normal Ridge regression
-        print("Using single solver")
+        logger.info("Using single solver")
         single_solver_params = dict()
         solver_params = {**common_solver_params, **single_solver_params}
         model = RidgeCV(cv=cv, alphas=alphas, solver_params=solver_params)
     else:  # use banded ridge regression
-        print("Using group solver")
-        # weights = np.linspace(0.00001, 1.0, 10)
-        # n_iter = np.tile(weights[:, None], (1, len(ct.transformers)))
+        logger.info("Using group solver")
         group_solver_params = dict(n_iter=n_iter, progress_bar=True)
         solver_params = {**common_solver_params, **group_solver_params}
         model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=solver_params)
