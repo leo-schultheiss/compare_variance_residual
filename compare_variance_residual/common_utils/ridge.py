@@ -3,7 +3,7 @@ import logging
 
 import himalaya
 import numpy as np
-from himalaya.ridge import GroupRidgeCV, ColumnTransformerNoStack
+from himalaya.ridge import GroupRidgeCV, RidgeCV
 from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import make_pipeline
@@ -134,11 +134,10 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
         resp_test_ = resp_train[tune_indexes_, :]
 
         # Run ridge regression using this test set
-        logger.info(f"Running ridge regression on bootstrap sample {bi + 1}/{nboots}")
-        correlation_matrix_, model_best_alphas = group_ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
-                                                             ct, n_iter, n_targets_batch, n_targets_batch_refit,
-                                                             random_state, n_alphas_batch, logger, single_alpha,
-                                                             use_corr)
+        correlation_matrix_, model_best_alphas = ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
+                                                       ct, n_iter, n_targets_batch, n_targets_batch_refit,
+                                                       random_state, n_alphas_batch, logger, single_alpha,
+                                                       use_corr)
         correlation_matrix_ = np.nan_to_num(correlation_matrix_)
         # count frequency of best alphas
         model_best_alphas = np.array(model_best_alphas)
@@ -192,37 +191,54 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
 
     logger.info("Calculating overall correlation based on optimal alphas")
     # get correlations for prediction dataset directly
-    corrs, model_best_alphas = group_ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
-                                           n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
-                                           logger, single_alpha, use_corr)
+    corrs, model_best_alphas = ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
+                                     n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
+                                     logger, single_alpha, use_corr)
     corrs = np.nan_to_num(corrs)
     logger.debug(
         f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
     return [], corrs, valphas, all_correlation_matrices, valinds
 
 
-def group_ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
-                n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr=True):
-    GROUP_CV_SOLVER_PARAMS = dict(alphas=alphas, score_func=himalaya.scoring.correlation_score,
-                                  local_alpha=not single_alpha, n_iter=n_iter, n_targets_batch=n_targets_batch,
-                                  n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch,
-                                  progress_bar=False)
-
-    # create "fake" cross validation splitter that returns whole dataset since we don't want to do cross validation
-    cv = WholeDatasetSplitter()
-    model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=GROUP_CV_SOLVER_PARAMS)
-    pipeline = make_pipeline(ct, model)
+def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
+          n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr):
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
-    logger.debug(f"banded ridge regression with column groups (bands) {columns} "
-                 f"on feature space of shape {stim_train.shape} "
+    logger.debug(f"ridge regression with column groups (bands) {columns} "
+                 f"on training set of shape {stim_train.shape} "
                  f"and on test set of shape {stim_test.shape}")
+
+    # scaler = StandardScaler(with_mean=True, with_std=False)
+
+    # create "fake" cross validation splitter that returns whole dataset since we don't want to do more cross validation
+    cv = WholeDatasetSplitter()
+    common_solver_params = dict(score_func=himalaya.scoring.correlation_score,
+                                local_alpha=not single_alpha, n_targets_batch_refit=n_targets_batch_refit,
+                                n_alphas_batch=n_alphas_batch)
+    if len(ct.transformers) == 1:  # use normal Ridge regression
+        print("Using single solver")
+        single_solver_params = dict()
+        solver_params = {**common_solver_params, **single_solver_params}
+        model = RidgeCV(cv=cv, alphas=alphas, solver_params=solver_params)
+    else:  # use banded ridge regression
+        print("Using group solver")
+        # weights = np.linspace(0.00001, 1.0, 10)
+        # n_iter = np.tile(weights[:, None], (1, len(ct.transformers)))
+        group_solver_params = dict(n_iter=n_iter, progress_bar=True)
+        solver_params = {**common_solver_params, **group_solver_params}
+        model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=solver_params)
+
+    pipeline = make_pipeline(
+        # scaler,
+        ct,
+        model
+    )
     pipeline.fit(stim_train, resp_train)
     predictions = pipeline.predict(stim_test)
-    if use_corr:
+
+    if use_corr:  # compute pearson correlation
         score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
                           for ii in range(resp_test.shape[1])])
-    else:
-        # compute R^2
+    else:  # compute R^2
         score = np.array([1 - np.mean((resp_test[:, ii] - predictions[:, ii].ravel()) ** 2) / np.var(resp_test[:, ii])
                           for ii in range(resp_test.shape[1])])
     return score, model.best_alphas_
