@@ -70,3 +70,4 @@ if __name__ == "__main__":
     predict_brain_activity(data_dir=args.data_dir, feature_filename=args.feature_filename,
                            language_model=args.language_model, layer=args.layer, subject_num=args.subject_num,
                            modality=args.modality)
+    print("Done")
