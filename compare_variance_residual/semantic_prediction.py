@@ -28,11 +28,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     """
     # Load data
     Rstim, Pstim = load_downsampled_context_representations(data_dir, feature_filename, layer)
-    print("Rstim.shape: ", Rstim.shape)
-    print("Pstim.shape: ", Pstim.shape)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
-    print("Rresp.shape: ", Rresp.shape)
-    print("Presp.shape: ", Presp.shape)
 
     # Delay stimuli
     delays = list(range(1, number_of_delays + 1))
