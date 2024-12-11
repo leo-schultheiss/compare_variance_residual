@@ -1,9 +1,6 @@
 import os.path
-
 import numpy as np
 from himalaya.ridge import ColumnTransformerNoStack
-from ridge_utils.util import make_delayed
-from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
 from compare_variance_residual.common_utils.feature_utils import load_subject_fmri, \
