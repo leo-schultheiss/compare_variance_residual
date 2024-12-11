@@ -19,7 +19,7 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
 
     # fit bootstrapped ridge regression model
     ct = ColumnTransformerNoStack(transformers=transformers)
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations
     output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
