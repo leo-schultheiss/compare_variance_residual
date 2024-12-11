@@ -36,7 +36,7 @@ class TemporalChunkSplitter(BaseCrossValidator):
 def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(0, 3, 20), nboots=15,
                     chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=50, n_targets_batch=None,
                     n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
-    """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
+    """Adapted from https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py to use himalaya
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
     run.  [nboots] total regression runs will be performed.  The best alpha value for each response will be
@@ -83,11 +83,11 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
         Number of feature-space weights combination to search. If an array is given,
         the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
     n_targets_batch : int, default 10
-        Number of targets to use in each batch. If None, all targets are used.
+        Number of targets to use in each batch. If None, all targets are used. Only used to constrain memeory usage.
     n_targets_batch_refit : int, default 10
-        Number of targets to use in each batch for refit. If None, all targets are used.
+        Number of targets to use in each batch for refit. If None, all targets are used. Only used to constrain memeory usage.
     n_alphas_batch : int, default 5
-        Number of alphas to try in each batch.
+        Number of alphas to try in each batch. Only used to constrain memeory usage.
     logger : logging.Logger, default logging.Logger("bootstrap_ridge")
     random_state : int, default 42
         Random seed for reproducibility.
@@ -104,13 +104,12 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     """
 
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
-    logger.debug(f"ridge regression with column groups (bands) {columns} "
-                 f"on training set of shape {stim_train.shape} "
-                 f"and on test set of shape {stim_test.shape}")
+    logger.debug(f"Performing bootstrap ridge regression with temporal chunking on groups (columns/bands): {columns} "
+                 f"on training set of shape: {stim_train.shape}, and on test set of shape: {stim_test.shape}")
 
     # scaler = StandardScaler(with_mean=True, with_std=False)
 
-    cv = TemporalChunkSplitter(nboots, chunklen, nchunks)
+    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
     common_solver_params = dict(score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
                                 n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
@@ -135,14 +134,16 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     model_best_alphas = model.best_alphas_
 
     if use_corr:  # compute pearson correlation
+        evaluation_type = "correlation"
         score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
                           for ii in range(resp_test.shape[1])])
     else:  # compute R^2
+        evaluation_type = "R^2"
         score = np.array([1 - np.mean((resp_test[:, ii] - predictions[:, ii].ravel()) ** 2) / np.var(resp_test[:, ii])
                           for ii in range(resp_test.shape[1])])
 
     score = np.nan_to_num(score)
     logger.debug(
-        f"Mean score: {score.mean()}, max correlation: {score.max()}, min correlation: {score.min()}, best alpha(s): {model_best_alphas}")
+        f"Mean {evaluation_type}: {score.mean()}, max {evaluation_type}: {score.max()}, min {evaluation_type}: {score.min()}, best alpha(s): {model_best_alphas}")
 
     return score, model_best_alphas
