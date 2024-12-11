@@ -1,8 +1,8 @@
 import os.path
 
 import numpy as np
-from himalaya.ridge import ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
@@ -27,9 +27,9 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
 
     # delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
+    ct = ColumnTransformer([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
 
     # fit bootstrapped ridge regression model
-    ct = ColumnTransformerNoStack([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
     wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations and predictions
