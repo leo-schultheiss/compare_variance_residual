@@ -36,10 +36,33 @@ def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int
     return splits_list
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTransformerNoStack,
-                    alphas=np.logspace(0, 4, 10), nboots=15, chunklen=40, nchunks=10, joined=None, single_alpha=True,
-                    use_corr=True, n_iter=1, n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=10,
-                    logger=ridge_logger, random_state=42):
+class TemporalChunkSplitter(BaseCrossValidator):
+    def __init__(self, num_splits, chunk_len, num_chunks, seed=42):
+        self.num_splits = num_splits
+        self.chunk_len = chunk_len
+        self.num_chunks = num_chunks
+        self.seed = seed
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return self.num_splits
+
+    def split(self, X, y=None, groups=None):
+        rng = np.random.RandomState(self.seed)
+        num_examples = len(X)
+        all_indexes = range(num_examples)
+        index_chunks = list(zip(*[iter(all_indexes)] * self.chunk_len))
+
+        for _ in range(self.num_splits):
+            rng.shuffle(index_chunks)
+            tune_indexes_ = list(itools.chain(*index_chunks[:self.num_chunks]))
+            train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
+            yield train_indexes_, tune_indexes_
+
+
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(0, 3, 20), nboots=15,
+                    chunklen=40, nchunks=20, joined=None, single_alpha=True, use_corr=True, n_iter=50,
+                    n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger,
+                    random_state=42):
     """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
