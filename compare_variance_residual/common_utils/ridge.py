@@ -10,18 +10,6 @@ from sklearn.pipeline import make_pipeline
 ridge_logger = logging.getLogger("ridge_corr")
 
 
-class WholeDatasetSplitter(BaseCrossValidator):
-    """Yields the whole dataset as training and testing set.
-    We use this since himalaya only provides a cross-validation solver for group ridge regression. Instead, we want to be able to use bootstrap sampling."""
-
-    def get_n_splits(self, X=None, y=None, groups=None):
-        return 1
-
-    def split(self, X, y=None, groups=None):
-        indices = np.arange(len(X))
-        yield indices, indices
-
-
 def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int, num_chunks: int, seed=42):
     rng = np.random.RandomState(seed)
     all_indexes = range(num_examples)
