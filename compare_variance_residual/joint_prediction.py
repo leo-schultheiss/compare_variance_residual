@@ -14,8 +14,6 @@ from compare_variance_residual.common_utils.ridge import bootstrap_ridge
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
                         number_of_delays=4):
-    textual_features = textual_features.split(",")
-
     # load features
     Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
@@ -40,7 +38,7 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
     transformers = []
     begin_ind = 0
     # join input features (context representations and low-level textual features)
-    for feature in textual_features:
+    for feature in textual_features.split(","):
         if feature == "semantic":
             Rstim, Pstim = load_downsampled_context_representations(data_dir, feature_filename, layer)
         elif feature in ['letters', 'numletters', 'numphonemes', 'numwords', 'phonemes', 'word_length_std']:
