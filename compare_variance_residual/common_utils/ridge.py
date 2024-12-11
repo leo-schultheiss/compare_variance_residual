@@ -10,19 +10,6 @@ from sklearn.pipeline import make_pipeline
 ridge_logger = logging.getLogger("ridge_corr")
 
 
-def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int, num_chunks: int, seed=42):
-    rng = np.random.RandomState(seed)
-    all_indexes = range(num_examples)
-    index_chunks = list(zip(*[iter(all_indexes)] * chunk_len))
-    splits_list = []
-    for _ in range(num_splits):
-        rng.shuffle(index_chunks)
-        tune_indexes_ = list(itools.chain(*index_chunks[:num_chunks]))
-        train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
-        splits_list.append((train_indexes_, tune_indexes_))
-    return splits_list
-
-
 class TemporalChunkSplitter(BaseCrossValidator):
     def __init__(self, num_splits, chunk_len, num_chunks, seed=42):
         self.num_splits = num_splits
