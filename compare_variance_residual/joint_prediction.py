@@ -14,12 +14,10 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     # load features
     Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
-    print("Rresp.shape: ", Rresp.shape)
-    print("Presp.shape: ", Presp.shape)
 
     # fit bootstrapped ridge regression model
     ct = ColumnTransformerNoStack(transformers=transformers)
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations
     output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
@@ -42,15 +40,11 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
             Rstim, Pstim = load_z_low_level_feature(data_dir, feature)
         else:
             raise ValueError(f"Textual feature {feature} not found in the dataset")
-        print("Rstim.shape: ", Rstim.shape)
-        print("Pstim.shape: ", Pstim.shape)
         if all_Rstim is None or all_Pstim is None:
             all_Rstim, all_Pstim = Rstim, Pstim
         else:
             all_Rstim = np.hstack((all_Rstim, Rstim))
             all_Pstim = np.hstack((all_Pstim, Pstim))
-        print("all_Rstim.shape: ", all_Rstim.shape)
-        print("all_Pstim.shape: ", all_Pstim.shape)
         transformers.append((feature, Delayer(delays), slice(begin_ind, begin_ind + Rstim.shape[1] - 1)))
         begin_ind += Rstim.shape[1]
     return all_Pstim, all_Rstim, transformers

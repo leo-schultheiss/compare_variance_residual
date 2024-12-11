@@ -4,43 +4,39 @@ import logging
 import himalaya
 import numpy as np
 from himalaya.ridge import GroupRidgeCV, RidgeCV
-from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import make_pipeline
 
 ridge_logger = logging.getLogger("ridge_corr")
 
 
-class WholeDatasetSplitter(BaseCrossValidator):
-    """Yields the whole dataset as training and testing set.
-    We use this since himalaya only provides a cross-validation solver for group ridge regression. Instead, we want to be able to use bootstrap sampling."""
+class TemporalChunkSplitter(BaseCrossValidator):
+    def __init__(self, num_splits, chunk_len, num_chunks, seed=42):
+        self.num_splits = num_splits
+        self.chunk_len = chunk_len
+        self.num_chunks = num_chunks
+        self.seed = seed
 
     def get_n_splits(self, X=None, y=None, groups=None):
-        return 1
+        return self.num_splits
 
     def split(self, X, y=None, groups=None):
-        indices = np.arange(len(X))
-        yield indices, indices
+        rng = np.random.RandomState(self.seed)
+        num_examples = len(X)
+        all_indexes = range(num_examples)
+        index_chunks = list(zip(*[iter(all_indexes)] * self.chunk_len))
+
+        for _ in range(self.num_splits):
+            rng.shuffle(index_chunks)
+            tune_indexes_ = list(itools.chain(*index_chunks[:self.num_chunks]))
+            train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
+            yield train_indexes_, tune_indexes_
 
 
-def gen_temporal_chunk_splits(num_splits: int, num_examples: int, chunk_len: int, num_chunks: int, seed=42):
-    rng = np.random.RandomState(seed)
-    all_indexes = range(num_examples)
-    index_chunks = list(zip(*[iter(all_indexes)] * chunk_len))
-    splits_list = []
-    for _ in range(num_splits):
-        rng.shuffle(index_chunks)
-        tune_indexes_ = list(itools.chain(*index_chunks[:num_chunks]))
-        train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
-        splits_list.append((train_indexes_, tune_indexes_))
-    return splits_list
-
-
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTransformerNoStack,
-                    alphas=np.logspace(0, 4, 10), nboots=15, chunklen=40, nchunks=10, joined=None, single_alpha=True,
-                    use_corr=True, n_iter=1, n_targets_batch=None, n_targets_batch_refit=None, n_alphas_batch=10,
-                    logger=ridge_logger, random_state=42):
-    """From https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(-5, 15, 20), nboots=15,
+                    chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=50, n_targets_batch=None,
+                    n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
+    """Adapted from https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py to use himalaya
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
     [nchunks] random chunks of length [chunklen] will be taken from [Rstim] and [Rresp] for each regression
     run.  [nboots] total regression runs will be performed.  The best alpha value for each response will be
@@ -75,12 +71,6 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
         The number of training chunks held out to test ridge parameters for each bootstrap sample. The product
         of nchunks and chunklen is the total number of training samples held out for each sample, and this
         product should be about 20 percent of the total length of the training data.
-    joined : None or list of array_like indices, default None
-        If you want the STRFs for two (or more) responses to be directly comparable, you need to ensure that
-        the regularization parameter that they use is the same. To do that, supply a list of the response sets
-        that should use the same ridge parameter here. For example, if you have four responses, joined could
-        be [np.array([0,1]), np.array([2,3])], in which case responses 0 and 1 will use the same ridge parameter
-        (which will be parameter that is best on average for those two), and likewise for responses 2 and 3.
     single_alpha : boolean, default False
         Whether to use a single alpha for all responses. Good for identification/decoding.
     use_corr : boolean, default True
@@ -90,140 +80,49 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct: ColumnTran
         will thus explain very little variance while still leading to high correlations, as correlation
         is scale-free while R**2 is not.
     n_iter : int, default 1
-        Number of feature-space weights combination to search. If an array is given, the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
+        Number of feature-space weights combination to search. If an array is given,
+        the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
     n_targets_batch : int, default 10
-        Number of targets to use in each batch. If None, all targets are used.
+        Number of targets to use in each batch. If None, all targets are used. Only used to constrain memeory usage.
     n_targets_batch_refit : int, default 10
-        Number of targets to use in each batch for refit. If None, all targets are used.
+        Number of targets to use in each batch for refit. If None, all targets are used. Only used to constrain memeory usage.
     n_alphas_batch : int, default 5
-        Number of alphas to try in each batch.
+        Number of alphas to try in each batch. Only used to constrain memeory usage.
     logger : logging.Logger, default logging.Logger("bootstrap_ridge")
     random_state : int, default 42
         Random seed for reproducibility.
 
     Returns
     -------
-    wt : array_like, shape (N, M)
-        If [return_wt] is True, regression weights for N features and M responses. If [return_wt] is False, [].
-    corrs : array_like, shape (M,)
-        Validation set correlations. Predicted responses for the validation set are obtained using the regression
-        weights: pred = np.dot(Pstim, wt), and then the correlation between each predicted response and each
+    score : array_like, shape (M,)
+        Validation set score. Either correlations if useCorrs or R^2.
+        Predicted responses for the validation set are obtained using the regression weights: pred = np.dot(Pstim, wt),
+        and then the correlation between each predicted response and each
         column in Presp is found.
+    weights : array_like, shape (N, M)
+        The weights for each feature and response. These are the weights that are used to predict the responses.
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
-    bootstrap_corrs : array_like, shape (A, M, B)
-        Correlation between predicted and actual responses on randomly held out portions of the training set,
-        for each of A alphas, M voxels, and B bootstrap samples.
-    valinds : array_like, shape (TH, B)
-        The indices of the training data that were used as "validation" for each bootstrap sample.
     """
-    nresp, nvox = resp_train.shape
-    splits = gen_temporal_chunk_splits(
-        nboots, nresp, chunklen, nchunks)
-    valinds = [splits[1] for splits in splits]
 
-    correlation_matrices = []
-    for bi in counter(range(nboots), countevery=1, total=nboots):
-        logger.debug("Selecting held-out test set..")
-        train_indexes_, tune_indexes_ = splits[bi]
-
-        # Select data
-        stim_train_ = stim_train[train_indexes_, :]
-        stim_test_ = stim_train[tune_indexes_, :]
-        resp_train_ = resp_train[train_indexes_, :]
-        resp_test_ = resp_train[tune_indexes_, :]
-
-        # Run ridge regression using this test set
-        correlation_matrix_, model_best_alphas = ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
-                                                       ct, n_iter, n_targets_batch, n_targets_batch_refit,
-                                                       random_state, n_alphas_batch, logger, single_alpha,
-                                                       use_corr)
-        correlation_matrix_ = np.nan_to_num(correlation_matrix_)
-        # count frequency of best alphas
-        model_best_alphas = np.array(model_best_alphas)
-        unique, counts = np.unique(model_best_alphas, return_counts=True)
-        logging_template = "mean correlation: {0}, max correlation: {1}, min correlation: {2}, best alpha(s): {3}"
-        logger.debug(
-            logging_template.format(correlation_matrix_.mean(), correlation_matrix_.max(), correlation_matrix_.min(),
-                                    f"{unique}: {counts}"))
-        correlation_matrices.append(correlation_matrix_)
-
-    # Find best alphas
-    if nboots > 0:
-        all_correlation_matrices = np.dstack(correlation_matrices)
-    else:
-        all_correlation_matrices = None
-
-    if single_alpha:
-        logger.debug("Finding single best alpha..")
-        if nboots == 0:
-            if len(alphas) == 1:
-                bestalphaind = 0
-            else:
-                raise ValueError("You must run at least one cross-validation step "
-                                 "to choose best overall alpha, or only supply one"
-                                 "possible alpha value.")
-        else:
-            meanbootcorr = all_correlation_matrices.mean(2).mean(1)
-            bestalphaind = np.argmax(meanbootcorr)
-        bestalpha = alphas[bestalphaind]
-        valphas = bestalpha
-        logger.debug("Best alpha = %0.3f" % bestalpha)
-    else:
-        if nboots == 0:
-            raise ValueError("You must run at least one cross-validation step to assign "
-                             "different alphas to each response.")
-        logger.info("Finding best alpha for each voxel..")
-        if joined is None:
-            # Find best alpha for each voxel
-            meanbootcorrs = all_correlation_matrices.mean(2)
-            bestalphainds = np.argmax(meanbootcorrs, 0)
-            valphas = alphas[bestalphainds]
-        else:
-            # Find best alpha for each group of voxels
-            valphas = np.zeros((nvox,))
-            for jl in joined:
-                # Mean across voxels in the set, then mean across bootstraps
-                jcorrs = all_correlation_matrices[:, jl, :].mean(1).mean(1)
-                bestalpha = np.argmax(jcorrs)
-                valphas[jl] = alphas[bestalpha]
-        logger.debug("Best alphas = %s" % valphas)
-
-    logger.info("Calculating overall correlation based on optimal alphas")
-    # get correlations for prediction dataset directly
-    corrs, model_best_alphas = ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
-                                     n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
-                                     logger, single_alpha, use_corr)
-    corrs = np.nan_to_num(corrs)
-    logger.debug(
-        f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
-    return [], corrs, valphas, all_correlation_matrices, valinds
-
-
-def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
-          n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr):
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
-    logger.debug(f"ridge regression with column groups (bands) {columns} "
-                 f"on training set of shape {stim_train.shape} "
-                 f"and on test set of shape {stim_test.shape}")
+    logger.debug(f"Performing bootstrap ridge regression with temporal chunking on groups (columns/bands): {columns} "
+                 f"on training set of shape: {stim_train.shape}, and on test set of shape: {stim_test.shape}")
 
     # scaler = StandardScaler(with_mean=True, with_std=False)
 
-    # create "fake" cross validation splitter that returns whole dataset since we don't want to do more cross validation
-    cv = WholeDatasetSplitter()
-    common_solver_params = dict(score_func=himalaya.scoring.correlation_score,
-                                local_alpha=not single_alpha, n_targets_batch_refit=n_targets_batch_refit,
+    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
+    common_solver_params = dict(score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
+                                n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
     if len(ct.transformers) == 1:  # use normal Ridge regression
-        print("Using single solver")
+        logger.info("Using single solver")
         single_solver_params = dict()
         solver_params = {**common_solver_params, **single_solver_params}
         model = RidgeCV(cv=cv, alphas=alphas, solver_params=solver_params)
     else:  # use banded ridge regression
-        print("Using group solver")
-        # weights = np.linspace(0.00001, 1.0, 10)
-        # n_iter = np.tile(weights[:, None], (1, len(ct.transformers)))
-        group_solver_params = dict(n_iter=n_iter, progress_bar=True)
+        logger.info("Using group solver")
+        group_solver_params = dict(n_iter=n_iter, alphas=alphas, progress_bar=True)
         solver_params = {**common_solver_params, **group_solver_params}
         model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=solver_params)
 
@@ -236,9 +135,16 @@ def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_ta
     predictions = pipeline.predict(stim_test)
 
     if use_corr:  # compute pearson correlation
+        evaluation_type = "correlation"
         score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
                           for ii in range(resp_test.shape[1])])
     else:  # compute R^2
+        evaluation_type = "R^2"
         score = np.array([1 - np.mean((resp_test[:, ii] - predictions[:, ii].ravel()) ** 2) / np.var(resp_test[:, ii])
                           for ii in range(resp_test.shape[1])])
-    return score, model.best_alphas_
+
+    score = np.nan_to_num(score)
+    logger.debug(
+        f"Mean {evaluation_type}: {score.mean()}, max {evaluation_type}: {score.max()}, min {evaluation_type}: {score.min()}, best alpha(s): {model.best_alphas_}")
+
+    return score, model.coef_, model.best_alphas_
