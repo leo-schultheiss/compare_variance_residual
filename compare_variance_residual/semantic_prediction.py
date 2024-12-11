@@ -35,7 +35,7 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     ct = ColumnTransformer([("semantic", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
 
     # fit bootstrapped ridge regression model
-    corrs, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct, nboots=2)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct, nboots=2)
 
     # save results
     output_file = get_prediction_path(language_model, "semantic", modality, subject_num, layer=layer)

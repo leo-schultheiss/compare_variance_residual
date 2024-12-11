@@ -28,7 +28,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     ct = ColumnTransformer([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
 
     # fit bootstrapped ridge regression model
-    corrs, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
