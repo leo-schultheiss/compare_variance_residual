@@ -4,7 +4,6 @@ import logging
 import himalaya
 import numpy as np
 from himalaya.ridge import GroupRidgeCV, RidgeCV
-from ridge_utils.utils import counter
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import make_pipeline
 
@@ -113,7 +112,8 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
         will thus explain very little variance while still leading to high correlations, as correlation
         is scale-free while R**2 is not.
     n_iter : int, default 1
-        Number of feature-space weights combination to search. If an array is given, the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
+        Number of feature-space weights combination to search. If an array is given,
+        the solver uses it as the list of weights to try, instead of sampling from a Dirichlet distribution.
     n_targets_batch : int, default 10
         Number of targets to use in each batch. If None, all targets are used.
     n_targets_batch_refit : int, default 10
@@ -126,105 +126,15 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
 
     Returns
     -------
-    wt : array_like, shape (N, M)
-        If [return_wt] is True, regression weights for N features and M responses. If [return_wt] is False, [].
-    corrs : array_like, shape (M,)
-        Validation set correlations. Predicted responses for the validation set are obtained using the regression
-        weights: pred = np.dot(Pstim, wt), and then the correlation between each predicted response and each
+    score : array_like, shape (M,)
+        Validation set score. Either correlations if useCorrs or R^2.
+        Predicted responses for the validation set are obtained using the regression weights: pred = np.dot(Pstim, wt),
+        and then the correlation between each predicted response and each
         column in Presp is found.
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
-    bootstrap_corrs : array_like, shape (A, M, B)
-        Correlation between predicted and actual responses on randomly held out portions of the training set,
-        for each of A alphas, M voxels, and B bootstrap samples.
-    valinds : array_like, shape (TH, B)
-        The indices of the training data that were used as "validation" for each bootstrap sample.
     """
-    nresp, nvox = resp_train.shape
-    splits = gen_temporal_chunk_splits(
-        nboots, nresp, chunklen, nchunks)
-    valinds = [splits[1] for splits in splits]
 
-    correlation_matrices = []
-    for bi in counter(range(nboots), countevery=1, total=nboots):
-        logger.debug("Selecting held-out test set..")
-        train_indexes_, tune_indexes_ = splits[bi]
-
-        # Select data
-        stim_train_ = stim_train[train_indexes_, :]
-        stim_test_ = stim_train[tune_indexes_, :]
-        resp_train_ = resp_train[train_indexes_, :]
-        resp_test_ = resp_train[tune_indexes_, :]
-
-        # Run ridge regression using this test set
-        correlation_matrix_, model_best_alphas = ridge(stim_train_, stim_test_, resp_train_, resp_test_, alphas,
-                                                       ct, n_iter, n_targets_batch, n_targets_batch_refit,
-                                                       random_state, n_alphas_batch, logger, single_alpha,
-                                                       use_corr)
-        correlation_matrix_ = np.nan_to_num(correlation_matrix_)
-        # count frequency of best alphas
-        model_best_alphas = np.array(model_best_alphas)
-        unique, counts = np.unique(model_best_alphas, return_counts=True)
-        logging_template = "mean correlation: {0}, max correlation: {1}, min correlation: {2}, best alpha(s): {3}"
-        logger.debug(
-            logging_template.format(correlation_matrix_.mean(), correlation_matrix_.max(), correlation_matrix_.min(),
-                                    f"{unique}: {counts}"))
-        correlation_matrices.append(correlation_matrix_)
-
-    # Find best alphas
-    if nboots > 0:
-        all_correlation_matrices = np.dstack(correlation_matrices)
-    else:
-        all_correlation_matrices = None
-
-    if single_alpha:
-        logger.debug("Finding single best alpha..")
-        if nboots == 0:
-            if len(alphas) == 1:
-                bestalphaind = 0
-            else:
-                raise ValueError("You must run at least one cross-validation step "
-                                 "to choose best overall alpha, or only supply one"
-                                 "possible alpha value.")
-        else:
-            meanbootcorr = all_correlation_matrices.mean(2).mean(1)
-            bestalphaind = np.argmax(meanbootcorr)
-        bestalpha = alphas[bestalphaind]
-        valphas = bestalpha
-        logger.debug("Best alpha = %0.3f" % bestalpha)
-    else:
-        if nboots == 0:
-            raise ValueError("You must run at least one cross-validation step to assign "
-                             "different alphas to each response.")
-        logger.info("Finding best alpha for each voxel..")
-        if joined is None:
-            # Find best alpha for each voxel
-            meanbootcorrs = all_correlation_matrices.mean(2)
-            bestalphainds = np.argmax(meanbootcorrs, 0)
-            valphas = alphas[bestalphainds]
-        else:
-            # Find best alpha for each group of voxels
-            valphas = np.zeros((nvox,))
-            for jl in joined:
-                # Mean across voxels in the set, then mean across bootstraps
-                jcorrs = all_correlation_matrices[:, jl, :].mean(1).mean(1)
-                bestalpha = np.argmax(jcorrs)
-                valphas[jl] = alphas[bestalpha]
-        logger.debug("Best alphas = %s" % valphas)
-
-    logger.info("Calculating overall correlation based on optimal alphas")
-    # get correlations for prediction dataset directly
-    corrs, model_best_alphas = ridge(stim_train, stim_test, resp_train, resp_test, valphas, ct, n_iter,
-                                     n_targets_batch, n_targets_batch_refit, random_state, n_alphas_batch,
-                                     logger, single_alpha, use_corr)
-    corrs = np.nan_to_num(corrs)
-    logger.debug(
-        f"Mean correlation: {corrs.mean()}, max correlation: {corrs.max()}, min correlation: {corrs.min()}, best alphas: {model_best_alphas}")
-    return [], corrs, valphas, all_correlation_matrices, valinds
-
-
-def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_targets_batch,
-          n_targets_batch_refit, random_state, n_alphas_batch, logger, single_alpha, use_corr):
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
     logger.debug(f"ridge regression with column groups (bands) {columns} "
                  f"on training set of shape {stim_train.shape} "
@@ -232,10 +142,9 @@ def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_ta
 
     # scaler = StandardScaler(with_mean=True, with_std=False)
 
-    # create "fake" cross validation splitter that returns whole dataset since we don't want to do more cross validation
-    cv = WholeDatasetSplitter()
-    common_solver_params = dict(score_func=himalaya.scoring.correlation_score,
-                                local_alpha=not single_alpha, n_targets_batch_refit=n_targets_batch_refit,
+    cv = TemporalChunkSplitter(nboots, chunklen, nchunks)
+    common_solver_params = dict(score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
+                                n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
     if len(ct.transformers) == 1:  # use normal Ridge regression
         print("Using single solver")
@@ -257,6 +166,7 @@ def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_ta
     )
     pipeline.fit(stim_train, resp_train)
     predictions = pipeline.predict(stim_test)
+    model_best_alphas = model.best_alphas_
 
     if use_corr:  # compute pearson correlation
         score = np.array([np.corrcoef(resp_test[:, ii], predictions[:, ii].ravel())[0, 1]
@@ -264,4 +174,9 @@ def ridge(stim_train, stim_test, resp_train, resp_test, alphas, ct, n_iter, n_ta
     else:  # compute R^2
         score = np.array([1 - np.mean((resp_test[:, ii] - predictions[:, ii].ravel()) ** 2) / np.var(resp_test[:, ii])
                           for ii in range(resp_test.shape[1])])
-    return score, model.best_alphas_
+
+    score = np.nan_to_num(score)
+    logger.debug(
+        f"Mean score: {score.mean()}, max correlation: {score.max()}, min correlation: {score.min()}, best alpha(s): {model_best_alphas}")
+
+    return score, model_best_alphas
