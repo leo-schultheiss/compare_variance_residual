@@ -21,9 +21,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     :param number_of_delays: int, number of delays to use
     """
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
-    print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
-    print(f"Rresp shape: {Rresp.shape}\nPresp shape: {Presp.shape}")
 
     # delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
