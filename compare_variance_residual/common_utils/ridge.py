@@ -1,7 +1,7 @@
 import itertools as itools
 import logging
 
-import himalaya
+from himalaya.scoring import correlation_score, r2_score
 import numpy as np
 from himalaya.ridge import GroupRidgeCV, RidgeCV
 from sklearn.model_selection import BaseCrossValidator
@@ -26,15 +26,16 @@ class TemporalChunkSplitter(BaseCrossValidator):
         all_indexes = range(num_examples)
         index_chunks = list(zip(*[iter(all_indexes)] * self.chunk_len))
 
+        # creates bootstrapped, random (with replacement) index slices
         for _ in range(self.num_splits):
             rng.shuffle(index_chunks)
-            tune_indexes_ = list(itools.chain(*index_chunks[:self.num_chunks]))
-            train_indexes_ = list(set(all_indexes) - set(tune_indexes_))
-            yield train_indexes_, tune_indexes_
+            tune_indexes = list(itools.chain(*index_chunks[:self.num_chunks]))
+            train_indexes = list(set(all_indexes) - set(tune_indexes))
+            yield train_indexes, tune_indexes
 
 
 def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(-5, 15, 20), nboots=15,
-                    chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=50, n_targets_batch=None,
+                    chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=20, n_targets_batch=None,
                     n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
     """Adapted from https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py to use himalaya
     Uses ridge regression with a bootstrapped held-out set to get optimal alpha values for each response.
@@ -57,7 +58,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     resp_test : array_like, shape (TP, M)
         Test responses with TP time points and M different responses. Each response should be Z-scored across
         time.
-    ct : ColumnTransformerNoStack with a list of transformers with entries (feature_name, transformer, columns)
+    ct : ColumnTransformer or ColumnTransformerNoStack with a list of transformers with entries (feature_name, transformer, columns)
         This estimator allows different columns or column subsets of the input to be transformed separately.
         The columns represent the indices of the separate feature groups fit in the banded ridge regression.
     alphas : list or array_like, shape (A,)
@@ -104,17 +105,15 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
     """
-
     columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
     logger.debug(f"Performing bootstrap ridge regression with temporal chunking on groups (columns/bands): {columns} "
                  f"on training set of shape: {stim_train.shape}, and on test set of shape: {stim_test.shape}")
 
-    # scaler = StandardScaler(with_mean=True, with_std=False)
-
-    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
-    common_solver_params = dict(score_func=himalaya.scoring.correlation_score, local_alpha=not single_alpha,
+    score_func = correlation_score if use_corr else r2_score
+    common_solver_params = dict(score_func=score_func, local_alpha=not single_alpha,
                                 n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
+    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
     if len(ct.transformers) == 1:  # use normal Ridge regression
         logger.info("Using single solver")
         single_solver_params = dict()
