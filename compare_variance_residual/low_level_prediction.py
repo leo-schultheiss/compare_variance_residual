@@ -23,10 +23,6 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
-    # delay stimuli to account for hemodynamic lag
-    delays = range(1, number_of_delays + 1)
-    ct = ColumnTransformer([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-
     # fit bootstrapped ridge regression model
     corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 

@@ -2,6 +2,7 @@ import argparse
 import os
 
 import numpy as np
+from himalaya.kernel_ridge import ColumnKernelizer, Kernelizer
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
@@ -30,12 +31,8 @@ def predict_brain_activity(data_dir: str, feature_filename: str, language_model:
     Rstim, Pstim = load_downsampled_context_representations(data_dir, feature_filename, layer)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
-    # Delay stimuli
-    delays = list(range(1, number_of_delays + 1))
-    ct = ColumnTransformer([("semantic", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-
     # fit bootstrapped ridge regression model
-    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct, nboots=2)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, nboots=2)
 
     # save results
     output_file = get_prediction_path(language_model, "semantic", modality, subject_num, layer=layer)
