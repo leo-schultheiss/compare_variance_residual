@@ -4,5 +4,6 @@
 /cache/
 /build/
 
+*-checkpoint.ipynb
 *.npy
 *.png
