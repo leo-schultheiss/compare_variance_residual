@@ -1,5 +1,6 @@
 import os.path
 import numpy as np
+from himalaya.kernel_ridge import Kernelizer, ColumnKernelizer
 from himalaya.ridge import ColumnTransformerNoStack
 from voxelwise_tutorials.delayer import Delayer
 
@@ -12,12 +13,11 @@ from compare_variance_residual.common_utils.ridge import bootstrap_ridge
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
                         number_of_delays=4):
     # load features
-    Pstim, Rstim, transformers = prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays)
+    Pstim, Rstim, ck = prepare_features(data_dir, feature_filename, layer, textual_features)
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
     # fit bootstrapped ridge regression model
-    ct = ColumnTransformerNoStack(transformers=transformers)
-    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ck)
 
     # save voxelwise correlations
     output_file = get_prediction_path(language_model, "joint", modality, subject_num, textual_features, layer)
@@ -27,8 +27,7 @@ def predict_joint_model(data_dir, feature_filename, language_model, subject_num,
     np.save(output_file, corrs)
 
 
-def prepare_features(data_dir, feature_filename, layer, textual_features, number_of_delays):
-    delays = range(1, number_of_delays + 1)
+def prepare_features(data_dir, feature_filename, layer, textual_features):
     all_Rstim, all_Pstim = None, None
     transformers = []
     begin_ind = 0
@@ -45,9 +44,10 @@ def prepare_features(data_dir, feature_filename, layer, textual_features, number
         else:
             all_Rstim = np.hstack((all_Rstim, Rstim))
             all_Pstim = np.hstack((all_Pstim, Pstim))
-        transformers.append((feature, Delayer(delays), slice(begin_ind, begin_ind + Rstim.shape[1] - 1)))
+        transformers.append((feature, Kernelizer(), slice(begin_ind, begin_ind + Rstim.shape[1] - 1)))
         begin_ind += Rstim.shape[1]
-    return all_Pstim, all_Rstim, transformers
+    column_kernelizer = ColumnKernelizer(transformers)
+    return all_Pstim, all_Rstim, column_kernelizer
 
 
 if __name__ == '__main__':

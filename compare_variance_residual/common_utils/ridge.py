@@ -1,11 +1,13 @@
 import itertools as itools
 import logging
 
+from himalaya.kernel_ridge import KernelRidgeCV, Kernelizer, MultipleKernelRidgeCV
 from himalaya.scoring import correlation_score, r2_score
 import numpy as np
 from himalaya.ridge import GroupRidgeCV, RidgeCV
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import make_pipeline
+from voxelwise_tutorials.delayer import Delayer
 
 ridge_logger = logging.getLogger("ridge_corr")
 
@@ -34,7 +36,7 @@ class TemporalChunkSplitter(BaseCrossValidator):
             yield train_indexes, tune_indexes
 
 
-def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.logspace(-5, 15, 20), nboots=15,
+def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ck=Kernelizer(), n_delays=4, alphas=np.logspace(-5, 15, 20), nboots=15,
                     chunklen=40, nchunks=20, single_alpha=True, use_corr=True, n_iter=20, n_targets_batch=None,
                     n_targets_batch_refit=None, n_alphas_batch=10, logger=ridge_logger, random_state=42):
     """Adapted from https://github.com/csinva/fmri/blob/master/neuro/encoding/ridge.py to use himalaya
@@ -58,9 +60,11 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     resp_test : array_like, shape (TP, M)
         Test responses with TP time points and M different responses. Each response should be Z-scored across
         time.
-    ct : ColumnTransformer or ColumnTransformerNoStack with a list of transformers with entries (feature_name, transformer, columns)
+    ck : Kernelizer or ColumnKernelizer (feature_name, transformer, columns), default Kernelizer()
         This estimator allows different columns or column subsets of the input to be transformed separately.
         The columns represent the indices of the separate feature groups fit in the banded ridge regression.
+    n_delays : int, default 4
+        Number of delays to use in the FIR model.
     alphas : list or array_like, shape (A,)
         Ridge parameters that will be tested. Should probably be log-spaced. np.logspace(0, 3, 20) works well.
     nboots : int, default 15
@@ -105,7 +109,7 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
     """
-    columns = dict((t[0], (t[2].start, t[2].stop)) for t in ct.transformers)
+    columns = dict((t[0], (t[2].start, t[2].stop)) for t in ck.transformers)
     logger.debug(f"Performing bootstrap ridge regression with temporal chunking on groups (columns/bands): {columns} "
                  f"on training set of shape: {stim_train.shape}, and on test set of shape: {stim_test.shape}")
 
@@ -114,20 +118,25 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ct, alphas=np.
                                 n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
                                 n_alphas_batch=n_alphas_batch)
     cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
-    if len(ct.transformers) == 1:  # use normal Ridge regression
-        logger.info("Using single solver")
+
+    # FIR model
+    delays = list(range(1, n_delays + 1))
+    delayer = Delayer(delays)
+
+    if isinstance(ck, Kernelizer):  # use normal Ridge regression
+        logger.info("Using kernel ridge")
         single_solver_params = dict()
         solver_params = {**common_solver_params, **single_solver_params}
-        model = RidgeCV(cv=cv, alphas=alphas, solver_params=solver_params)
+        model = KernelRidgeCV(kernel="linear", cv=cv, alphas=alphas, solver_params=solver_params)
     else:  # use banded ridge regression
-        logger.info("Using group solver")
+        logger.info("Using multiple kernel ridge")
         group_solver_params = dict(n_iter=n_iter, alphas=alphas, progress_bar=True)
         solver_params = {**common_solver_params, **group_solver_params}
-        model = GroupRidgeCV(cv=cv, groups="input", random_state=random_state, solver_params=solver_params)
+        model = MultipleKernelRidgeCV(cv=cv, kernels="precomputed", random_state=random_state, solver_params=solver_params)
 
     pipeline = make_pipeline(
-        # scaler,
-        ct,
+        ck,
+        delayer,
         model
     )
     pipeline.fit(stim_train, resp_train)
