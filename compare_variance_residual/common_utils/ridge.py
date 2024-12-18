@@ -8,6 +8,7 @@ from himalaya.ridge import GroupRidgeCV, RidgeCV
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import make_pipeline
 from voxelwise_tutorials.delayer import Delayer
+from himalaya.utils import check_random_state
 
 ridge_logger = logging.getLogger("ridge_corr")
 
@@ -109,20 +110,15 @@ def bootstrap_ridge(stim_train, resp_train, stim_test, resp_test, ck=Kernelizer(
     alphas : array_like, shape (M,)
         The regularization coefficient (alpha) selected for each voxel using bootstrap cross-validation.
     """
-    columns = dict((t[0], (t[2].start, t[2].stop)) for t in ck.transformers)
-    logger.debug(f"Performing bootstrap ridge regression with temporal chunking on groups (columns/bands): {columns} "
-                 f"on training set of shape: {stim_train.shape}, and on test set of shape: {stim_test.shape}")
-
-    score_func = correlation_score if use_corr else r2_score
-    common_solver_params = dict(score_func=score_func, local_alpha=not single_alpha,
-                                n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
-                                n_alphas_batch=n_alphas_batch)
-    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
-
     # FIR model
     delays = list(range(1, n_delays + 1))
     delayer = Delayer(delays)
 
+    cv = TemporalChunkSplitter(nboots, chunklen, nchunks, random_state)
+    score_func = correlation_score if use_corr else r2_score
+    common_solver_params = dict(score_func=score_func, local_alpha=not single_alpha,
+                                n_targets_batch_refit=n_targets_batch_refit, n_targets_batch=n_targets_batch,
+                                n_alphas_batch=n_alphas_batch)
     if isinstance(ck, Kernelizer):  # use normal Ridge regression
         logger.info("Using kernel ridge")
         single_solver_params = dict()
