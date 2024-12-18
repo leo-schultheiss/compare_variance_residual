@@ -24,7 +24,7 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
 
     # fit bootstrapped ridge regression model
-    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
