@@ -1,6 +1,5 @@
 import numpy as np
 from himalaya.kernel_ridge import KernelRidgeCV, Kernelizer, ColumnKernelizer, MultipleKernelRidgeCV
-from networkx.generators.joint_degree_seq import joint_degree_graph
 from sklearn.pipeline import make_pipeline
 
 
@@ -37,7 +36,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
     column_kernelizer = ColumnKernelizer(kernelizers)
 
     # random search
-    solver_params = dict(n_iter=5, alphas=np.logspace(-10, 10, 41))
+    solver_params = dict(n_iter=5, alphas=np.logspace(-10, 10, 41), progress_bar=False)
     model_random = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search", solver_params=solver_params,
                                          random_state=42)
     pipe = make_pipeline(column_kernelizer, model_random)
@@ -48,7 +47,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
         # refine model using gradient descent
         deltas = pipe[-1].deltas_
         solver_params = dict(max_iter=10, hyper_gradient_method="direct", max_iter_inner_hyper=10,
-                             initial_deltas=deltas)
+                             initial_deltas=deltas, progress_bar=False)
         model = MultipleKernelRidgeCV(kernels="precomputed", solver="hyper_gradient", solver_params=solver_params,
                                       random_state=42)
         pipe = make_pipeline(column_kernelizer, model)
@@ -58,4 +57,6 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
         joint_score = pipe.score(X_test, Y_test)
 
     # calculate unique variance explained by each feature space
-    return joint_score - single_predictions[1], joint_score - single_predictions[0]
+    X0_unique = joint_score - single_predictions[1]
+
+    return float(X0_unique.mean())
