@@ -8,7 +8,7 @@ from voxelwise_tutorials.delayer import Delayer
 
 from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, \
     get_prediction_path
-from compare_variance_residual.common_utils.ridge import bootstrap_ridge
+from compare_variance_residual.common_utils.bootstrap_ridge import bootstrap_ridge
 
 
 def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, number_of_delays=4):
