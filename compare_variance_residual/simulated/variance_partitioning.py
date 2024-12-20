@@ -14,7 +14,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
 
     single_predictions = []
     for X_train, X_test in zip(Xs_train, Xs_test):
-        model = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", solver_params=solver_params)
+        model = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", solver_params=solver_params, warn=False)
         model.fit(X_train, Y_train)
         score = model.score(X_test, Y_test)
         single_predictions.append(score)
