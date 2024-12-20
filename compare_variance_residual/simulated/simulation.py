@@ -2,10 +2,33 @@ import numpy as np
 from himalaya.backend import get_backend
 
 
+def generate_distribution(shape, distribution):
+    """Generate a distribution.
+
+    Parameters
+    ----------
+    shape : array of shape (n_samples, )
+        x coordinates.
+    distribution : str in {"normal", "uniform"}
+        Distribution to generate.
+
+    Returns
+    -------
+    array of shape (n_samples, )
+        Generated distribution.
+    """
+    if distribution == "normal":
+        return np.random.randn(*shape)
+    elif distribution == "uniform":
+        return np.random.uniform(-1, 1, size=shape)
+    else:
+        raise ValueError(f"Unknown distribution {distribution}.")
+
+
 def generate_dataset(n_targets=500,
                      n_samples_train=1000, n_samples_test=400,
                      noise=0, unique_contributions=None,
-                     n_features_list=None, random_distribution=np.random.randn, random_state=None):
+                     n_features_list=None, random_distribution="normal", random_state=None):
     """Utility to generate dataset.
 
     Parameters
@@ -22,7 +45,7 @@ def generate_dataset(n_targets=500,
         Proportion of the target variance explained by each feature space.
     n_features_list : list of int of length (n_features, ) or None
         Number of features in each kernel. If None, use 1000 features for each.
-    random_distribution : callable
+    random_distribution : str in {"normal", "uniform"}
         Function to generate random features.
         Should support the signature (n_samples, n_features) -> array of shape (n_samples, n_features).
     random_state : int, or None
@@ -52,20 +75,19 @@ def generate_dataset(n_targets=500,
     if n_features_list is None:
         n_features_list = np.full(len(unique_contributions), fill_value=1000)
 
-    # Then, generate a random dataset, using the arbitrary scalings.
     Xs_train, Xs_test = [], []
     Y_train, Y_test = None, None
 
     # Generate a shared component
-    S_train = random_distribution(n_samples_train, 1)
-    S_test = random_distribution(n_samples_test, 1)
+    S_train = generate_distribution([n_samples_train, 1], random_distribution)
+    S_test = generate_distribution([n_samples_test, 1], random_distribution)
 
     for ii, unique_contribution in enumerate(unique_contributions):
         n_features = n_features_list[ii]
 
         # generate random features
-        X_train = random_distribution(n_samples_train, n_features)
-        X_test = random_distribution(n_samples_test, n_features)
+        X_train = generate_distribution([n_samples_train, n_features], random_distribution)
+        X_test = generate_distribution([n_samples_test, n_features], random_distribution)
 
         # add shared component
         shared_contribution = (1 - np.sum(unique_contributions)) / len(unique_contributions)
@@ -79,7 +101,7 @@ def generate_dataset(n_targets=500,
         Xs_train.append(X_train)
         Xs_test.append(X_test)
 
-        weights = random_distribution(n_features, n_targets) / n_features
+        weights = generate_distribution([n_features, n_targets], random_distribution) / n_features
 
         if ii == 0:
             Y_train = X_train @ weights
@@ -92,8 +114,8 @@ def generate_dataset(n_targets=500,
     Y_train /= std
     Y_test /= std
 
-    Y_train += random_distribution(n_samples_train, n_targets) * noise
-    Y_test += random_distribution(n_samples_test, n_targets) * noise
+    Y_train += generate_distribution([n_samples_train, n_targets], random_distribution) * noise
+    Y_test += generate_distribution([n_samples_test, n_targets], random_distribution) * noise
     Y_train -= Y_train.mean(0)
     Y_test -= Y_test.mean(0)
 
