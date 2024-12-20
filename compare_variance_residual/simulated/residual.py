@@ -15,7 +15,7 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=False):
         train_predict = model.predict(backend.to_numpy(Xs_train[1]))
         test_predict = model.predict(backend.to_numpy(Xs_test[1]))
     else:
-        model = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", solver="eigenvalues")
+        model = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", solver="eigenvalues", warn=False)
         model.fit(Xs_train[1], Xs_train[0])
         train_predict = model.predict(Xs_train[1])
         test_predict = model.predict(Xs_test[1])
@@ -25,7 +25,7 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=False):
     train_residual = Xs_train[0] - train_predict
     test_residual = Xs_test[0] - test_predict
 
-    model_residual = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear")
+    model_residual = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", warn=False)
     model_residual.fit(train_residual, Y_train)
 
     score = model_residual.score(test_residual, Y_test)
