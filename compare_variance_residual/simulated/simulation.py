@@ -1,5 +1,6 @@
 import numpy as np
 from himalaya.backend import get_backend
+from matplotlib import pyplot as plt
 
 
 def generate_distribution(shape, distribution):
@@ -126,3 +127,38 @@ def generate_dataset(n_targets=500,
     Y_test = backend.asarray(Y_test, dtype="float32")
 
     return Xs_train, Xs_test, Y_train, Y_test, n_features_list
+
+
+def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual, unique_contributions, n_features_list,
+                              n_targets, n_samples_train, n_samples_test, noise_level, random_distribution):
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    handles, labels = [], []
+    for ax, predicted, method in zip(axs, [predicted_variance, predicted_residual], ["Variance Partitioning", "Residual"]):
+        line, = ax.plot(x, predicted, alpha=0.7, label=fr"predicted contribution", marker=".")
+
+        if method == "variance":
+            handles.append(line)
+            labels.append(line.get_label())
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("predicted contribution")
+        ax.set_title(f"{method}")
+        ax.set_ylim([-0.1, 1.1])
+        # ax.set_xlim([-0.05, 1.05])
+
+        # draw center line
+        line = ax.axhline(y=unique_contributions[0], color='k', linestyle='--', label='true contribution of $X_0$')
+        if method == "variance":
+            handles.append(line)
+            labels.append(line.get_label())
+        ax.axhline(y=0, color='k', linestyle='-', label='true contribution of $X_1$')
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.95, 0.5))
+    # Add text field with variable information
+    variable_info = f"n_features_list: {n_features_list}\n" \
+                    f"n_targets: {n_targets}\n" \
+                    f"n_samples_train: {n_samples_train}\n" \
+                    f"n_samples_test: {n_samples_test}\n" \
+                    f"noise_level: {noise_level}\n" \
+                    f"random_distribution: {random_distribution}"
+    fig.text(0.5, -0.1, variable_info, ha='center', va='center', fontsize=10)
+    plt.show()
