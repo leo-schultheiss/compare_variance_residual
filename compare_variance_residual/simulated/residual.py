@@ -4,7 +4,7 @@ from himalaya.kernel_ridge import KernelRidgeCV
 from sklearn.linear_model import LinearRegression
 
 
-def residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=False):
+def residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=False, ignore_negative_r2=False):
     backend = himalaya.backend.get_backend()
 
     # train model for creating residuals
@@ -30,5 +30,9 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=False):
 
     score = model_residual.score(test_residual, Y_test)
     score = backend.to_numpy(score)
+
+    if ignore_negative_r2:
+        score = score[score >= 0]
+
     mean = np.mean(score)
     return mean

@@ -3,11 +3,11 @@ from himalaya.kernel_ridge import KernelRidgeCV, Kernelizer, ColumnKernelizer, M
 from sklearn.pipeline import make_pipeline
 
 
-def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=False):
+def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=False, ignore_negative_r2=False):
     """
     Perform variance partitioning on two feature spaces
 
-    returns: unique variance explained by each feature space
+    returns: unique variance explained by feature space 0
     """
     # train single models
     solver_params = dict()
@@ -36,7 +36,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
     column_kernelizer = ColumnKernelizer(kernelizers)
 
     # random search
-    solver_params = dict(n_iter=5, alphas=np.logspace(-10, 10, 41), progress_bar=False)
+    solver_params = dict(n_iter=10, alphas=np.logspace(-10, 10, 41), progress_bar=False)
     model_random = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search", solver_params=solver_params,
                                          random_state=42)
     pipe = make_pipeline(column_kernelizer, model_random)
@@ -59,4 +59,8 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
     # calculate unique variance explained by each feature space
     X0_unique = joint_score - single_predictions[1]
 
-    return float(X0_unique.mean())
+    if ignore_negative_r2:
+        X0_unique = X0_unique[X0_unique >= 0]
+
+    mean = np.mean(X0_unique)
+    return float(mean)
