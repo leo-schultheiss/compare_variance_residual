@@ -91,9 +91,12 @@ def generate_dataset(n_targets=500,
         X_test = generate_distribution([n_samples_test, n_features], random_distribution)
 
         # add shared component
-        shared_contribution = (1 - np.sum(unique_contributions)) / len(unique_contributions)
-        X_train = shared_contribution * S_train + unique_contribution * X_train
-        X_test = shared_contribution * S_test + unique_contribution * X_test
+        # todo check if this is correct
+        unique_component = unique_contribution * len(unique_contributions)
+        shared_component = 1 - unique_component
+
+        X_train = shared_component * S_train + unique_component * X_train
+        X_test = shared_component * S_test + unique_component * X_test
 
         # demean
         X_train -= X_train.mean(0)
@@ -120,7 +123,6 @@ def generate_dataset(n_targets=500,
     Y_train -= Y_train.mean(0)
     Y_test -= Y_test.mean(0)
 
-
     Xs_train = backend.asarray(Xs_train, dtype="float32")
     Xs_test = backend.asarray(Xs_test, dtype="float32")
     Y_train = backend.asarray(Y_train, dtype="float32")
@@ -129,11 +131,11 @@ def generate_dataset(n_targets=500,
     return Xs_train, Xs_test, Y_train, Y_test, n_features_list
 
 
-def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual, unique_contributions, n_features_list,
-                              n_targets, n_samples_train, n_samples_test, noise_level, random_distribution):
+def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual, unique_contributions, **kwargs):
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
     handles, labels = [], []
-    for ax, predicted, method in zip(axs, [predicted_variance, predicted_residual], ["Variance Partitioning", "Residual"]):
+    for ax, predicted, method in zip(axs, [predicted_variance, predicted_residual],
+                                     ["Variance Partitioning", "Residual"]):
         line, = ax.plot(x, predicted, alpha=0.7, label=fr"predicted contribution", marker=".")
 
         if method == "variance":
@@ -154,11 +156,7 @@ def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual,
         ax.axhline(y=0, color='k', linestyle='-', label='true contribution of $X_1$')
     fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.95, 0.5))
     # Add text field with variable information
-    variable_info = f"n_features_list: {n_features_list}\n" \
-                    f"n_targets: {n_targets}\n" \
-                    f"n_samples_train: {n_samples_train}\n" \
-                    f"n_samples_test: {n_samples_test}\n" \
-                    f"noise_level: {noise_level}\n" \
-                    f"random_distribution: {random_distribution}"
+    variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
+        ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
     fig.text(0.5, -0.1, variable_info, ha='center', va='center', fontsize=10)
     plt.show()
