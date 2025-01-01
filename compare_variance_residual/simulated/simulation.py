@@ -10,7 +10,7 @@ def generate_distribution(shape, distribution):
     ----------
     shape : array of shape (n_samples, )
         x coordinates.
-    distribution : str in {"normal", "uniform"}
+    distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
         Distribution to generate.
 
     Returns
@@ -22,6 +22,18 @@ def generate_distribution(shape, distribution):
         return np.random.randn(*shape)
     elif distribution == "uniform":
         return np.random.uniform(-1, 1, size=shape)
+    elif distribution == "exponential":
+        return np.random.exponential(size=shape)
+    elif distribution == "gamma":
+        return np.random.gamma(size=shape, shape=1)
+    elif distribution == "beta":
+        return np.random.beta(a=1, b=1, size=shape)
+    elif distribution == "poisson":
+        return np.random.poisson(size=shape)
+    elif distribution == "lognormal":
+        return np.random.lognormal(size=shape)
+    elif distribution == "pareto":
+        return np.random.pareto(a=1, size=shape)
     else:
         raise ValueError(f"Unknown distribution {distribution}.")
 
@@ -130,11 +142,13 @@ def generate_dataset(n_targets=500,
     return Xs_train, Xs_test, Y_train, Y_test, n_features_list
 
 
-def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual, unique_contributions, **kwargs):
+def plot_variance_vs_residual(x, xlabel, predicted_variance, predicted_residual, unique_contributions, x_is_log=False, **kwargs):
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
     handles, labels = [], []
     for ax, predicted, method in zip(axs, [predicted_variance, predicted_residual],
                                      ["Variance Partitioning", "Residual"]):
+        if x_is_log:
+            ax.set_xscale("log")
         line, = ax.plot(x, predicted, alpha=0.7, label=fr"predicted contribution", marker=".")
 
         if method == "variance":
