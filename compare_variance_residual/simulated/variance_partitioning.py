@@ -43,8 +43,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
     # Fit the model on all targets
     pipe.fit(X_train, Y_train)
 
-    if use_refinement:
-        # refine model using gradient descent
+    if use_refinement:  # refine model using gradient descent
         deltas = pipe[-1].deltas_
         solver_params = dict(max_iter=10, hyper_gradient_method="direct", max_iter_inner_hyper=10,
                              initial_deltas=deltas, progress_bar=False)
