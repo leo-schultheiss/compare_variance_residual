@@ -134,8 +134,8 @@ def generate_dataset(n_targets=500,
     Y_train -= Y_train.mean(0)
     Y_test -= Y_test.mean(0)
 
-    Xs_train = backend.asarray(Xs_train, dtype="float32")
-    Xs_test = backend.asarray(Xs_test, dtype="float32")
+    Xs_train = [backend.asarray(X, dtype="float32") for X in Xs_train]
+    Xs_test = [backend.asarray(X, dtype="float32") for X in Xs_test]
     Y_train = backend.asarray(Y_train, dtype="float32")
     Y_test = backend.asarray(Y_test, dtype="float32")
 
@@ -164,6 +164,8 @@ def plot_variance_vs_residual(x, xlabel, predicted_variance: list, predicted_res
     ax.boxplot(predicted_residual, positions=positions_residual, widths=width(positions_residual, w), patch_artist=True,
                boxprops=dict(facecolor="C1"), label="residual method")
 
+    ax.set_title("Variance partitioning vs residual method")
+    ax.set_subtitle(xlabel)
     ax.set_xlabel(xlabel)
     ax.set_ylabel("predicted contribution")
     ax.set_ylim([-0.1, 1.1])
