@@ -164,8 +164,8 @@ def plot_variance_vs_residual(x, xlabel, predicted_variance: list, predicted_res
     ax.boxplot(predicted_residual, positions=positions_residual, widths=width(positions_residual, w), patch_artist=True,
                boxprops=dict(facecolor="C1"), label="residual method")
 
-    ax.set_title("Variance partitioning vs residual method")
-    ax.set_subtitle(xlabel)
+    ax.set_title(xlabel)
+    fig.suptitle("Variance partitioning vs residual method")
     ax.set_xlabel(xlabel)
     ax.set_ylabel("predicted contribution")
     ax.set_ylim([-0.1, 1.1])
