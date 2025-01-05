@@ -13,3 +13,4 @@ himalaya>=0.4.6
 scikit-learn>=1.5.2
 matplotlib>=3.9.2
 voxelwise-tutorials>=0.1.7
+stacking-fmri>=0.1.1
