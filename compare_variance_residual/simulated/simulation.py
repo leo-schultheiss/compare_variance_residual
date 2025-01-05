@@ -146,17 +146,18 @@ def plot_variance_vs_residual(x, xlabel, predicted_variance: list, predicted_res
                               x_is_log=False, **kwargs):
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    w = 0.1
     if x_is_log:
+        w = 0.05
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
-        positions_variance = 10 ** (np.log10(x) - w) if isinstance(x[0], (int, float)) else np.arange(len(x)) - w
-        positions_residual = 10 ** (np.log10(x) + w) if isinstance(x[0], (int, float)) else np.arange(len(x)) + w
+        positions_variance = 10 ** (np.log10(x) - w / 2.)
+        positions_residual = 10 ** (np.log10(x) + w / 2.)
     else:
-        width = lambda _, w: w * 2
-        positions_variance = x - w if isinstance(x[0], (int, float)) else np.arange(len(x)) - w
-        positions_residual = x + w if isinstance(x[0], (int, float)) else np.arange(len(x)) + w
+        w = (x[-1] if isinstance(x[0], (int, float)) else len(x)) / (len(x) * 5)
+        width = lambda _, w: w
+        positions_variance = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) - w / 2.
+        positions_residual = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) + w / 2.
 
-    # Plot variance partitioning
+        # Plot variance partitioning
     ax.boxplot(predicted_variance, positions=positions_variance, widths=width(positions_variance, w), patch_artist=True,
                boxprops=dict(facecolor="C0"), label="variance partitioning")
     # Plot residuals
@@ -170,7 +171,8 @@ def plot_variance_vs_residual(x, xlabel, predicted_variance: list, predicted_res
         ax.set_xticks(x)
         ax.set_xticklabels(x)
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
-        ax.set_xlim([10 ** (np.log10(x[0]) - w * 2), 10 ** (np.log10(x[-1]) + w * 2)]) if x_is_log else ax.set_xlim([x[0] - w, x[-1] + w])
+        ax.set_xlim([10 ** (np.log10(x[0]) - w * 2), 10 ** (np.log10(x[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
+            [x[0] - w * 2, x[-1] + w * 2])
     else:
         ax.set_xlim([-0.5, len(x) - 0.5])
         ax.set_xticks(np.arange(len(x)))
