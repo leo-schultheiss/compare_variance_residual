@@ -1,5 +1,9 @@
 import numpy as np
 from himalaya.backend import get_backend
+from himalaya.progress_bar import bar
+
+from compare_variance_residual.simulated.residual import residual_method
+from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
 
 
 def generate_distribution(shape, distribution):
@@ -139,3 +143,49 @@ def generate_dataset(n_targets=500,
     Y_test = backend.asarray(Y_test, dtype="float32")
 
     return Xs_train, Xs_test, Y_train, Y_test
+
+
+def run_experiment(variable_values, variable_name, n_runs, unique_contributions, n_features_list, n_targets,
+                   n_samples_train, n_samples_test, noise_level, random_distribution, ignore_negative_r2,
+                   use_refinement, use_ols):
+    predicted_variance = []
+    predicted_residual = []
+
+    for value in bar(variable_values, title=f"Varying {variable_name}"):
+        variance_runs = []
+        residual_runs = []
+
+        if variable_name == "sample size training":
+            n_samples_train = int(value)
+        elif variable_name == "sample size testing":
+            n_samples_test = int(value)
+        elif variable_name == "number of features $X_{0,1}$":
+            n_features_list = [int(value), int(value)]
+        elif variable_name == "number of features $X_{0}$":
+            n_features_list = [int(value), n_features_list[1]]
+        elif variable_name == "number of targets":
+            n_targets = int(value)
+        elif variable_name == "relative amount of noise in the target":
+            noise_level = value
+        elif variable_name == "proportions of unique contribution":
+            unique_contributions = value
+        elif variable_name == "sampling distributions":
+            random_distribution = value
+
+        for run in range(n_runs):
+            (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(
+                n_features_list=n_features_list, n_targets=n_targets,
+                n_samples_train=n_samples_train, n_samples_test=n_samples_test,
+                noise=noise_level, unique_contributions=unique_contributions,
+                random_distribution=random_distribution, random_state=run + 100)
+
+            partitioning = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=use_refinement,
+                                                 ignore_negative_r2=ignore_negative_r2)
+            residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=use_ols,
+                                       ignore_negative_r2=ignore_negative_r2)
+            variance_runs.append(partitioning)
+            residual_runs.append(residual)
+
+        predicted_variance.append(variance_runs)
+        predicted_residual.append(residual_runs)
+    return predicted_variance, predicted_residual
