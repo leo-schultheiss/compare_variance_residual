@@ -25,11 +25,11 @@ def plot_variance_vs_residual_box(x, xlabel, predicted_variance: list, predicted
     ax.boxplot(predicted_residual, positions=positions_residual, widths=width(positions_residual, w), patch_artist=True,
                boxprops=dict(facecolor="C1"), medianprops=medianprops, label="residual method")
 
-    ax.set_title(xlabel)
+    ax.set_title("Box plots of predicted contributions in a range from 0 to 1")
     fig.suptitle("Variance partitioning vs residual method")
     ax.set_xlabel(xlabel)
     ax.set_ylabel("predicted contribution")
-    ax.set_ylim([0 , 1.])
+    ax.set_ylim([0, 1.])
     if isinstance(x[0], (int, float)):
         ax.set_xticks(x)
         ax.set_xticklabels(x)
@@ -55,3 +55,101 @@ def plot_variance_vs_residual_box(x, xlabel, predicted_variance: list, predicted
         ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
     fig.text(1.1, 0.5, variable_info, ha='center', va='center', fontsize=10)
     plt.show()
+
+
+def plot_variance_vs_residual_error(x, xlabel, predicted_variance: list, predicted_residual: list, unique_contributions,
+                                    x_is_log=False, **kwargs):
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # transform data to reflect error from true contribution
+    true_contribution = unique_contributions[0]
+    predicted_variance = list(np.array(predicted_variance) - true_contribution)
+    predicted_residual = list(np.array(predicted_residual) - true_contribution)
+
+    if x_is_log:
+        w = 0.05
+        width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
+        positions_variance = 10 ** (np.log10(x) - w / 2.)
+        positions_residual = 10 ** (np.log10(x) + w / 2.)
+    else:
+        w = (x[-1] if isinstance(x[0], (int, float)) else len(x)) / (len(x) * 5)
+        width = lambda _, w: w
+        positions_variance = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) - w / 2.
+        positions_residual = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) + w / 2.
+
+    # Plot variance partitioning
+    medianprops = dict(color='black')
+    variance_plot = ax.boxplot(predicted_variance, positions=positions_variance, widths=width(positions_variance, w),
+                               patch_artist=True, boxprops=dict(facecolor="C0"), medianprops=medianprops,
+                               label="variance partitioning")
+    # Plot residuals
+    residual_plot = ax.boxplot(predicted_residual, positions=positions_residual, widths=width(positions_residual, w),
+                               patch_artist=True, boxprops=dict(facecolor="C1"), medianprops=medianprops,
+                               label="residual method")
+
+    ax.set_title("Deviation from true contribution")
+    fig.suptitle("Variance partitioning vs residual method")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("predicted contribution - true contribution")
+
+    # set y-axis limits to the largest absolute whisker
+    max_abs_variance = max(
+        [np.max(np.abs(variance_plot['whiskers'][i].get_ydata())) for i in range(len(variance_plot['whiskers']))])
+    max_abs_residual = max(
+        [np.max(np.abs(residual_plot['whiskers'][i].get_ydata())) for i in range(len(residual_plot['whiskers']))])
+    max_total = max(max_abs_variance, max_abs_residual)
+    ax.set_ylim([-max_total - 0.1, max_total + 0.1])
+
+    if isinstance(x[0], (int, float)):
+        ax.set_xticks(x)
+        ax.set_xticklabels(x)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+        ax.set_xlim([10 ** (np.log10(x[0]) - w * 2), 10 ** (np.log10(x[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
+            [x[0] - w * 2, x[-1] + w * 2])
+    else:
+        ax.set_xlim([-0.5, len(x) - 0.5])
+        ax.set_xticks(np.arange(len(x)))
+        ax.set_xticklabels(x, rotation=45, ha='right')
+
+    if x_is_log:
+        ax.set_xscale("log")
+
+    # draw center line
+    ax.axhline(y=0, color='k', linestyle='--', label='true contribution of $X_0$')
+
+    # Add legend
+    ax.legend(loc='upper right')
+
+    # Add text field with variable information
+    variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
+        ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
+    fig.text(1.1, 0.5, variable_info, ha='center', va='center', fontsize=10)
+    plt.show()
+
+
+def plot_variance_vs_residual_xy_correlation(x, xlabel, predicted_variance: list, predicted_residual: list,
+                                             unique_contributions, **kwargs):
+    """
+    create scatterplots of predicted variance vs predicted residual to show correlation
+    """
+    fig, ax = plt.subplots(len(predicted_variance), 3, figsize=(6, 6 * len(predicted_variance)))
+
+    # center data around true contribution
+    true_contribution = unique_contributions[0]
+    predicted_variance = list(np.array(predicted_variance) - true_contribution)
+    predicted_residual = list(np.array(predicted_residual) - true_contribution)
+
+    for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
+        i = i % len(predicted_variance)
+        ax[i].scatter(variance, residual, alpha=0.5)
+        ax[i].set_title(f"Correlation {xlabel}={x[i]}")
+        ax[i].set_xlabel("predicted variance")
+        ax[i].set_ylabel("predicted residual")
+
+        # set axis limits
+        xlims = [min(variance), max(variance)]
+        ylims = [min(residual), max(residual)]
+        ax[i].set_xlim(xlims)
+        ax[i].set_ylim([min(residual), max(residual)])
+        # plot x=y
+        ax[i].plot(xlims, ylims, 'k--')
