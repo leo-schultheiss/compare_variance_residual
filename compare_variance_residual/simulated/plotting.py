@@ -132,24 +132,43 @@ def plot_variance_vs_residual_xy_correlation(x, xlabel, predicted_variance: list
     """
     create scatterplots of predicted variance vs predicted residual to show correlation
     """
-    fig, ax = plt.subplots(len(predicted_variance), 3, figsize=(6, 6 * len(predicted_variance)))
+    def scale_to_minus_one_to_one(array):
+        min_val = np.min(array)
+        max_val = np.max(array)
+        scaled_array = 2 * (array - min_val) / (max_val - min_val) - 1
+        return scaled_array
+
+    # remove nans and infs
+    predicted_variance, predicted_residual = np.nan_to_num(predicted_variance), np.nan_to_num(predicted_residual)
+
+    # create a grid according to the number of samples
+    nrows = 3
+    ncols = (len(x) + nrows - 1) // nrows  # Ensure enough columns to fit all plots
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False)
 
     # center data around true contribution
     true_contribution = unique_contributions[0]
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
-    for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
-        i = i % len(predicted_variance)
-        ax[i].scatter(variance, residual, alpha=0.5)
-        ax[i].set_title(f"Correlation {xlabel}={x[i]}")
-        ax[i].set_xlabel("predicted variance")
-        ax[i].set_ylabel("predicted residual")
+    # scale data to [-1, 1]
+    predicted_variance = [scale_to_minus_one_to_one(variance) for variance in predicted_variance]
+    predicted_residual = [scale_to_minus_one_to_one(residual) for residual in predicted_residual]
 
-        # set axis limits
-        xlims = [min(variance), max(variance)]
-        ylims = [min(residual), max(residual)]
-        ax[i].set_xlim(xlims)
-        ax[i].set_ylim([min(residual), max(residual)])
+    for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
+        ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
+
+        ax[i // ncols, i % ncols].set_title(f"{x[i]} {xlabel}")
+        ax[i // ncols, i % ncols].set_xlabel("predicted variance")
+        ax[i // ncols, i % ncols].set_ylabel("predicted residual")
+
+        # add text box that displays the correlation coefficient
+        corr = np.corrcoef(variance, residual)[0, 1]
+        ax[i // ncols, i % ncols].text(0.05, 0.95, rf"$\rho$: {corr:.2f}", transform=ax[i // ncols, i % ncols].transAxes,
+                                      fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+
+        lims = [-1.1, 1.1]
+        ax[i // ncols, i % ncols].set_xlim(lims)
+        ax[i // ncols, i % ncols].set_ylim(lims)
         # plot x=y
-        ax[i].plot(xlims, ylims, 'k--')
+        ax[i // ncols, i % ncols].plot(lims, lims, 'k--')
