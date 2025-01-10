@@ -1,4 +1,3 @@
-# Robustness Tests for encoding models
+# Comparing Variance Partitioning and the Residual Method for Interpreting Brain Recordings
 
-This repository contains code for the Bachelor's Thesis "Interpreting Brain Recordings Through the Robustness of DNN Model Representations".
-
+This repository contains code for the Bachelor's Thesis "Comparing Variance Partitioning and the Residual Method for Interpreting Brain Recordings".
