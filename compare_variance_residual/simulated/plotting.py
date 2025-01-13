@@ -120,7 +120,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
 
 
 def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            unique_contributions, normalize=True, ignore_outliers=True, **kwargs):
+                            unique_contributions, normalize=False, ignore_outliers=True, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
@@ -144,7 +144,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     n_plots = len(predicted_variance)
     ncols = int(np.ceil(np.sqrt(n_plots)))
     nrows = int(np.ceil(n_plots / ncols))
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=True, sharey=True)
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=normalize, sharey=normalize)
     # add title to the figure
     fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution",
                  fontsize=20, y=1.0)
@@ -160,7 +160,10 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                                        transform=ax[i // ncols, i % ncols].transAxes,
                                        fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
-        xlims, ylims = calculate_plot_limits(residual, variance, normalize)
+        if normalize:
+            xlims, ylims = [-1.1, 1.1], [-1.1, 1.1]
+        else:
+            xlims, ylims = calculate_plot_limits(residual, variance)
         ax[i // ncols, i % ncols].set_xlim(xlims)
         ax[i // ncols, i % ncols].set_ylim(ylims)
         # plot x=y
@@ -190,16 +193,14 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     plt.show()
 
 
-def calculate_plot_limits(residual, variance, normalize):
-    if normalize:
-        return [-1.1, 1.1], [-1.1, 1.1]
-    else:
-        variance_lower_perc = np.percentile(variance, 1)
-        variance_upper_perc = np.percentile(variance, 99)
-        xlims = [variance_lower_perc * 1.1 if variance_lower_perc < 0 else variance_lower_perc * 0.9,
-                 variance_upper_perc * 1.1 if variance_upper_perc > 0 else variance_upper_perc * 0.9]
-        residual_lower_perc = np.percentile(residual, 1)
-        residual_upper_perc = np.percentile(residual, 99)
-        ylims = [residual_lower_perc * 1.1 if residual_lower_perc < 0 else residual_lower_perc * 0.9,
-                 residual_upper_perc * 1.1 if residual_upper_perc > 0 else residual_upper_perc * 0.9]
+def calculate_plot_limits(residual, variance):
+    variance_lower_perc = np.percentile(variance, 5)
+    variance_upper_perc = np.percentile(variance, 95)
+    xlims = [variance_lower_perc * 1.1 if variance_lower_perc < 0 else variance_lower_perc * 0.9,
+             variance_upper_perc * 1.1 if variance_upper_perc > 0 else variance_upper_perc * 0.9]
+
+    residual_lower_perc = np.percentile(residual, 5)
+    residual_upper_perc = np.percentile(residual, 95)
+    ylims = [residual_lower_perc * 1.1 if residual_lower_perc < 0 else residual_lower_perc * 0.9,
+             residual_upper_perc * 1.1 if residual_upper_perc > 0 else residual_upper_perc * 0.9]
     return xlims, ylims
