@@ -30,7 +30,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
         for start, end in zip(start_and_end[:-1], start_and_end[1:])
     ]
 
-    # Create a different ``Kernelizer`` for each feature space.
+    # Create a different Kernelizer for each feature space.
     kernelizers = [("space %d" % ii, Kernelizer(), slice_)
                    for ii, slice_ in enumerate(slices)]
     column_kernelizer = ColumnKernelizer(kernelizers)
@@ -51,11 +51,9 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
                                       random_state=42)
         pipe = make_pipeline(column_kernelizer, model)
         pipe.fit(X_train, Y_train)
-        joint_score = pipe.score(X_test, Y_test)
-    else:
-        joint_score = pipe.score(X_test, Y_test)
+    joint_score = pipe.score(X_test, Y_test)
 
-    # calculate unique variance explained by each feature space
+    # calculate unique variance explained by feature space 0
     X0_unique = joint_score - single_predictions[1]
 
     if ignore_negative_r2:
