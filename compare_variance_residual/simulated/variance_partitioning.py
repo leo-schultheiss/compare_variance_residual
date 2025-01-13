@@ -1,5 +1,6 @@
 import numpy as np
 from himalaya.kernel_ridge import KernelRidgeCV, Kernelizer, ColumnKernelizer, MultipleKernelRidgeCV
+from himalaya.ridge import RidgeCV
 from sklearn.pipeline import make_pipeline
 
 
@@ -9,15 +10,6 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
 
     returns: unique variance explained by feature space 0
     """
-    # train single models
-    solver_params = dict()
-
-    single_predictions = []
-    for X_train, X_test in zip(Xs_train, Xs_test):
-        model = KernelRidgeCV(alphas=np.logspace(-10, 10, 41), kernel="linear", solver_params=solver_params, warn=False)
-        model.fit(X_train, Y_train)
-        score = model.score(X_test, Y_test)
-        single_predictions.append(score)
 
     # train joint model
     X_train = np.hstack([X for X in Xs_train])
@@ -44,6 +36,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
     pipe.fit(X_train, Y_train)
 
     if use_refinement:  # refine model using gradient descent
+        # todo use normal ridge regression
         deltas = pipe[-1].deltas_
         solver_params = dict(max_iter=10, hyper_gradient_method="direct", max_iter_inner_hyper=10,
                              initial_deltas=deltas, progress_bar=False)
@@ -53,8 +46,13 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=Fal
         pipe.fit(X_train, Y_train)
     joint_score = pipe.score(X_test, Y_test)
 
+    # train single model
+    model = RidgeCV(alphas=np.logspace(-10, 10, 41), solver_params=solver_params, warn=False)
+    model.fit(Xs_train[1], Y_train)
+    score = model.score(Xs_test[1], Y_test)
+
     # calculate unique variance explained by feature space 0
-    X0_unique = joint_score - single_predictions[1]
+    X0_unique = joint_score - score
 
     if ignore_negative_r2:
         X0_unique = X0_unique[X0_unique >= 0]
