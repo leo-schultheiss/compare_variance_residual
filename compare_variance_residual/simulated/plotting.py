@@ -80,10 +80,14 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     title = "Deviation from true contribution"
     ylabel = "predicted contribution - true contribution"
 
-    # Calculate the 95th percentile for the whiskers
-    whisker_percentile = 95
-    variance_whiskers = [np.percentile(np.abs(variance), whisker_percentile) for variance in predicted_variance]
-    residual_whiskers = [np.percentile(np.abs(residual), whisker_percentile) for residual in predicted_residual]
+    # Calculate the whiskers greatest extent
+    predicted_variance = np.array(predicted_variance)
+    predicted_residual = np.array(predicted_residual)
+    # The box extends from the first quartile (Q1) to the third quartile (Q3) of the data, with a line at the median. The whiskers extend from the box to the farthest data point lying within 1.5x the inter-quartile range (IQR) from the box. Flier points are those past the end of the whiskers. See https://en.wikipedia.org/wiki/Box_plot for reference.
+    variance_iqr = np.array([np.percentile(variance, 75) - np.percentile(variance, 25) for variance in predicted_variance])
+    residual_iqr = np.array([np.percentile(residual, 75) - np.percentile(residual, 25) for residual in predicted_residual])
+    variance_whiskers = np.array([1.5 * iqr for iqr in variance_iqr])
+    residual_whiskers = np.array([1.5 * iqr for iqr in residual_iqr])
 
     # set y-axis limits to the largest absolute whisker
     max_abs_variance = max(variance_whiskers)
