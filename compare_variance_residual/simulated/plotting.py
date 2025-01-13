@@ -84,17 +84,18 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     # Calculate the whiskers greatest extent
     predicted_variance = np.array(predicted_variance)
     predicted_residual = np.array(predicted_residual)
-    # The box extends from the first quartile (Q1) to the third quartile (Q3) of the data, with a line at the median. The whiskers extend from the box to the farthest data point lying within 1.5x the inter-quartile range (IQR) from the box. Flier points are those past the end of the whiskers. See https://en.wikipedia.org/wiki/Box_plot for reference.
-    variance_iqr = np.array([np.percentile(variance, 75) - np.percentile(variance, 25) for variance in predicted_variance])
-    residual_iqr = np.array([np.percentile(residual, 75) - np.percentile(residual, 25) for residual in predicted_residual])
-    variance_whiskers = np.array([1.5 * iqr for iqr in variance_iqr])
-    residual_whiskers = np.array([1.5 * iqr for iqr in residual_iqr])
+    # The whiskers extend from the box to the farthest data point lying within 1.5x the inter-quartile range (IQR) from the box.
+    # Flier points are those past the end of the whiskers. See https://en.wikipedia.org/wiki/Box_plot for reference.
+    iqr_variance = np.subtract(*np.percentile(predicted_variance, [75, 25]))
+    iqr_residual = np.subtract(*np.percentile(predicted_residual, [75, 25]))
+    # calculate whiskers
+    max_total = np.max([np.percentile(predicted_variance, 75, axis=1) + 1.5 * iqr_variance,
+                        np.percentile(predicted_residual, 75, axis=1) + 1.5 * iqr_residual])
+    min_total = np.min([np.percentile(predicted_variance, 25, axis=1) - 1.5 * iqr_variance,
+                        np.percentile(predicted_residual, 25, axis=1) - 1.5 * iqr_residual])
 
     # set y-axis limits to the largest absolute whisker
-    max_abs_variance = max(variance_whiskers)
-    max_abs_residual = max(residual_whiskers)
-    max_total = max(max_abs_variance, max_abs_residual)
-    ylim = [-max_total - 0.1, max_total + 0.1]
+    ylim = [min_total - 0.1, max_total + 0.1]
 
     # transform data to reflect error from true contribution
     true_contribution = unique_contributions[0]
@@ -125,8 +126,10 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     """
     # remove 5th percentile and 95th percentile to ignore outliers
     if ignore_outliers:
-        predicted_variance = [np.clip(variance, np.percentile(variance, 5), np.percentile(variance, 95)) for variance in predicted_variance]
-        predicted_residual = [np.clip(residual, np.percentile(residual, 5), np.percentile(residual, 95)) for residual in predicted_residual]
+        predicted_variance = [np.clip(variance, np.percentile(variance, 5), np.percentile(variance, 95)) for variance in
+                              predicted_variance]
+        predicted_residual = [np.clip(residual, np.percentile(residual, 5), np.percentile(residual, 95)) for residual in
+                              predicted_residual]
 
     # center data around true contribution
     true_contribution = unique_contributions[0]
@@ -143,11 +146,12 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     nrows = int(np.ceil(n_plots / ncols))
     fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=True, sharey=True)
     # add title to the figure
-    fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution", fontsize=20, y=1.0)
+    fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution",
+                 fontsize=20, y=1.0)
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
-        title = f"{xlabel}: " + f"{x[i]:02}" if isinstance(x[i], (int, float)) else x[i]
+        title = f"{xlabel}: " + (f"{x[i]:02}" if isinstance(x[i], (int, float)) else x[i])
         ax[i // ncols, i % ncols].set_title(title)
 
         # add text box that displays the correlation coefficient
