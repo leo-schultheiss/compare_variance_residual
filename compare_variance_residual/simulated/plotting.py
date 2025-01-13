@@ -71,7 +71,8 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
     # Add text field with variable information
     variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
         ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
-    fig.text(1.1, 0.5, variable_info, ha='center', va='center', fontsize=10)
+    fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
+    plt.tight_layout()
     plt.show()
 
 
@@ -111,7 +112,9 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     # Add text field with variable information
     variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
         ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
-    fig.text(1.1, 0.5, variable_info, ha='left', va='center', fontsize=10)
+    fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
+
+    plt.tight_layout()
     plt.show()
 
 
@@ -169,5 +172,5 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     for i in range(n_plots, nrows * ncols):
         fig.delaxes(ax.flatten()[i])
     # create additional plot for text containing variable information
-    fig.text(1.1, 0.5, '\n'.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]), ha='left', va='center',
+    fig.text(1, 0.5, '\n'.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]), ha='left', va='center',
              fontsize=10)
