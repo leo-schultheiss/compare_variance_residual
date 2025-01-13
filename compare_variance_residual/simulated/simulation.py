@@ -6,43 +6,8 @@ from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
 
 
-def generate_distribution(shape, distribution):
-    """Generate a distribution.
-
-    Parameters
-    ----------
-    shape : array of shape (n_samples, )
-        x coordinates.
-    distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
-        Distribution to generate.
-
-    Returns
-    -------
-    array of shape (n_samples, )
-        Generated distribution.
-    """
-    if distribution == "normal":
-        return np.random.randn(*shape)
-    elif distribution == "uniform":
-        return np.random.uniform(-1, 1, size=shape)
-    elif distribution == "exponential":
-        return np.random.exponential(size=shape)
-    elif distribution == "gamma":
-        return np.random.gamma(shape=1, size=shape)
-    elif distribution == "beta":
-        return np.random.beta(a=1, b=1, size=shape)
-    elif distribution == "poisson":
-        return np.random.poisson(size=shape)
-    elif distribution == "lognormal":
-        return np.random.lognormal(size=shape)
-    elif distribution == "pareto":
-        return np.random.pareto(a=1, size=shape)
-    else:
-        raise ValueError(f"Unknown distribution {distribution}.")
-
-
-def generate_dataset(n_targets=500,
-                     n_samples_train=1000, n_samples_test=400,
+def generate_dataset(n_targets=100,
+                     n_samples_train=100, n_samples_test=100,
                      noise=0, unique_contributions=None,
                      n_features_list=None, random_distribution="normal", random_state=None):
     """Utility to generate dataset.
@@ -82,7 +47,43 @@ def generate_dataset(n_targets=500,
     n_features_list : list of int of length (n_features, )
         Number of features in each kernel.
     """
-    np.random.seed(random_state)
+
+    def generate_distribution(shape, distribution):
+        """Generate a distribution.
+
+        Parameters
+        ----------
+        shape : array of shape (n_samples, )
+            x coordinates.
+        distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
+            Distribution to generate.
+
+        Returns
+        -------
+        array of shape (n_samples, )
+            Generated distribution.
+        """
+        if distribution == "normal":
+            return np.random.randn(*shape)
+        elif distribution == "uniform":
+            return np.random.uniform(-1, 1, size=shape)
+        elif distribution == "exponential":
+            return np.random.exponential(size=shape)
+        elif distribution == "gamma":
+            return np.random.gamma(shape=1, size=shape)
+        elif distribution == "beta":
+            return np.random.beta(a=1, b=1, size=shape)
+        elif distribution == "poisson":
+            return np.random.poisson(size=shape)
+        elif distribution == "lognormal":
+            return np.random.lognormal(size=shape)
+        elif distribution == "pareto":
+            return np.random.pareto(a=1, size=shape)
+        else:
+            raise ValueError(f"Unknown distribution {distribution}.")
+
+    if random_state is not None:
+        np.random.seed(random_state)
     backend = get_backend()
 
     if unique_contributions is None:
@@ -178,14 +179,13 @@ def run_experiment(variable_values, variable_name, n_runs, unique_contributions,
                 n_samples_train=n_samples_train, n_samples_test=n_samples_test,
                 noise=noise_level, unique_contributions=unique_contributions,
                 random_distribution=random_distribution, random_state=run + 100)
-
-            partitioning = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=use_refinement,
-                                                 ignore_negative_r2=ignore_negative_r2)
+            variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=use_refinement,
+                                              ignore_negative_r2=ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=use_ols,
-                                       ignore_negative_r2=ignore_negative_r2)
-            partitioning = np.nan_to_num(partitioning)
+                                        ignore_negative_r2=ignore_negative_r2)
+            variance = np.nan_to_num(variance)
             residual = np.nan_to_num(residual)
-            variance_runs.append(partitioning)
+            variance_runs.append(variance)
             residual_runs.append(residual)
 
         predicted_variance.append(variance_runs)
