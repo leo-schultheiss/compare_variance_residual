@@ -6,7 +6,7 @@ def normalize_to_unit_interval(array):
     min_val = np.min(array)
     max_val = np.max(array)
     scaled_array = 2 * (array - min_val) / (max_val - min_val) - 1
-    return scaled_array
+    return np.nan_to_num(scaled_array)
 
 
 def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim):
@@ -119,21 +119,21 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
 
 
 def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            unique_contributions, scale_to_unit_range=True, **kwargs):
+                            unique_contributions, normalize=True, ignore_outliers=True, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
-
-    # remove nans and infs
-    predicted_variance, predicted_residual = np.nan_to_num(predicted_variance), np.nan_to_num(predicted_residual)
+    # remove 5th percentile and 95th percentile to ignore outliers
+    if ignore_outliers:
+        predicted_variance = [np.clip(variance, np.percentile(variance, 5), np.percentile(variance, 95)) for variance in predicted_variance]
+        predicted_residual = [np.clip(residual, np.percentile(residual, 5), np.percentile(residual, 95)) for residual in predicted_residual]
 
     # center data around true contribution
     true_contribution = unique_contributions[0]
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
-    # scale data to [-1, 1]
-    if scale_to_unit_range:
+    if normalize:
         predicted_variance = [normalize_to_unit_interval(variance) for variance in predicted_variance]
         predicted_residual = [normalize_to_unit_interval(residual) for residual in predicted_residual]
 
@@ -141,15 +141,14 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     n_plots = len(predicted_variance)
     ncols = int(np.ceil(np.sqrt(n_plots)))
     nrows = int(np.ceil(n_plots / ncols))
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False)
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=True, sharey=True)
+    # add title to the figure
+    fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution", fontsize=20, y=1.0)
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
-
-        title = f"predicted contributions for {x[i]} {xlabel}"
-        ax[i // ncols, i % ncols].set_title(f"{x[i]} {xlabel}")
-        ax[i // ncols, i % ncols].set_xlabel("variance partitioning predicted contribution")
-        ax[i // ncols, i % ncols].set_ylabel("residual method predicted contribution")
+        title = f"{xlabel}: " + f"{x[i]:02}" if isinstance(x[i], (int, float)) else x[i]
+        ax[i // ncols, i % ncols].set_title(title)
 
         # add text box that displays the correlation coefficient
         corr = np.corrcoef(variance, residual)[0, 1]
@@ -157,10 +156,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                                        transform=ax[i // ncols, i % ncols].transAxes,
                                        fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
-        xlims = [np.min(variance) * 1.1 if np.min(variance) < 0 else np.min(variance) * 0.9,
-                 np.max(variance) * 1.1 if np.max(variance) > 0 else np.max(variance) * 0.9]
-        ylims = [np.min(residual) * 1.1 if np.min(residual) < 0 else np.min(residual) * 0.9,
-                 np.max(residual) * 1.1 if np.max(residual) > 0 else np.max(residual) * 0.9]
+        xlims, ylims = calculate_plot_limits(residual, variance, normalize)
         ax[i // ncols, i % ncols].set_xlim(xlims)
         ax[i // ncols, i % ncols].set_ylim(ylims)
         # plot x=y
@@ -168,9 +164,38 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
         # add legend
         ax[i // ncols, i % ncols].legend(loc='lower right')
 
+        # if this will be the last subplot in a column, and i is not in the final row add xticks
+        if n_plots < (ncols * nrows) and i // nrows == nrows - 2 and i % ncols == ncols - 1:
+            ax[i // ncols, i % ncols].xaxis.set_tick_params(labelbottom=True)
+
+    # add x and y labels
+    fig.text(0.5, -0.01, f"variance partitioning predicted - true contribution{', normalized' if normalize else ''}",
+             ha='center', fontsize=15)
+    fig.text(-0.01, 0.5, f"residual method predicted - true contribution{', normalized' if normalize else ''}",
+             rotation='vertical', va='center', fontsize=15)
+
     # remove empty subplots
     for i in range(n_plots, nrows * ncols):
         fig.delaxes(ax.flatten()[i])
     # create additional plot for text containing variable information
     fig.text(1, 0.5, '\n'.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]), ha='left', va='center',
              fontsize=10)
+
+    # Adjust layout to increase margins
+    plt.tight_layout()
+    plt.show()
+
+
+def calculate_plot_limits(residual, variance, normalize):
+    if normalize:
+        return [-1.1, 1.1], [-1.1, 1.1]
+    else:
+        variance_lower_perc = np.percentile(variance, 1)
+        variance_upper_perc = np.percentile(variance, 99)
+        xlims = [variance_lower_perc * 1.1 if variance_lower_perc < 0 else variance_lower_perc * 0.9,
+                 variance_upper_perc * 1.1 if variance_upper_perc > 0 else variance_upper_perc * 0.9]
+        residual_lower_perc = np.percentile(residual, 1)
+        residual_upper_perc = np.percentile(residual, 99)
+        ylims = [residual_lower_perc * 1.1 if residual_lower_perc < 0 else residual_lower_perc * 0.9,
+                 residual_upper_perc * 1.1 if residual_upper_perc > 0 else residual_upper_perc * 0.9]
+    return xlims, ylims
