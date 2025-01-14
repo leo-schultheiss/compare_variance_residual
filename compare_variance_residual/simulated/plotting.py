@@ -150,6 +150,8 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                  fontsize=20, y=1.0)
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
+        if x[i] == "exponential":
+            print()
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
         title = f"{xlabel}: " + (f"{x[i]:02}" if isinstance(x[i], (int, float)) else x[i])
         ax[i // ncols, i % ncols].set_title(title)
@@ -196,11 +198,12 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
 def calculate_plot_limits(residual, variance):
     variance_lower_perc = np.percentile(variance, 5)
     variance_upper_perc = np.percentile(variance, 95)
-    xlims = [variance_lower_perc * 1.1 if variance_lower_perc < 0 else variance_lower_perc * 0.9,
-             variance_upper_perc * 1.1 if variance_upper_perc > 0 else variance_upper_perc * 0.9]
-
+    variance_range = variance_upper_perc - variance_lower_perc
+    xlims = [variance_lower_perc + 0.1 * variance_range if variance_lower_perc < 0 else variance_lower_perc - 0.1 * variance_range,
+             variance_upper_perc + 0.1 * variance_range if variance_upper_perc > 0 else variance_upper_perc - 0.1 * variance_range]
     residual_lower_perc = np.percentile(residual, 5)
     residual_upper_perc = np.percentile(residual, 95)
-    ylims = [residual_lower_perc * 1.1 if residual_lower_perc < 0 else residual_lower_perc * 0.9,
-             residual_upper_perc * 1.1 if residual_upper_perc > 0 else residual_upper_perc * 0.9]
+    residual_range = residual_upper_perc - residual_lower_perc
+    ylims = [residual_lower_perc + 0.1 * residual_range if residual_lower_perc < 0 else residual_lower_perc - 0.1 * residual_range,
+             residual_upper_perc + 0.1 * residual_range if residual_upper_perc > 0 else residual_upper_perc - 0.1 * residual_range]
     return xlims, ylims
