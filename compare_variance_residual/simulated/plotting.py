@@ -57,9 +57,9 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
                                      unique_contributions, x_is_log=False, **kwargs):
     title = "Box plots of predicted contributions displayed in range from 0 to 1"
     ylabel = "predicted contribution"
-    ylims = [-0.1, 1.1]
+    ylim = [-0.1, 1.1]
 
-    fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylims)
+    fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
     ax.axhline(y=unique_contributions[0], color='k', linestyle='--', label='true contribution of $X_0$')
@@ -77,28 +77,48 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
 
 def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, unique_contributions,
                           x_is_log=False, **kwargs):
+    def calculate_whiskers(data):
+        # Calculate Q1 (25th percentile) and Q3 (75th percentile) for each experiment
+        Q1 = np.percentile(data, 25, axis=1)
+        Q3 = np.percentile(data, 75, axis=1)
+
+        # Calculate IQR (Interquartile Range) for each experiment
+        IQR = Q3 - Q1
+
+        # Calculate whiskers
+        lower_whiskers = Q1 - 1.5 * IQR
+        upper_whiskers = Q3 + 1.5 * IQR
+
+        # Find the smallest and largest whiskers among all experiments
+        smallest_whisker = np.min(lower_whiskers)
+        largest_whisker = np.max(upper_whiskers)
+
+        return smallest_whisker, largest_whisker
+
     title = "Deviation from true contribution"
     ylabel = "predicted contribution - true contribution"
 
-    # Calculate the whiskers greatest extent
-    predicted_variance = np.array(predicted_variance)
-    predicted_residual = np.array(predicted_residual)
-    iqr_variance = np.subtract(*np.percentile(predicted_variance, [75, 25]))
-    iqr_residual = np.subtract(*np.percentile(predicted_residual, [75, 25]))
-    # calculate whiskers
-    max_total = np.max([np.percentile(predicted_variance, 75, axis=1) + 1.5 * iqr_variance,
-                        np.percentile(predicted_residual, 75, axis=1) + 1.5 * iqr_residual])
-    min_total = np.min([np.percentile(predicted_variance, 25, axis=1) - 1.5 * iqr_variance,
-                        np.percentile(predicted_residual, 25, axis=1) - 1.5 * iqr_residual])
-
-    # set y-axis limits to the largest absolute whisker
-    ylim = [min(0, min_total), max(1, max_total)]
-
     # transform data to reflect error from true contribution
     true_contribution = unique_contributions[0]
-    predicted_variance = list(np.array(predicted_variance) - true_contribution)
-    predicted_residual = list(np.array(predicted_residual) - true_contribution)
+    predicted_variance = np.array(predicted_variance) - true_contribution
+    predicted_residual = np.array(predicted_residual) - true_contribution
 
+    # Calculate the whiskers greatest extent
+    variance_min_whisker, variance_max_whisker = calculate_whiskers(predicted_variance)
+    residual_min_whisker, residual_max_whisker = calculate_whiskers(predicted_residual)
+
+    # Calculate the total whiskers
+    min_total = min(variance_min_whisker, residual_min_whisker)
+    max_total = max(variance_max_whisker, residual_max_whisker)
+
+    # set y-axis limits to the largest absolute whiskers
+    ylim = [min(0, min_total), max(1, max_total)]
+
+    # transform back to lists
+    predicted_variance = predicted_variance.tolist()
+    predicted_residual = predicted_residual.tolist()
+
+    # plot boxplots
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
