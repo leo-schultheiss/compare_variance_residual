@@ -4,6 +4,7 @@
 /cache/
 /build/
 /dist/
+*.egg-info/
 
 *-checkpoint.ipynb
 *.npy
