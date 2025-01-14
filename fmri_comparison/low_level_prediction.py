@@ -6,9 +6,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
-from compare_variance_residual.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, \
+from fmri_comparison.common_utils.feature_utils import load_z_low_level_feature, load_subject_fmri, \
     get_prediction_path
-from compare_variance_residual.common_utils.bootstrap_ridge import bootstrap_ridge
+from fmri_comparison.common_utils.bootstrap_ridge import bootstrap_ridge
 
 
 def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_level_feature: str, number_of_delays=4):

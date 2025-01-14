@@ -7,10 +7,10 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
-from compare_variance_residual.common_utils.feature_utils import load_downsampled_context_representations, \
+from fmri_comparison.common_utils.feature_utils import load_downsampled_context_representations, \
     load_subject_fmri, \
     get_prediction_path
-from compare_variance_residual.common_utils.bootstrap_ridge import bootstrap_ridge
+from fmri_comparison.common_utils.bootstrap_ridge import bootstrap_ridge
 
 trim = 5
 

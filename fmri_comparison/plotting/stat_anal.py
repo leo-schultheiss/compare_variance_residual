@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 import os
 
-import compare_variance_residual.common_utils.feature_utils
+import fmri_comparison.common_utils.feature_utils
 
 
 def correlation_stat_analysis(correlation, savefig=False, alternate_title=None, xlim=None, ylim=None):
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     low_level_feature = "letters"
 
     # Load the data
-    path = compare_variance_residual.common_utils.feature_utils.get_prediction_path(language_model, feature, modality, subject, layer=layer)
+    path = fmri_comparison.common_utils.feature_utils.get_prediction_path(language_model, feature, modality, subject, layer=layer)
     print("loading", path)
     correlation = np.nan_to_num(np.load(path, allow_pickle=True))
     correlation_stat_analysis(correlation)
