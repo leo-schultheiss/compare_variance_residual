@@ -4,10 +4,10 @@ from himalaya.kernel_ridge import Kernelizer, ColumnKernelizer
 from himalaya.ridge import ColumnTransformerNoStack
 from voxelwise_tutorials.delayer import Delayer
 
-from compare_variance_residual.common_utils.feature_utils import load_subject_fmri, \
+from fmri_comparison.common_utils.feature_utils import load_subject_fmri, \
     load_downsampled_context_representations, \
     get_prediction_path, load_z_low_level_feature
-from compare_variance_residual.common_utils.bootstrap_ridge import bootstrap_ridge
+from fmri_comparison.common_utils.bootstrap_ridge import bootstrap_ridge
 
 
 def predict_joint_model(data_dir, feature_filename, language_model, subject_num, modality, layer, textual_features,
