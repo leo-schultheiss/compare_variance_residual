@@ -4,7 +4,7 @@ import re
 from setuptools import find_packages, setup
 
 # get version from voxelwise_tutorials/__init__.py
-with open('compare_variance_residual/__init__.py') as f:
+with open('fmri_comparison/__init__.py') as f:
     infos = f.readlines()
 __version__ = ''
 for line in infos:
@@ -39,7 +39,7 @@ extras_require = {
 }
 
 setup(
-    name='compare_variance_residual',
+    name='fmri_comparison',
     maintainer="Leo Schultheiß",
     maintainer_email="leo.schultheiss@tum.de",
     description="Compare variance partitioning and residual method",

@@ -1,7 +1,7 @@
 import itertools
 import os
 
-from compare_variance_residual import low_level_prediction, semantic_prediction, joint_prediction
+from fmri_comparison import low_level_prediction, semantic_prediction, joint_prediction
 
 
 def start_batch_run():

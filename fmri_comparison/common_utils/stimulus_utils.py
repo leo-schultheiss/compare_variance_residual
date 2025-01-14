@@ -1,4 +1,4 @@
-from compare_variance_residual.common_utils.textgrid import TextGrid
+from fmri_comparison.common_utils.textgrid import TextGrid
 import os
 import numpy as np
 
