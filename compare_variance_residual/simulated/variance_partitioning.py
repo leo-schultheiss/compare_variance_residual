@@ -1,58 +1,44 @@
 import numpy as np
-from himalaya.kernel_ridge import KernelRidgeCV, Kernelizer, ColumnKernelizer, MultipleKernelRidgeCV
-from himalaya.ridge import RidgeCV
+from himalaya.kernel_ridge import Kernelizer, ColumnKernelizer, MultipleKernelRidgeCV
+from himalaya.ridge import RidgeCV, GroupRidgeCV
 from sklearn.pipeline import make_pipeline
 
 
-def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=False, ignore_negative_r2=False):
+def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_direct_result=False, ignore_negative_r2=False):
     """
     Perform variance partitioning on two feature spaces
 
-    returns: unique variance explained by feature space 0
+    returns: proportional unique variance explained by feature space 0
     """
 
     # train joint model
-    X_train = np.hstack([X for X in Xs_train])
-    X_test = np.hstack([X for X in Xs_test])
-
-    # Find the start and end of each feature space X in Xs
-    start_and_end = np.concatenate([[0], np.cumsum([X.shape[1] for X in Xs_train])])
-    slices = [
-        slice(start, end)
-        for start, end in zip(start_and_end[:-1], start_and_end[1:])
-    ]
-
-    # Create a different Kernelizer for each feature space.
-    kernelizers = [("space %d" % ii, Kernelizer(), slice_)
-                   for ii, slice_ in enumerate(slices)]
-    column_kernelizer = ColumnKernelizer(kernelizers)
-
-    # random search
     solver_params = dict(n_iter=10, alphas=np.logspace(-10, 10, 41), progress_bar=False)
-    model_random = MultipleKernelRidgeCV(kernels="precomputed", solver="random_search", solver_params=solver_params,
-                                         random_state=42)
-    pipe = make_pipeline(column_kernelizer, model_random)
-    # Fit the model on all targets
-    pipe.fit(X_train, Y_train)
+    model = GroupRidgeCV(groups="input", solver_params=solver_params)
+    model.fit(Xs_train, Y_train)
+    joint_score = model.score(Xs_test, Y_test)
 
-    if use_refinement:  # refine model using gradient descent
-        # todo use normal ridge regression
-        deltas = pipe[-1].deltas_
-        solver_params = dict(max_iter=10, hyper_gradient_method="direct", max_iter_inner_hyper=10,
-                             initial_deltas=deltas, progress_bar=False)
-        model = MultipleKernelRidgeCV(kernels="precomputed", solver="hyper_gradient", solver_params=solver_params,
-                                      random_state=42)
-        pipe = make_pipeline(column_kernelizer, model)
-        pipe.fit(X_train, Y_train)
-    joint_score = pipe.score(X_test, Y_test)
+    # train single model(s)
+    solver_params = dict()
+    if use_direct_result:
+        model = RidgeCV(alphas=np.logspace(-10, 10, 41), solver_params=solver_params)
+        model.fit(Xs_train[1], Y_train)
+        score = model.score(Xs_test[1], Y_test)
 
-    # train single model
-    model = RidgeCV(alphas=np.logspace(-10, 10, 41), solver_params=solver_params, warn=False)
-    model.fit(Xs_train[1], Y_train)
-    score = model.score(Xs_test[1], Y_test)
+        # calculate unique variance explained by feature space 0 only using the joint model and feature space 1
+        X0_unique = joint_score - score
+    else:
+        # train both models
+        model_0 = RidgeCV(alphas=np.logspace(-10, 10, 41), solver_params=solver_params)
+        model_0.fit(Xs_train[0], Y_train)
+        score_0 = model_0.score(Xs_test[0], Y_test)
 
-    # calculate unique variance explained by feature space 0
-    X0_unique = joint_score - score
+        model_1 = RidgeCV(alphas=np.logspace(-10, 10, 41), solver_params=solver_params)
+        model_1.fit(Xs_train[1], Y_train)
+        score_1 = model_1.score(Xs_test[1], Y_test)
+
+        # calculate unique variance explained by feature space 0
+        shared = joint_score - score_0 - score_1
+        X0_unique = score_0 - shared
 
     if ignore_negative_r2:
         X0_unique = X0_unique[X0_unique >= 0]
