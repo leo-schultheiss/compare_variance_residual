@@ -148,7 +148,7 @@ def generate_dataset(n_targets=100,
 
 def run_experiment(variable_values, variable_name, n_runs, unique_contributions, n_features_list, n_targets,
                    n_samples_train, n_samples_test, noise_level, random_distribution, ignore_negative_r2,
-                   use_refinement, use_ols):
+                   use_ols):
     predicted_variance = []
     predicted_residual = []
 
@@ -179,10 +179,9 @@ def run_experiment(variable_values, variable_name, n_runs, unique_contributions,
                 n_samples_train=n_samples_train, n_samples_test=n_samples_test,
                 noise=noise_level, unique_contributions=unique_contributions,
                 random_distribution=random_distribution, random_state=run + 100)
-            variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, use_refinement=use_refinement,
-                                              ignore_negative_r2=ignore_negative_r2)
+            variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, ignore_negative_r2=ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, use_ols=use_ols,
-                                        ignore_negative_r2=ignore_negative_r2)
+                                       ignore_negative_r2=ignore_negative_r2)
             variance = np.nan_to_num(variance)
             residual = np.nan_to_num(residual)
             variance_runs.append(variance)
