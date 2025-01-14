@@ -3,6 +3,7 @@
 /data/
 /cache/
 /build/
+/dist/
 
 *-checkpoint.ipynb
 *.npy
