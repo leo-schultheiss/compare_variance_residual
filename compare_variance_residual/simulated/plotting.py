@@ -54,11 +54,10 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
 
 
 def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list,
-                                     unique_contributions,
-                                     x_is_log=False, **kwargs):
+                                     unique_contributions, x_is_log=False, **kwargs):
     title = "Box plots of predicted contributions displayed in range from 0 to 1"
     ylabel = "predicted contribution"
-    ylims = [0, 1]
+    ylims = [-0.1, 1.1]
 
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylims)
 
@@ -84,8 +83,6 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     # Calculate the whiskers greatest extent
     predicted_variance = np.array(predicted_variance)
     predicted_residual = np.array(predicted_residual)
-    # The whiskers extend from the box to the farthest data point lying within 1.5x the inter-quartile range (IQR) from the box.
-    # Flier points are those past the end of the whiskers. See https://en.wikipedia.org/wiki/Box_plot for reference.
     iqr_variance = np.subtract(*np.percentile(predicted_variance, [75, 25]))
     iqr_residual = np.subtract(*np.percentile(predicted_residual, [75, 25]))
     # calculate whiskers
@@ -95,7 +92,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
                         np.percentile(predicted_residual, 25, axis=1) - 1.5 * iqr_residual])
 
     # set y-axis limits to the largest absolute whisker
-    ylim = [min_total - 0.1, max_total + 0.1]
+    ylim = [min(0, min_total), max(1, max_total)]
 
     # transform data to reflect error from true contribution
     true_contribution = unique_contributions[0]
@@ -144,7 +141,8 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     n_plots = len(predicted_variance)
     ncols = int(np.ceil(np.sqrt(n_plots)))
     nrows = int(np.ceil(n_plots / ncols))
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=normalize, sharey=normalize)
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=normalize,
+                           sharey=normalize)
     # add title to the figure
     fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution",
                  fontsize=20, y=1.0)
@@ -197,11 +195,23 @@ def calculate_plot_limits(residual, variance):
     variance_lower_perc = np.percentile(variance, 5)
     variance_upper_perc = np.percentile(variance, 95)
     variance_range = variance_upper_perc - variance_lower_perc
-    xlims = [variance_lower_perc + 0.1 * variance_range if variance_lower_perc < 0 else variance_lower_perc - 0.1 * variance_range,
-             variance_upper_perc + 0.1 * variance_range if variance_upper_perc > 0 else variance_upper_perc - 0.1 * variance_range]
+    xlims = [
+        variance_lower_perc + 0.1 * variance_range if variance_lower_perc < 0 else variance_lower_perc - 0.1 * variance_range,
+        variance_upper_perc + 0.1 * variance_range if variance_upper_perc > 0 else variance_upper_perc - 0.1 * variance_range]
     residual_lower_perc = np.percentile(residual, 5)
     residual_upper_perc = np.percentile(residual, 95)
     residual_range = residual_upper_perc - residual_lower_perc
-    ylims = [residual_lower_perc + 0.1 * residual_range if residual_lower_perc < 0 else residual_lower_perc - 0.1 * residual_range,
-             residual_upper_perc + 0.1 * residual_range if residual_upper_perc > 0 else residual_upper_perc - 0.1 * residual_range]
+    ylims = [
+        residual_lower_perc + 0.1 * residual_range if residual_lower_perc < 0 else residual_lower_perc - 0.1 * residual_range,
+        residual_upper_perc + 0.1 * residual_range if residual_upper_perc > 0 else residual_upper_perc - 0.1 * residual_range]
     return xlims, ylims
+
+
+def plot_experiment(variable_values, variable_name, predicted_variance, predicted_residual,
+                    unique_contributions, x_is_log=False, **kwargs):
+    plot_predicted_contributions_box(variable_values, variable_name, predicted_variance, predicted_residual,
+                                     unique_contributions, x_is_log=x_is_log, **kwargs)
+    plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
+                          unique_contributions, x_is_log=x_is_log, **kwargs)
+    plot_prediction_scatter(variable_values, variable_name, predicted_variance, predicted_residual,
+                            unique_contributions, **kwargs)
