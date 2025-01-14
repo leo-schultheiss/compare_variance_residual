@@ -120,7 +120,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
 
 
 def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            unique_contributions, normalize=False, ignore_outliers=True, **kwargs):
+                            unique_contributions, normalize=False, ignore_outliers=False, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
@@ -150,8 +150,6 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                  fontsize=20, y=1.0)
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
-        if x[i] == "exponential":
-            print()
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
         title = f"{xlabel}: " + (f"{x[i]:02}" if isinstance(x[i], (int, float)) else x[i])
         ax[i // ncols, i % ncols].set_title(title)
