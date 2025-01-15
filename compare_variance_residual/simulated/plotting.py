@@ -187,8 +187,8 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
         # plot x=y
         ax[i // ncols, i % ncols].plot(xlims, ylims, 'k--', label="x=y")
         # plot X=0, and y=0
-        ax[i // ncols, i % ncols].axvline(x=0, color='k', linestyle='--', label='true contribution of $X_0$')
-        ax[i // ncols, i % ncols].axhline(y=0, color='k', linestyle='--')
+        ax[i // ncols, i % ncols].axvline(x=0, color='k', linestyle='-', label='true contribution of $X_0$')
+        ax[i // ncols, i % ncols].axhline(y=0, color='k', linestyle='-')
         # add legend
         ax[i // ncols, i % ncols].legend(loc='lower right')
 
