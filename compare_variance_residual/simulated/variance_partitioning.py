@@ -59,7 +59,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
         score_1 = model_1.score(Xs_test[1], Y_test)
 
         # calculate unique variance explained by feature space 0
-        shared = joint_score - score_0 - score_1
+        shared = (score_0 + score_1) - joint_score
         X0_unique = score_0 - shared
 
     if ignore_negative_r2:
