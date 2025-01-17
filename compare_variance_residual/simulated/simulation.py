@@ -178,9 +178,9 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
 
         for run in range(n_runs):
             (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(
-                d_shared=d_shared, d_unique_list=d_unique_list, n_targets=n_targets,
-                n_samples_train=n_samples_train, n_samples_test=n_samples_test,
-                noise=noise_level, random_distribution=random_distribution, random_state=run + 100)
+                d_shared=d_shared, d_unique_list=d_unique_list, n_targets=n_targets, n_samples_train=n_samples_train,
+                n_samples_test=n_samples_test, noise=noise_level, random_distribution=random_distribution,
+                random_state=run + 100)
             variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
                                              direct_variance_partitioning, ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
