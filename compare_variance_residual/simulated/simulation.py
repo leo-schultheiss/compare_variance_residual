@@ -120,7 +120,7 @@ def generate_dataset(n_targets=100,
         Xs_train.append(X_train)
         Xs_test.append(X_test)
 
-        weights = generate_distribution([n_features, n_targets], random_distribution) / n_features
+        weights = generate_distribution([n_features, n_targets], "normal") / n_features
 
         if ii == 0:
             Y_train = X_train @ weights
