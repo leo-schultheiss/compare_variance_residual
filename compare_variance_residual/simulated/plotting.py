@@ -62,7 +62,7 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
+    true_contribution = 1 / 3
     ax.axhline(y=true_contribution, color='k', linestyle='--', label=r'true contribution of $X_0$')
 
     # Add legend
@@ -99,7 +99,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted contribution - true contribution"
 
     # transform data to reflect error from true contribution
-    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
+    true_contribution = 1 / 3
     predicted_variance = np.array(predicted_variance) - true_contribution
     predicted_residual = np.array(predicted_residual) - true_contribution
 
@@ -148,7 +148,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true contribution
-    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
+    true_contribution = 1 / 3
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
