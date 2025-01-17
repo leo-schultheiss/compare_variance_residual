@@ -6,6 +6,41 @@ from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
 
 
+def create_random_distribution(shape, distribution) -> np.ndarray:
+    """Create a random distribution.
+
+    Parameters
+    ----------
+    shape : array of shape (n_samples,)
+        x coordinates.
+    distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
+        Distribution to generate.
+
+    Returns
+    -------
+    array of shape (n_samples, )
+        Generated distribution.
+    """
+    if distribution == "normal":
+        return np.random.randn(*shape)
+    elif distribution == "uniform":
+        return np.random.uniform(-1, 1, size=shape)
+    elif distribution == "exponential":
+        return np.random.exponential(size=shape)
+    elif distribution == "gamma":
+        return np.random.gamma(shape=1, size=shape)
+    elif distribution == "beta":
+        return np.random.beta(a=1, b=1, size=shape)
+    elif distribution == "poisson":
+        return np.random.poisson(size=shape)
+    elif distribution == "lognormal":
+        return np.random.lognormal(size=shape)
+    elif distribution == "pareto":
+        return np.random.pareto(a=1, size=shape)
+    else:
+        raise ValueError(f"Unknown distribution {distribution}.")
+
+
 def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
                      random_distribution="normal", random_state=None):
     """Utility to generate dataset.
@@ -46,40 +81,6 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
         Number of features in each kernel.
     """
 
-    def generate_distribution(shape, distribution) -> np.ndarray:
-        """Generate a distribution.
-
-        Parameters
-        ----------
-        shape : array of shape (n_samples, )
-            x coordinates.
-        distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
-            Distribution to generate.
-
-        Returns
-        -------
-        array of shape (n_samples, )
-            Generated distribution.
-        """
-        if distribution == "normal":
-            return np.random.randn(*shape)
-        elif distribution == "uniform":
-            return np.random.uniform(-1, 1, size=shape)
-        elif distribution == "exponential":
-            return np.random.exponential(size=shape)
-        elif distribution == "gamma":
-            return np.random.gamma(shape=1, size=shape)
-        elif distribution == "beta":
-            return np.random.beta(a=1, b=1, size=shape)
-        elif distribution == "poisson":
-            return np.random.poisson(size=shape)
-        elif distribution == "lognormal":
-            return np.random.lognormal(size=shape)
-        elif distribution == "pareto":
-            return np.random.pareto(a=1, size=shape)
-        else:
-            raise ValueError(f"Unknown distribution {distribution}.")
-
     if random_state is not None:
         np.random.seed(random_state)
     backend = get_backend()
@@ -88,9 +89,13 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
         d_unique_list = [50, 50]
 
     # generate shared component
-    S_train = generate_distribution([n_samples_train, d_shared], random_distribution)
-    S_test = generate_distribution([n_samples_test, d_shared], random_distribution)
-    beta_S = generate_distribution([d_shared, n_targets], "normal")
+    S_train = create_random_distribution([n_samples_train, d_shared], random_distribution)
+    S_test = create_random_distribution([n_samples_test, d_shared], random_distribution)
+    S_train -= S_train.mean(0)
+    S_test -= S_test.mean(0)
+
+    # generate shared weights
+    beta_S = create_random_distribution([d_shared, n_targets], "normal")
 
     Us_train, Us_test = [], []
     betas_U = []
@@ -98,14 +103,16 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
 
     for ii, d_unique in enumerate(d_unique_list):
         # generate unique component
-        U_train = generate_distribution([n_samples_train, d_unique], random_distribution).astype("float32")
-        U_test = generate_distribution([n_samples_test, d_unique], random_distribution).astype("float32")
+        U_train = create_random_distribution([n_samples_train, d_unique], random_distribution).astype("float32")
+        U_test = create_random_distribution([n_samples_test, d_unique], random_distribution).astype("float32")
         U_train -= U_train.mean(0)
         U_test -= U_test.mean(0)
-        beta_U = generate_distribution([d_unique, n_targets], "normal")
+
+        # generate unique weights
+        beta_U = create_random_distribution([d_unique, n_targets], "normal")
         betas_U.append(beta_U)
 
-        # combine shared and unique components to feature space
+        # concatenate shared and unique components
         X_train = np.hstack([S_train, U_train])
         X_test = np.hstack([S_test, U_test])
 
@@ -123,13 +130,13 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
     Y_train = S_train @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_train, betas_U)])
     Y_test = S_test @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_test, betas_U)])
 
-    std = Y_train.std(0)[None]
-    Y_train /= std
-    Y_test /= std
+    # std = Y_train.std(0)[None]
+    # Y_train /= std
+    # Y_test /= std
 
     # add noise
-    Y_train += generate_distribution([n_samples_train, n_targets], "normal") * noise
-    Y_test += generate_distribution([n_samples_test, n_targets], "normal") * noise
+    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
+    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
 
     Y_train -= Y_train.mean(0)
     Y_test -= Y_test.mean(0)
@@ -188,17 +195,22 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
 
 
 if __name__ == "__main__":
-    unique_contributions = [0.5, 0.5]
-    n_features_list = [100, 100]
+    d_shared = 50
+    d_unique_list = [50, 50]
     n_targets = 100
     n_samples_train = 100
     n_samples_test = 50
     noise = 0.1
     random_distribution = "normal"
 
-    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(n_targets, n_samples_train, n_samples_test, noise,
-                                                            unique_contributions, n_features_list, random_distribution,
-                                                            42)
+    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_shared, d_unique_list, n_targets, n_samples_train,
+                                                            n_samples_test, noise, random_distribution, 42)
     # check if Xs are demeaned
-    X_all = np.concatenate(Xs_train, axis=0)
-    assert np.allclose(X_all.mean(0), 0)
+    X_train_all = np.concatenate(Xs_train, axis=0)
+    assert np.allclose(X_train_all.mean(0), 0)
+    X_test_all = np.concatenate(Xs_test, axis=0)
+    assert np.allclose(X_test_all.mean(0), 0)
+
+    # check if Ys are demeaned
+    assert np.allclose(Y_train.mean(0), 0)
+    assert np.allclose(Y_test.mean(0), 0)
