@@ -171,10 +171,10 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
             n_targets = int(value)
         elif variable_name == "relative amount of noise in the target":
             noise_level = value
-        elif variable_name == "proportions of unique contribution":
-            unique_contributions = value
         elif variable_name == "sampling distribution":
             random_distribution = value
+        else:
+            raise ValueError(f"Unknown variable_name {variable_name}.")
 
         for run in range(n_runs):
             (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(
