@@ -54,7 +54,7 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
 
 
 def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list,
-                                     unique_contributions, x_is_log=False, **kwargs):
+                                     d_shared, d_unique_list, x_is_log=False, **kwargs):
     title = "Box plots of predicted contributions displayed in range from 0 to 1"
     ylabel = "predicted contribution"
     ylim = [-0.1, 1.1]
@@ -62,20 +62,20 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    ax.axhline(y=unique_contributions[0], color='k', linestyle='--', label=r'true contribution of $X_0$')
+    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
+    ax.axhline(y=true_contribution, color='k', linestyle='--', label=r'true contribution of $X_0$')
 
     # Add legend
     ax.legend(loc='upper right')
 
     # Add text field with variable information
-    variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
-        ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
+    variable_info = create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
     plt.tight_layout()
     plt.show()
 
 
-def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, unique_contributions,
+def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, d_shared, d_unique_list,
                           x_is_log=False, **kwargs):
     def calculate_whiskers(data):
         # Calculate Q1 (25th percentile) and Q3 (75th percentile) for each experiment
@@ -99,7 +99,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted contribution - true contribution"
 
     # transform data to reflect error from true contribution
-    true_contribution = unique_contributions[0]
+    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
     predicted_variance = np.array(predicted_variance) - true_contribution
     predicted_residual = np.array(predicted_residual) - true_contribution
 
@@ -112,7 +112,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     max_total = max(variance_max_whisker, residual_max_whisker)
 
     # set y-axis limits to the largest absolute whiskers
-    ylim = [min(0, min_total), max(1, max_total)]
+    ylim = [min(-0.5, min_total), max(0.5, max_total)]
 
     # transform back to lists
     predicted_variance = predicted_variance.tolist()
@@ -128,8 +128,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ax.legend(loc='upper right')
 
     # Add text field with variable information
-    variable_info = f"unique_contributions: {unique_contributions}\n" + '\n'.join(
-        ['{}={!r}'.format(k, v) for k, v in kwargs.items()])
+    variable_info = create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
 
     plt.tight_layout()
@@ -137,7 +136,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
 
 
 def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            unique_contributions, normalize=False, ignore_outliers=False, **kwargs):
+                            d_shared, d_unique_list, normalize=False, ignore_outliers=False, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
@@ -149,7 +148,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true contribution
-    true_contribution = unique_contributions[0]
+    true_contribution = d_unique_list[0] / (d_shared + d_unique_list[0])
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
@@ -185,7 +184,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
         ax[i // ncols, i % ncols].set_xlim(xlims)
         ax[i // ncols, i % ncols].set_ylim(ylims)
         # plot x=y
-        ax[i // ncols, i % ncols].plot(xlims, ylims, 'k--', label="x=y")
+        ax[i // ncols, i % ncols].plot([-10000, 10000], [-10000, 10000], 'k--', label="x=y")
         # plot X=0, and y=0
         ax[i // ncols, i % ncols].axvline(x=0, color='k', linestyle='-', label='true contribution of $X_0$')
         ax[i // ncols, i % ncols].axhline(y=0, color='k', linestyle='-')
@@ -206,7 +205,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     for i in range(n_plots, nrows * ncols):
         fig.delaxes(ax.flatten()[i])
     # create additional plot for text containing variable information
-    fig.text(1, 0.5, '\n'.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()]), ha='left', va='center',
+    fig.text(1, 0.5, create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs), ha='left', va='center',
              fontsize=10)
 
     # Adjust layout to increase margins
@@ -214,27 +213,33 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     plt.show()
 
 
+def create_text(**kwargs):
+    return '\n'.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()])
+
+
 def calculate_plot_limits(residual, variance):
-    variance_lower_perc = np.percentile(variance, 5)
-    variance_upper_perc = np.percentile(variance, 95)
+    variance_lower_perc, variance_upper_perc = np.percentile(variance, [5, 95])
     variance_range = variance_upper_perc - variance_lower_perc
     xlims = [
-        variance_lower_perc + 0.1 * variance_range if variance_lower_perc < 0 else variance_lower_perc - 0.1 * variance_range,
-        variance_upper_perc + 0.1 * variance_range if variance_upper_perc > 0 else variance_upper_perc - 0.1 * variance_range]
-    residual_lower_perc = np.percentile(residual, 5)
-    residual_upper_perc = np.percentile(residual, 95)
+        variance_lower_perc - 0.1 * variance_range,
+        variance_upper_perc + 0.1 * variance_range
+    ]
+    xlims = [min(xlims[0], -0.1 * variance_range), max(xlims[1], 0.1 * variance_range)]
+
+    residual_lower_perc, residual_upper_perc = np.percentile(residual, [5, 95])
     residual_range = residual_upper_perc - residual_lower_perc
     ylims = [
         residual_lower_perc + 0.1 * residual_range if residual_lower_perc < 0 else residual_lower_perc - 0.1 * residual_range,
         residual_upper_perc + 0.1 * residual_range if residual_upper_perc > 0 else residual_upper_perc - 0.1 * residual_range]
+    ylims = [min(ylims[0], - 0.1 * residual_range), max(ylims[1], 0.1 * residual_range)]
     return xlims, ylims
 
 
 def plot_experiment(variable_values, variable_name, predicted_variance, predicted_residual,
-                    unique_contributions, x_is_log=False, **kwargs):
+                    d_shared, d_unique_list, x_is_log=False, **kwargs):
     plot_predicted_contributions_box(variable_values, variable_name, predicted_variance, predicted_residual,
-                                     unique_contributions, x_is_log=x_is_log, **kwargs)
+                                     d_shared, d_unique_list, x_is_log=x_is_log, **kwargs)
     plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
-                          unique_contributions, x_is_log=x_is_log, **kwargs)
+                          d_shared, d_unique_list, x_is_log=x_is_log, **kwargs)
     plot_prediction_scatter(variable_values, variable_name, predicted_variance, predicted_residual,
-                            unique_contributions, **kwargs)
+                            d_shared, d_unique_list, **kwargs)
