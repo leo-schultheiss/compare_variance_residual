@@ -120,17 +120,18 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
         Xs_test.append(X_test)
 
     # demean features across all feature spaces
-    mean_train = np.mean(Xs_train, axis=0)
-    mean_test = np.mean(Xs_test, axis=0)
+    mean_train = np.mean(np.concatenate(Xs_train), axis=0)
+    mean_test = np.mean(np.concatenate(Xs_test), axis=0)
     Xs_train = [X - mean_train for X in Xs_train]
     Xs_test = [X - mean_test for X in Xs_test]
 
     Y_train = S_train @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_train, betas_U)])
     Y_test = S_test @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_test, betas_U)])
 
-    # std = Y_train.std(0)[None]
-    # Y_train /= std
-    # Y_test /= std
+    # normalize targets
+    std = Y_train.std(0)[None]
+    Y_train /= std
+    Y_test /= std
 
     # add noise
     Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
@@ -202,12 +203,42 @@ if __name__ == "__main__":
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_shared, d_unique_list, n_targets, n_samples_train,
                                                             n_samples_test, noise, random_distribution, 42)
+
+
+    import matplotlib.pyplot as plt
+    plt.scatter(Xs_train[0][:, 0], Y_train[:, 0], label="train")
+    plt.show()
+
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import r2_score
+
+
+
+    model = LinearRegression()
+    model.fit(Xs_train[0], Y_train)
+
+    Y_pred = model.predict(Xs_test[0])
+    print(f"R^2 score on one train: {r2_score(Y_test, Y_pred)}")
+
+    X_train = np.hstack(Xs_train)
+    model = LinearRegression()
+    model.fit(X_train, Y_train)
+
+    X_test = np.hstack(Xs_test)
+    Y_pred = model.predict(X_test)
+    print(f"R^2 score on all train: {r2_score(Y_test, Y_pred)}")
+
+    # check if Xs are random
+    assert not np.allclose(Xs_train[0], Xs_train[1])
+
     # check if Xs are demeaned
-    X_train_all = np.concatenate(Xs_train, axis=0)
-    assert np.allclose(X_train_all.mean(0), 0)
-    X_test_all = np.concatenate(Xs_test, axis=0)
-    assert np.allclose(X_test_all.mean(0), 0)
+    mean_train = np.mean(np.concatenate(Xs_train, axis=0), axis=0)
+    mean_test = np.mean(np.concatenate(Xs_test, axis=0), axis=0)
+    assert np.allclose(mean_train, 0)
+    assert np.allclose(mean_test, 0)
 
     # check if Ys are demeaned
     assert np.allclose(Y_train.mean(0), 0)
     assert np.allclose(Y_test.mean(0), 0)
+
+
