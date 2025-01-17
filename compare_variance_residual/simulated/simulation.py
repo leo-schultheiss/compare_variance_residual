@@ -6,26 +6,24 @@ from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
 
 
-def generate_dataset(n_targets=100,
-                     n_samples_train=100, n_samples_test=100,
-                     noise=0, unique_contributions=None,
-                     n_features_list=None, random_distribution="normal", random_state=None):
+def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
+                     random_distribution="normal", random_state=None):
     """Utility to generate dataset.
 
     Parameters
     ----------
+    d_shared : int
+        Dimension of shared component between feature spaces.
+    d_unique_list : list of int
+        Dimension of unique component in each feature space.
     n_targets : int
         Number of targets.
     n_samples_train : int
         Number of samples in the training set.
     n_samples_test : int
         Number of sample in the testing set.
-    noise : float > 0
+    noise : float >= 0
         Scale of the Gaussian white noise added to the targets.
-    unique_contributions : list of floats
-        Proportion of the target variance explained by each feature space.
-    n_features_list : list of int of length (n_features, ) or None
-        Number of features in each kernel. If None, use 1000 features for each.
     random_distribution : str in {"normal", "uniform"}
         Function to generate random features.
         Should support the signature (n_samples, n_features) -> array of shape (n_samples, n_features).
@@ -48,7 +46,7 @@ def generate_dataset(n_targets=100,
         Number of features in each kernel.
     """
 
-    def generate_distribution(shape, distribution):
+    def generate_distribution(shape, distribution) -> np.ndarray:
         """Generate a distribution.
 
         Parameters
@@ -86,55 +84,53 @@ def generate_dataset(n_targets=100,
         np.random.seed(random_state)
     backend = get_backend()
 
-    if unique_contributions is None:
-        unique_contributions = [0.5, 0.5]
-
-    if n_features_list is None:
-        n_features_list = np.full(len(unique_contributions), fill_value=1000)
-
-    Xs_train, Xs_test = [], []
-    Y_train, Y_test = np.zeros((n_samples_train, n_targets)), np.zeros((n_samples_test, n_targets))
+    if d_unique_list is None:
+        d_unique_list = [50, 50]
 
     # generate shared component
-    S_train = generate_distribution([n_samples_train, 1], random_distribution)
-    S_test = generate_distribution([n_samples_test, 1], random_distribution)
+    S_train = generate_distribution([n_samples_train, d_shared], random_distribution)
+    S_test = generate_distribution([n_samples_test, d_shared], random_distribution)
+    beta_S = generate_distribution([d_shared, n_targets], "normal")
 
-    for ii, unique_contribution in enumerate(unique_contributions):
-        n_features = n_features_list[ii]
+    Us_train, Us_test = [], []
+    betas_U = []
+    Xs_train, Xs_test = [], []
 
-        # generate random features
-        X_train = generate_distribution([n_samples_train, n_features], random_distribution)
-        X_test = generate_distribution([n_samples_test, n_features], random_distribution)
+    for ii, d_unique in enumerate(d_unique_list):
+        # generate unique component
+        U_train = generate_distribution([n_samples_train, d_unique], random_distribution).astype("float32")
+        U_test = generate_distribution([n_samples_test, d_unique], random_distribution).astype("float32")
+        U_train -= U_train.mean(0)
+        U_test -= U_test.mean(0)
+        beta_U = generate_distribution([d_unique, n_targets], "normal")
+        betas_U.append(beta_U)
 
-        # add shared component
-        unique_component = unique_contribution
-        shared_component = (1 - sum(unique_contributions)) / len(unique_contributions)
+        # combine shared and unique components to feature space
+        X_train = np.hstack([S_train, U_train])
+        X_test = np.hstack([S_test, U_test])
 
-        X_train = shared_component * S_train + unique_component * X_train
-        X_test = shared_component * S_test + unique_component * X_test
-
-        # demean
-        X_train -= X_train.mean(0)
-        X_test -= X_test.mean(0)
-
+        Us_train.append(U_train)
+        Us_test.append(U_test)
         Xs_train.append(X_train)
         Xs_test.append(X_test)
 
-        weights = generate_distribution([n_features, n_targets], "normal") / n_features
+    # demean features across all feature spaces
+    mean_train = np.mean(Xs_train, axis=0)
+    mean_test = np.mean(Xs_test, axis=0)
+    Xs_train = [X - mean_train for X in Xs_train]
+    Xs_test = [X - mean_test for X in Xs_test]
 
-        if ii == 0:
-            Y_train = X_train @ weights
-            Y_test = X_test @ weights
-        else:
-            Y_train += X_train @ weights
-            Y_test += X_test @ weights
+    Y_train = S_train @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_train, betas_U)])
+    Y_test = S_test @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_test, betas_U)])
 
     std = Y_train.std(0)[None]
     Y_train /= std
     Y_test /= std
 
-    Y_train += generate_distribution([n_samples_train, n_targets], random_distribution) * noise
-    Y_test += generate_distribution([n_samples_test, n_targets], random_distribution) * noise
+    # add noise
+    Y_train += generate_distribution([n_samples_train, n_targets], "normal") * noise
+    Y_test += generate_distribution([n_samples_test, n_targets], "normal") * noise
+
     Y_train -= Y_train.mean(0)
     Y_test -= Y_test.mean(0)
 
@@ -146,7 +142,7 @@ def generate_dataset(n_targets=100,
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def run_experiment(variable_values, variable_name, n_runs, unique_contributions, n_features_list, n_targets,
+def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_list, n_targets,
                    n_samples_train, n_samples_test, noise_level, random_distribution, alphas, cv,
                    direct_variance_partitioning, ignore_negative_r2, use_ols):
     predicted_variance = []
@@ -162,8 +158,8 @@ def run_experiment(variable_values, variable_name, n_runs, unique_contributions,
             n_samples_test = int(value)
         elif variable_name == "number of features $X_{0,1}$":
             n_features_list = [int(value), int(value)]
-        elif variable_name == "number of features $X_{0}$":
-            n_features_list = [int(value), n_features_list[1]]
+        # elif variable_name == "number of features $X_{0}$":
+        #     n_features_list = [int(value), n_features_list[1]]
         elif variable_name == "number of targets":
             n_targets = int(value)
         elif variable_name == "relative amount of noise in the target":
@@ -175,10 +171,9 @@ def run_experiment(variable_values, variable_name, n_runs, unique_contributions,
 
         for run in range(n_runs):
             (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(
-                n_features_list=n_features_list, n_targets=n_targets,
+                d_shared=d_shared, d_unique_list=d_unique_list, n_targets=n_targets,
                 n_samples_train=n_samples_train, n_samples_test=n_samples_test,
-                noise=noise_level, unique_contributions=unique_contributions,
-                random_distribution=random_distribution, random_state=run + 100)
+                noise=noise_level, random_distribution=random_distribution, random_state=run + 100)
             variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
                                              direct_variance_partitioning, ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
@@ -190,3 +185,20 @@ def run_experiment(variable_values, variable_name, n_runs, unique_contributions,
         predicted_variance.append(variance_runs)
         predicted_residual.append(residual_runs)
     return predicted_variance, predicted_residual
+
+
+if __name__ == "__main__":
+    unique_contributions = [0.5, 0.5]
+    n_features_list = [100, 100]
+    n_targets = 100
+    n_samples_train = 100
+    n_samples_test = 50
+    noise = 0.1
+    random_distribution = "normal"
+
+    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(n_targets, n_samples_train, n_samples_test, noise,
+                                                            unique_contributions, n_features_list, random_distribution,
+                                                            42)
+    # check if Xs are demeaned
+    X_all = np.concatenate(Xs_train, axis=0)
+    assert np.allclose(X_all.mean(0), 0)
