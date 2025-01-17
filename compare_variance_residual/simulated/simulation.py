@@ -31,8 +31,6 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         return np.random.gamma(shape=1, size=shape)
     elif distribution == "beta":
         return np.random.beta(a=1, b=1, size=shape)
-    # elif distribution == "poisson":
-    #     return np.random.poisson(size=shape)
     elif distribution == "lognormal":
         return np.random.lognormal(size=shape)
     elif distribution == "pareto":
@@ -164,9 +162,8 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
         elif variable_name == "sample size testing":
             n_samples_test = int(value)
         elif variable_name == "number of features $X_{0,1}$":
-            n_features_list = [int(value), int(value)]
-        # elif variable_name == "number of features $X_{0}$":
-        #     n_features_list = [int(value), n_features_list[1]]
+            d_shared = int(value)
+            d_unique_list = [int(value), int(value)]
         elif variable_name == "number of targets":
             n_targets = int(value)
         elif variable_name == "relative amount of noise in the target":
