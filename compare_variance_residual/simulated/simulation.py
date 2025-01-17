@@ -31,8 +31,8 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         return np.random.gamma(shape=1, size=shape)
     elif distribution == "beta":
         return np.random.beta(a=1, b=1, size=shape)
-    elif distribution == "poisson":
-        return np.random.poisson(size=shape)
+    # elif distribution == "poisson":
+    #     return np.random.poisson(size=shape)
     elif distribution == "lognormal":
         return np.random.lognormal(size=shape)
     elif distribution == "pareto":
@@ -103,8 +103,8 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
 
     for ii, d_unique in enumerate(d_unique_list):
         # generate unique component
-        U_train = create_random_distribution([n_samples_train, d_unique], random_distribution).astype("float32")
-        U_test = create_random_distribution([n_samples_test, d_unique], random_distribution).astype("float32")
+        U_train = create_random_distribution([n_samples_train, d_unique], random_distribution)
+        U_test = create_random_distribution([n_samples_test, d_unique], random_distribution)
         U_train -= U_train.mean(0)
         U_test -= U_test.mean(0)
 
