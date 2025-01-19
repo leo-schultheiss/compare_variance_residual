@@ -91,46 +91,7 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
         Xs_test, Xs_train, Y_test, Y_train = stacked_feature_spaces(d_shared, d_unique_list, n_samples_train,
                                                                     n_samples_test, n_targets, random_distribution)
     elif construction_method == "svd":
-        Xs_train, Xs_test = [], []
-        Y_train, Y_test = [], []
-        Us_train, Us_test = [], []
-
-        # Dimensions and ranks
-        d_s, d_0, d_1 = 10, 10, 10  # Dimensions of S, U_0, U_1
-        r_s, r_0, r_1 = 5, 5, 5  # Ranks of S, U_0, U_1
-
-        # Generate orthogonal subspaces
-        S_train = orth(generate_dataset([d_s, r_s], n_samples_train))
-        S_test = orth(generate_dataset([d_s, r_s], n_samples_test))
-
-        for i in range(2):
-            U_train = orth(generate_dataset([d_s, r_s], n_samples_train))
-            U_test = orth(generate_dataset([d_s, r_s], n_samples_test))
-
-            unique_component = 0.5
-            shared_component = 1 - unique_component
-
-            # Construct feature space
-            X_train = shared_component * S_train @ np.random.randn(r_s, n_samples_train) + unique_component * U_train @ np.random.randn(r_0, n_samples_train)
-            X_test =  shared_component * S_test @ np.random.randn(r_s, n_samples_test) + unique_component * U_test @ np.random.randn(r_0, n_samples_test)
-
-            Xs_train.append(X_train)
-            Xs_test.append(X_test)
-        # Define target Y
-        # Define weights for Y computation
-        w_s = np.random.randn(r_s, 1)  # Shared weight
-        w_u0 = np.random.randn(r_0, 1)  # Unique weight for U_0
-        w_u1 = np.random.randn(r_1, 1)  # Unique weight for U_1
-
-        # Compute Y
-        Y_shared = S.T @ w_s @ np.random.randn(1, n_samples)  # Shared contribution
-        Y_u0 = U_0.T @ w_u0 @ np.random.randn(1, n_samples)  # Unique contribution from U_0
-        Y_u1 = U_1.T @ w_u1 @ np.random.randn(1, n_samples)  # Unique contribution from U_1
-
-        Y_train = S_train.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_train, 1)
-        Y_test = S_test.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_test, 1)
-
-        Y += noise * np.random.randn(*Y.shape)
+        Xs_test, Xs_train, Y_test, Y_train = svd_feature_spaces(n_samples_test, n_samples_train, noise)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
@@ -160,12 +121,55 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
     return Xs_train, Xs_test, Y_train, Y_test
 
 
+def svd_feature_spaces(n_samples_test, n_samples_train, noise):
+    Xs_train, Xs_test = [], []
+    Y_train, Y_test = [], []
+    Us_train, Us_test = [], []
+    # Dimensions and ranks
+    d_s, d_0, d_1 = 10, 10, 10  # Dimensions of S, U_0, U_1
+    r_s, r_0, r_1 = 5, 5, 5  # Ranks of S, U_0, U_1
+    # Generate orthogonal subspaces
+    S_train = orth(create_random_distribution([d_s, r_s], n_samples_train))
+    S_test = orth(create_random_distribution([d_s, r_s], n_samples_test))
+    for i in range(2):
+        U_train = orth(create_random_distribution([d_s, r_s], n_samples_train))
+        U_test = orth(create_random_distribution([d_s, r_s], n_samples_test))
+
+        unique_component = 0.5
+        shared_component = 1 - unique_component
+
+        # Construct feature space
+        X_train = shared_component * S_train @ np.random.randn(r_s,
+                                                               n_samples_train) + unique_component * U_train @ np.random.randn(
+            r_0, n_samples_train)
+        X_test = shared_component * S_test @ np.random.randn(r_s,
+                                                             n_samples_test) + unique_component * U_test @ np.random.randn(
+            r_0, n_samples_test)
+
+        Xs_train.append(X_train)
+        Xs_test.append(X_test)
+    # Define target Y
+    # Define weights for Y computation
+    w_s = np.random.randn(r_s, 1)  # Shared weight
+    w_u0 = np.random.randn(r_0, 1)  # Unique weight for U_0
+    w_u1 = np.random.randn(r_1, 1)  # Unique weight for U_1
+    # Compute Y
+    Y_shared = S.T @ w_s @ np.random.randn(1, n_samples)  # Shared contribution
+    Y_u0 = U_0.T @ w_u0 @ np.random.randn(1, n_samples)  # Unique contribution from U_0
+    Y_u1 = U_1.T @ w_u1 @ np.random.randn(1, n_samples)  # Unique contribution from U_1
+    Y_train = S_train.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_train, 1)
+    Y_test = S_test.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_test, 1)
+    Y += noise * np.random.randn(*Y.shape)
+    return Xs_test, Xs_train, Y_test, Y_train
+
+
 def stacked_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test, n_targets, random_distribution):
     # generate shared component
     S_train = create_random_distribution([n_samples_train, d_shared], random_distribution)
     S_test = create_random_distribution([n_samples_test, d_shared], random_distribution)
     S_train -= S_train.mean(0)
     S_test -= S_test.mean(0)
+
     # generate shared weights
     beta_S = create_random_distribution([d_shared, n_targets], "normal")
     Us_train, Us_test = [], []
@@ -182,7 +186,7 @@ def stacked_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_t
         beta_U = create_random_distribution([d_unique, n_targets], "normal")
         betas_U.append(beta_U)
 
-        # concatenate shared and unique components
+        # stack shared and unique components
         X_train = np.hstack([S_train, U_train])
         X_test = np.hstack([S_test, U_test])
 
