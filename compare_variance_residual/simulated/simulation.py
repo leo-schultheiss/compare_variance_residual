@@ -41,73 +41,69 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         raise ValueError(f"Unknown distribution {distribution}.")
 
 
-def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
-                     random_distribution="normal", construction_method="svd", random_state=None):
-    """Utility to generate dataset.
+def generate_dataset(d_list=None, feature_space_weights=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
+                     random_distribution="normal", construction_method="stack", random_state=None):
+    """
+    Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
 
-    Parameters
-    ----------
-    d_shared : int
-        Dimension of shared component between feature spaces.
-    d_unique_list : list of int
-        Dimension of unique component in each feature space.
-    n_targets : int
-        Number of targets.
-    n_samples_train : int
-        Number of samples in the training set.
-    n_samples_test : int
-        Number of sample in the testing set.
-    noise : float >= 0
-        Scale of the Gaussian white noise added to the targets.
-    random_distribution : str in {"normal", "uniform"}
-        Function to generate random features.
-        Should support the signature (n_samples, n_features) -> array of shape (n_samples, n_features).
-    random_state : int, or None
-        Random generator seed use to generate the true kernel weights.
+    This function creates synthetic datasets with specified configurations of feature spaces, target variables,
+    and sample sizes. The function allows for flexible dataset construction using various methods
+    such as stacking feature spaces or applying Singular Value Decomposition (SVD) based strategies. The user
+    can control noise levels, distribution of random target values, and weights of feature spaces. The resulting
+    datasets are returned as structured arrays for training and testing purposes.
 
-    Returns
-    -------
-    Xs_train : array of shape (n_feature_spaces, n_samples_train, n_features)
-        Training features.
-    Xs_test : array of shape (n_feature_spaces, n_samples_test, n_features)
-        Testing features.
-    Y_train : array of shape (n_samples_train, n_targets)
-        Training targets.
-    Y_test : array of shape (n_samples_test, n_targets)
-        Testing targets.
-    kernel_weights : array of shape (n_targets, n_features)
-        Kernel weights in the prediction of the targets.
-    n_features_list : list of int of length (n_features, )
-        Number of features in each kernel.
+    Parameters:
+        d_list: list of int, optional
+            A list specifying the dimensions of the feature spaces. Defaults to [100, 100, 100].
+        feature_space_weights: list of float, optional
+            A list indicating the relative weights for each feature space. Must sum to 1. Defaults to [1/3, 1/3, 1/3].
+        n_targets: int
+            The number of target variables in the dataset.
+        n_samples_train: int
+            The number of samples in the training dataset.
+        n_samples_test: int
+            The number of samples in the testing dataset.
+        noise: float
+            The standard deviation of the Gaussian noise to be added to the targets.
+        random_distribution: str
+            The type of random distribution to use for generating target values. Defaults to "normal".
+        construction_method: str
+            The method to use for constructing the feature spaces. Can be either "stack" or "svd". Defaults to "stack".
+        random_state: int, optional
+            Seed for the random number generator to ensure reproducibility. Defaults to None.
+
+    Returns:
+        tuple:
+            A tuple containing:
+            - Xs_train: list of ndarray, Training feature spaces as arrays.
+            - Xs_test: list of ndarray, Testing feature spaces as arrays.
+            - Y_train: ndarray, Target variables for the training set.
+            - Y_test: ndarray, Target variables for the testing set.
+
+    Raises:
+        ValueError:
+            If an unknown construction_method is provided.
     """
 
     if random_state is not None:
         np.random.seed(random_state)
     backend = get_backend()
 
-    if d_unique_list is None:
-        d_unique_list = [50, 50]
+    if d_list is None:
+        d_list = [100] * 3
+
+    if feature_space_weights is None:
+        feature_space_weights = [1/3] * 3
 
     if construction_method == "stack":
-        Xs_test, Xs_train, Y_test, Y_train = stacked_feature_spaces(d_shared, d_unique_list, n_samples_train,
-                                                                    n_samples_test, n_targets, random_distribution)
+        Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, feature_space_weights, n_samples_train,
+                                                                    n_samples_test, n_targets, noise,
+                                                                    random_distribution)
     elif construction_method == "svd":
-        Xs_test, Xs_train, Y_test, Y_train = svd_feature_spaces(d_shared, d_unique_list, n_samples_train,
-                                                                n_samples_test, n_targets, random_distribution)
+        Xs_train, Xs_test, Y_train, Y_test = svd_feature_spaces(d_list, feature_space_weights, n_samples_train,
+                                                                n_samples_test, n_targets, noise, random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
-
-    # normalize targets
-    std = Y_train.std(0)[None]
-    Y_train /= std
-    Y_test /= std
-
-    # add noise
-    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
-    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
-
-    Y_train -= Y_train.mean(0)
-    Y_test -= Y_test.mean(0)
 
     Xs_train = [backend.asarray(X, dtype="float32") for X in Xs_train]
     Xs_test = [backend.asarray(X, dtype="float32") for X in Xs_test]
@@ -117,7 +113,39 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def svd_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test, n_targets, random_distribution):
+def stacked_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
+    # generate feature spaces
+    feature_spaces_train = [create_random_distribution([n_samples_train, d], random_distribution) for d in d_list]
+    feature_spaces_test = [create_random_distribution([n_samples_test, d], random_distribution) for d in d_list]
+
+    # concatenate the first feature with all other feature spaces
+    # [0, 1], [0, 2], [0, 3], ...
+    Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
+    Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
+
+    Xs_train = [zscore(X) for X in Xs_train]
+    Xs_test = [zscore(X) for X in Xs_test]
+
+    # generate weights
+    thetas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+
+    # generate targets
+    Y_train = sum(
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(feature_space_weights, feature_spaces_train, thetas)])
+    Y_test = sum(
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(feature_space_weights, feature_spaces_test, thetas)])
+
+    Y_train = zscore(Y_train)
+    Y_test = zscore(Y_test)
+
+    # add noise
+    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
+    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
+
+    return Xs_train, Xs_test, Y_train, Y_test
+
+
+def svd_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
     # create orthonormal S matrix
     S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
     S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
@@ -153,51 +181,16 @@ def svd_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test,
     Y_train = S_train @ theta_S + sum(U_train @ theta_U for U_train, theta_U in zip(Us_train, thetas_U))
     Y_test = S_test @ theta_S + sum(U_test @ theta_U for U_test, theta_U in zip(Us_test, thetas_U))
 
-    return Xs_test, Xs_train, Y_test, Y_train
-
-
-def stacked_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test, n_targets, random_distribution):
-    # generate shared component
-    S_train = create_random_distribution([n_samples_train, d_shared], random_distribution)
-    S_test = create_random_distribution([n_samples_test, d_shared], random_distribution)
-
-    # generate shared weights
-    theta_S = create_random_distribution([d_shared, n_targets], "normal")
-    Us_train, Us_test = [], []
-    thetas_U = []
-    Xs_train, Xs_test = [], []
-    for ii, d_unique in enumerate(d_unique_list):
-        # generate unique component
-        U_train = create_random_distribution([n_samples_train, d_unique], random_distribution)
-        U_test = create_random_distribution([n_samples_test, d_unique], random_distribution)
-
-        # generate unique weights
-        theta_U = create_random_distribution([d_unique, n_targets], "normal")
-        thetas_U.append(theta_U)
-
-        # stack shared and unique components
-        X_train = np.hstack([S_train, U_train])
-        X_test = np.hstack([S_test, U_test])
-
-        X_train = zscore(X_train, axis=-1)
-        X_test = zscore(X_test, axis=-1)
-
-        Us_train.append(U_train)
-        Us_test.append(U_test)
-        Xs_train.append(X_train)
-        Xs_test.append(X_test)
-    Y_train = S_train @ theta_S + sum([U @ theta_U for U, theta_U in zip(Us_train, thetas_U)])
-    Y_test = S_test @ theta_S + sum([U @ theta_U for U, theta_U in zip(Us_test, thetas_U)])
-
-    Y_train = zscore(Y_train, axis=-1)
-    Y_test = zscore(Y_test, axis=-1)
+    # add noise
+    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
+    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
 
     return Xs_test, Xs_train, Y_test, Y_train
 
 
-def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_list, n_targets,
-                   n_samples_train, n_samples_test, noise_level, random_distribution, alphas, cv,
-                   direct_variance_partitioning, ignore_negative_r2, use_ols):
+def run_experiment(variable_values, variable_name, n_runs, d_list, feature_space_weights, n_targets, n_samples_train, n_samples_test,
+                   noise_level, construction_method, random_distribution, alphas, cv, direct_variance_partitioning, ignore_negative_r2,
+                   use_ols):
     predicted_variance = []
     predicted_residual = []
 
@@ -209,9 +202,8 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
             n_samples_train = int(value)
         elif variable_name == "sample size testing":
             n_samples_test = int(value)
-        elif variable_name == "number of features $X_{0,1}$":
-            d_shared = int(value)
-            d_unique_list = [int(value), int(value)]
+        elif variable_name == "number of features":
+            d_list = [int(value)] * len(d_list)
         elif variable_name == "number of targets":
             n_targets = int(value)
         elif variable_name == "relative amount of noise in the target":
@@ -222,10 +214,14 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
             raise ValueError(f"Unknown variable_name {variable_name}.")
 
         for run in range(n_runs):
-            (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(
-                d_shared=d_shared, d_unique_list=d_unique_list, n_targets=n_targets, n_samples_train=n_samples_train,
-                n_samples_test=n_samples_test, noise=noise_level, random_distribution=random_distribution,
-                random_state=run + 100)
+            (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list=d_list,
+                                                                    feature_space_weights=feature_space_weights,
+                                                                    n_targets=n_targets,
+                                                                    n_samples_train=n_samples_train,
+                                                                    n_samples_test=n_samples_test, noise=noise_level,
+                                                                    construction_method=construction_method,
+                                                                    random_distribution=random_distribution,
+                                                                    random_state=run + 100)
             variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
                                              direct_variance_partitioning, ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
@@ -240,16 +236,16 @@ def run_experiment(variable_values, variable_name, n_runs, d_shared, d_unique_li
 
 
 if __name__ == "__main__":
-    d_shared = 50
-    d_unique_list = [50, 50]
+    d_list = [100, 100, 100]
+    feature_space_weights = [1/3, 1/3, 1/3]
     n_targets = 100
     n_samples_train = 100
     n_samples_test = 50
     noise = 0.1
     random_distribution = "normal"
 
-    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_shared, d_unique_list, n_targets, n_samples_train,
-                                                            n_samples_test, noise, random_distribution, "svd", 42)
+    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, feature_space_weights, n_targets, n_samples_train,
+                                                            n_samples_test, noise, random_distribution, "stack", 42)
 
     import matplotlib.pyplot as plt
 
@@ -265,15 +261,17 @@ if __name__ == "__main__":
     Y_pred = model.predict(Xs_test[0])
     print(f"R^2 score on one train: {r2_score(Y_test, Y_pred)}")
 
-    X_train = np.hstack(Xs_train)
+    X_stack = np.hstack(Xs_train)
     model = LinearRegression()
-    model.fit(X_train, Y_train)
+    model.fit(X_stack, Y_train)
 
     X_test = np.hstack(Xs_test)
     Y_pred = model.predict(X_test)
     print(f"R^2 score on all train: {r2_score(Y_test, Y_pred)}")
 
     from himalaya.ridge import BandedRidgeCV
+    from himalaya.backend import set_backend
+    set_backend("cupy")
 
     model = BandedRidgeCV(groups="input")
     model.fit(Xs_train, Y_train)
@@ -281,14 +279,14 @@ if __name__ == "__main__":
     print(f"R^2 score on banded: {r2_score(Y_test, Y_pred)}")
 
     # check if Xs are random
-    assert not np.allclose(Xs_train[0], Xs_train[1])
+    assert not np.allclose(Xs_train[0], Xs_train[1], atol=1e-5)
 
     # check if Xs are demeaned
-    mean_train = np.mean(np.concatenate(Xs_train, axis=0), axis=0)
-    mean_test = np.mean(np.concatenate(Xs_test, axis=0), axis=0)
-    assert np.allclose(mean_train, 0)
-    assert np.allclose(mean_test, 0)
+    for X in Xs_train:
+        assert np.allclose(X.mean(0), 0, atol=1e-5)
+    for X in Xs_test:
+        assert np.allclose(X.mean(0), 0, atol=1e-5)
 
     # check if Ys are demeaned
-    assert np.allclose(Y_train.mean(0), 0)
-    assert np.allclose(Y_test.mean(0), 0)
+    assert np.allclose(Y_train.mean(0), 0, atol=1e-5)
+    assert np.allclose(Y_test.mean(0), 0, atol=1e-5)

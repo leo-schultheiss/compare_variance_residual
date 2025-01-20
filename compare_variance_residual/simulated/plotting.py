@@ -53,8 +53,8 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
     return fig, ax
 
 
-def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list,
-                                     d_shared, d_unique_list, x_is_log=False, **kwargs):
+def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list, feature_space_weights, x_is_log=False,
+                                     **kwargs):
     title = "Box plots of predicted contributions displayed in range from 0 to 1"
     ylabel = "predicted contribution"
     ylim = [-0.1, 1.1]
@@ -62,20 +62,20 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    true_contribution = 1 / 3
+    true_contribution = feature_space_weights[1]
     ax.axhline(y=true_contribution, color='k', linestyle='--', label=r'true contribution of $X_0$')
 
     # Add legend
     ax.legend(loc='upper right')
 
     # Add text field with variable information
-    variable_info = create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs)
+    variable_info = create_text(**kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
     plt.tight_layout()
     plt.show()
 
 
-def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, d_shared, d_unique_list,
+def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, feature_space_weights,
                           x_is_log=False, **kwargs):
     def calculate_whiskers(data):
         # Calculate Q1 (25th percentile) and Q3 (75th percentile) for each experiment
@@ -99,7 +99,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted contribution - true contribution"
 
     # transform data to reflect error from true contribution
-    true_contribution = 1 / 3
+    true_contribution = feature_space_weights[1]
     predicted_variance = np.array(predicted_variance) - true_contribution
     predicted_residual = np.array(predicted_residual) - true_contribution
 
@@ -128,7 +128,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ax.legend(loc='upper right')
 
     # Add text field with variable information
-    variable_info = create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs)
+    variable_info = create_text(**kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
 
     plt.tight_layout()
@@ -136,7 +136,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
 
 
 def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            d_shared, d_unique_list, normalize=False, ignore_outliers=False, **kwargs):
+                            feature_space_weights, normalize=False, ignore_outliers=False, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
@@ -148,7 +148,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true contribution
-    true_contribution = 1 / 3
+    true_contribution = feature_space_weights[1]
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
@@ -177,10 +177,13 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
                                        transform=ax[i // ncols, i % ncols].transAxes,
                                        fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
-        if normalize:
-            xlims, ylims = [-1.1, 1.1], [-1.1, 1.1]
-        else:
-            xlims, ylims = calculate_plot_limits(residual, variance)
+        # if normalize:
+        #     xlims, ylims = [-1.1, 1.1], [-1.1, 1.1]
+        # else:
+        #     xlims, ylims = calculate_plot_limits(residual, variance)
+        xlims = [-1.1, 1.1]
+        ylims = [-1.1, 1.1]
+
         ax[i // ncols, i % ncols].set_xlim(xlims)
         ax[i // ncols, i % ncols].set_ylim(ylims)
         # plot x=y
@@ -205,7 +208,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     for i in range(n_plots, nrows * ncols):
         fig.delaxes(ax.flatten()[i])
     # create additional plot for text containing variable information
-    fig.text(1, 0.5, create_text(d_shared=d_shared, d_unique_list=d_unique_list, **kwargs), ha='left', va='center',
+    fig.text(1, 0.5, create_text(**kwargs), ha='left', va='center',
              fontsize=10)
 
     # Adjust layout to increase margins
@@ -236,10 +239,10 @@ def calculate_plot_limits(residual, variance):
 
 
 def plot_experiment(variable_values, variable_name, predicted_variance, predicted_residual,
-                    d_shared, d_unique_list, x_is_log=False, **kwargs):
+                    feature_space_weights, x_is_log=False, **kwargs):
     plot_predicted_contributions_box(variable_values, variable_name, predicted_variance, predicted_residual,
-                                     d_shared, d_unique_list, x_is_log=x_is_log, **kwargs)
+                                     feature_space_weights, x_is_log=x_is_log, **kwargs)
     plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
-                          d_shared, d_unique_list, x_is_log=x_is_log, **kwargs)
+                          feature_space_weights, x_is_log=x_is_log, **kwargs)
     plot_prediction_scatter(variable_values, variable_name, predicted_variance, predicted_residual,
-                            d_shared, d_unique_list, **kwargs)
+                            feature_space_weights, **kwargs)
