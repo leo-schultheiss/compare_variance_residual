@@ -10,14 +10,15 @@ def normalize_to_unit_interval(array):
 
 
 def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim):
-    fig, ax = plt.subplots(figsize=(12, 6))
+    figure_width = 1.5 * len(predicted_residual)
+    fig, ax = plt.subplots(figsize=(figure_width, 4.5))
     if x_is_log:
-        w = 0.05
+        w = 1 / (2 * len(predicted_residual))
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
         positions_variance = 10 ** (np.log10(x) - w / 2.)
         positions_residual = 10 ** (np.log10(x) + w / 2.)
     else:
-        w = (x[-1] if isinstance(x[0], (int, float)) else len(x)) / (len(x) * 5)
+        w = 1 / (len(predicted_residual))
         width = lambda _, w: w
         positions_variance = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) - w / 2.
         positions_residual = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) + w / 2.
@@ -53,9 +54,10 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
     return fig, ax
 
 
-def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list, feature_space_weights, x_is_log=False,
+def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list,
+                                     feature_space_weights, x_is_log=False,
                                      **kwargs):
-    title = "Box plots of predicted contributions displayed in range from 0 to 1"
+    title = "Predicted Contributions for Variance Partitioning and Residual Method"
     ylabel = "predicted contribution"
     ylim = [-0.1, 1.1]
 
@@ -160,7 +162,7 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
     n_plots = len(predicted_variance)
     ncols = int(np.ceil(np.sqrt(n_plots)))
     nrows = int(np.ceil(n_plots / ncols))
-    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 6), squeeze=False, sharex=normalize,
+    fig, ax = plt.subplots(nrows, ncols, figsize=(ncols * 4.5, nrows * 4.5), squeeze=False, sharex=normalize,
                            sharey=normalize)
     # add title to the figure
     fig.suptitle(f"Scatter plots over {xlabel}: Predicted Variance vs Residual Deviation from True Contribution",
