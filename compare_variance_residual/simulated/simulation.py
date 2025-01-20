@@ -91,7 +91,8 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
         Xs_test, Xs_train, Y_test, Y_train = stacked_feature_spaces(d_shared, d_unique_list, n_samples_train,
                                                                     n_samples_test, n_targets, random_distribution)
     elif construction_method == "svd":
-        Xs_test, Xs_train, Y_test, Y_train = svd_feature_spaces(n_samples_test, n_samples_train, noise)
+        Xs_test, Xs_train, Y_test, Y_train = svd_feature_spaces(d_shared, d_unique_list, n_samples_train,
+                                                                n_samples_test, n_targets, random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
@@ -121,45 +122,42 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def svd_feature_spaces(n_samples_test, n_samples_train, noise):
-    Xs_train, Xs_test = [], []
-    Y_train, Y_test = [], []
+def svd_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test, n_targets, random_distribution):
+    # create orthonormal S matrix
+    S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
+    S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
+    
     Us_train, Us_test = [], []
-    # Dimensions and ranks
-    d_s, d_0, d_1 = 10, 10, 10  # Dimensions of S, U_0, U_1
-    r_s, r_0, r_1 = 5, 5, 5  # Ranks of S, U_0, U_1
-    # Generate orthogonal subspaces
-    S_train = orth(create_random_distribution([d_s, r_s], n_samples_train))
-    S_test = orth(create_random_distribution([d_s, r_s], n_samples_test))
-    for i in range(2):
-        U_train = orth(create_random_distribution([d_s, r_s], n_samples_train))
-        U_test = orth(create_random_distribution([d_s, r_s], n_samples_test))
-
-        unique_component = 0.5
-        shared_component = 1 - unique_component
-
-        # Construct feature space
-        X_train = shared_component * S_train @ np.random.randn(r_s,
-                                                               n_samples_train) + unique_component * U_train @ np.random.randn(
-            r_0, n_samples_train)
-        X_test = shared_component * S_test @ np.random.randn(r_s,
-                                                             n_samples_test) + unique_component * U_test @ np.random.randn(
-            r_0, n_samples_test)
-
-        Xs_train.append(X_train)
-        Xs_test.append(X_test)
-    # Define target Y
-    # Define weights for Y computation
-    w_s = np.random.randn(r_s, 1)  # Shared weight
-    w_u0 = np.random.randn(r_0, 1)  # Unique weight for U_0
-    w_u1 = np.random.randn(r_1, 1)  # Unique weight for U_1
-    # Compute Y
-    Y_shared = S.T @ w_s @ np.random.randn(1, n_samples)  # Shared contribution
-    Y_u0 = U_0.T @ w_u0 @ np.random.randn(1, n_samples)  # Unique contribution from U_0
-    Y_u1 = U_1.T @ w_u1 @ np.random.randn(1, n_samples)  # Unique contribution from U_1
-    Y_train = S_train.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_train, 1)
-    Y_test = S_test.T @ np.random.randn(d_s, 1) + np.random.randn(n_samples_test, 1)
-    Y += noise * np.random.randn(*Y.shape)
+    
+    # create orthonormal U_i matrices and ensure they are orthogonal to S and each other
+    for d_unique in d_unique_list:
+        U_train = orth(create_random_distribution([n_samples_train, d_unique], random_distribution))
+        U_test = orth(create_random_distribution([n_samples_test, d_unique], random_distribution))
+    
+        # remove projections onto S and all previously created U_i matrices
+        for prev_U_train, prev_U_test in zip(Us_train, Us_test):
+            U_train -= prev_U_train @ (prev_U_train.T @ U_train)
+            U_test -= prev_U_test @ (prev_U_test.T @ U_test)
+        U_train -= S_train @ (S_train.T @ U_train)
+        U_test -= S_test @ (S_test.T @ U_test)
+    
+        # re-orthonormalize after removing projections
+        U_train = orth(U_train)
+        U_test = orth(U_test)
+    
+        Us_train.append(U_train)
+        Us_test.append(U_test)
+        
+    # combine S and Ui to each feature
+    Xs_train = [np.hstack([S_train, U_train]) for U_train in Us_train]
+    Xs_test = [np.hstack([S_test, U_test]) for U_test in Us_test]
+    
+    # combine target out of S and U_i
+    beta_S = create_random_distribution([d_shared, n_targets], "normal")
+    betas_U = [create_random_distribution([U_train.shape[1], n_targets], "normal") for U_train in Us_train]
+    Y_train = S_train @ beta_S + sum(U_train @ beta_U for U_train, beta_U in zip(Us_train, betas_U))
+    Y_test = S_test @ beta_S + sum(U_test @ beta_U for U_test, beta_U in zip(Us_test, betas_U))
+    
     return Xs_test, Xs_train, Y_test, Y_train
 
 
@@ -253,7 +251,7 @@ if __name__ == "__main__":
     random_distribution = "normal"
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_shared, d_unique_list, n_targets, n_samples_train,
-                                                            n_samples_test, noise, random_distribution, 42)
+                                                            n_samples_test, noise, random_distribution, "svd", 42)
 
     import matplotlib.pyplot as plt
 
@@ -276,6 +274,13 @@ if __name__ == "__main__":
     X_test = np.hstack(Xs_test)
     Y_pred = model.predict(X_test)
     print(f"R^2 score on all train: {r2_score(Y_test, Y_pred)}")
+
+    from himalaya.ridge import BandedRidgeCV
+
+    model = BandedRidgeCV(groups="input")
+    model.fit(Xs_train, Y_train)
+    Y_pred = model.predict(Xs_test)
+    print(f"R^2 score on banded: {r2_score(Y_test, Y_pred)}")
 
     # check if Xs are random
     assert not np.allclose(Xs_train[0], Xs_train[1])
