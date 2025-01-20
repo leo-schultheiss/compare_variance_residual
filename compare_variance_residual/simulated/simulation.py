@@ -2,6 +2,7 @@ import numpy as np
 from himalaya.backend import get_backend
 from himalaya.progress_bar import bar
 from scipy.linalg import orth
+from scipy.stats import zscore
 
 from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
@@ -14,7 +15,7 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
     ----------
     shape : array of shape (n_samples,)
         x coordinates.
-    distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "poisson", "lognormal", "pareto"}
+    distribution : str in {"normal", "uniform", "exponential", "gamma", "beta", "lognormal", "pareto"}
         Distribution to generate.
 
     Returns
@@ -96,12 +97,6 @@ def generate_dataset(d_shared=50, d_unique_list=None, n_targets=100, n_samples_t
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
-    # demean features across all feature spaces
-    mean_train = np.mean(np.concatenate(Xs_train), axis=0)
-    mean_test = np.mean(np.concatenate(Xs_test), axis=0)
-    Xs_train = [X - mean_train for X in Xs_train]
-    Xs_test = [X - mean_test for X in Xs_test]
-
     # normalize targets
     std = Y_train.std(0)[None]
     Y_train /= std
@@ -126,38 +121,38 @@ def svd_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_test,
     # create orthonormal S matrix
     S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
     S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
-    
+
     Us_train, Us_test = [], []
-    
+
     # create orthonormal U_i matrices and ensure they are orthogonal to S and each other
     for d_unique in d_unique_list:
         U_train = orth(create_random_distribution([n_samples_train, d_unique], random_distribution))
         U_test = orth(create_random_distribution([n_samples_test, d_unique], random_distribution))
-    
+
         # remove projections onto S and all previously created U_i matrices
         for prev_U_train, prev_U_test in zip(Us_train, Us_test):
             U_train -= prev_U_train @ (prev_U_train.T @ U_train)
             U_test -= prev_U_test @ (prev_U_test.T @ U_test)
         U_train -= S_train @ (S_train.T @ U_train)
         U_test -= S_test @ (S_test.T @ U_test)
-    
+
         # re-orthonormalize after removing projections
         U_train = orth(U_train)
         U_test = orth(U_test)
-    
+
         Us_train.append(U_train)
         Us_test.append(U_test)
-        
+
     # combine S and Ui to each feature
     Xs_train = [np.hstack([S_train, U_train]) for U_train in Us_train]
     Xs_test = [np.hstack([S_test, U_test]) for U_test in Us_test]
-    
+
     # combine target out of S and U_i
-    beta_S = create_random_distribution([d_shared, n_targets], "normal")
-    betas_U = [create_random_distribution([U_train.shape[1], n_targets], "normal") for U_train in Us_train]
-    Y_train = S_train @ beta_S + sum(U_train @ beta_U for U_train, beta_U in zip(Us_train, betas_U))
-    Y_test = S_test @ beta_S + sum(U_test @ beta_U for U_test, beta_U in zip(Us_test, betas_U))
-    
+    theta_S = create_random_distribution([d_shared, n_targets], "normal")
+    thetas_U = [create_random_distribution([U_train.shape[1], n_targets], "normal") for U_train in Us_train]
+    Y_train = S_train @ theta_S + sum(U_train @ theta_U for U_train, theta_U in zip(Us_train, thetas_U))
+    Y_test = S_test @ theta_S + sum(U_test @ theta_U for U_test, theta_U in zip(Us_test, thetas_U))
+
     return Xs_test, Xs_train, Y_test, Y_train
 
 
@@ -165,35 +160,38 @@ def stacked_feature_spaces(d_shared, d_unique_list, n_samples_train, n_samples_t
     # generate shared component
     S_train = create_random_distribution([n_samples_train, d_shared], random_distribution)
     S_test = create_random_distribution([n_samples_test, d_shared], random_distribution)
-    S_train -= S_train.mean(0)
-    S_test -= S_test.mean(0)
 
     # generate shared weights
-    beta_S = create_random_distribution([d_shared, n_targets], "normal")
+    theta_S = create_random_distribution([d_shared, n_targets], "normal")
     Us_train, Us_test = [], []
-    betas_U = []
+    thetas_U = []
     Xs_train, Xs_test = [], []
     for ii, d_unique in enumerate(d_unique_list):
         # generate unique component
         U_train = create_random_distribution([n_samples_train, d_unique], random_distribution)
         U_test = create_random_distribution([n_samples_test, d_unique], random_distribution)
-        U_train -= U_train.mean(0)
-        U_test -= U_test.mean(0)
 
         # generate unique weights
-        beta_U = create_random_distribution([d_unique, n_targets], "normal")
-        betas_U.append(beta_U)
+        theta_U = create_random_distribution([d_unique, n_targets], "normal")
+        thetas_U.append(theta_U)
 
         # stack shared and unique components
         X_train = np.hstack([S_train, U_train])
         X_test = np.hstack([S_test, U_test])
 
+        X_train = zscore(X_train, axis=-1)
+        X_test = zscore(X_test, axis=-1)
+
         Us_train.append(U_train)
         Us_test.append(U_test)
         Xs_train.append(X_train)
         Xs_test.append(X_test)
-    Y_train = S_train @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_train, betas_U)])
-    Y_test = S_test @ beta_S + sum([U @ beta_U for U, beta_U in zip(Us_test, betas_U)])
+    Y_train = S_train @ theta_S + sum([U @ theta_U for U, theta_U in zip(Us_train, thetas_U)])
+    Y_test = S_test @ theta_S + sum([U @ theta_U for U, theta_U in zip(Us_test, thetas_U)])
+
+    Y_train = zscore(Y_train, axis=-1)
+    Y_test = zscore(Y_test, axis=-1)
+
     return Xs_test, Xs_train, Y_test, Y_train
 
 
