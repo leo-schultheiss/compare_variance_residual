@@ -1,6 +1,6 @@
 [project]
 name = "compare_variance_residual"
-version = "0.0.3"
+dynamic = ["version"]
 authors = [
     { name = "Leo Schultheiss", email = "leo.schultheiss@tum.de" },
 ]
@@ -30,6 +30,7 @@ dependencies = [
     "scikit-learn>=1.5.2",
     "matplotlib>=3.9.2",
     "voxelwise-tutorials>=0.1.7",
+    # not actually needed, maybe in the future
     "stacking-fmri>=0.1.1",
 ]
 
@@ -39,3 +40,11 @@ Issues = "https://github.com/leo-schultheiss/compare_variance_residual/issues"
 
 [tool.setuptools]
 packages = ["compare_variance_residual", "compare_variance_residual.simulated", "compare_variance_residual.fmri_comparison"]
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.versioning]
+scheme = "simple"
