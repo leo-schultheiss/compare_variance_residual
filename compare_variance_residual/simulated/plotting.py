@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -54,9 +56,8 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
     return fig, ax
 
 
-def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predicted_residual: list,
-                                     feature_space_weights, x_is_log=False,
-                                     **kwargs):
+def plot_predicted_contributions_box(xlabel, x, predicted_variance: list, predicted_residual: list,
+                                     feature_space_weights, x_is_log=False, save_dir=None, **kwargs):
     title = "Predicted Contributions for Variance Partitioning and Residual Method"
     ylabel = "predicted contribution"
     ylim = [-0.1, 1.1]
@@ -74,6 +75,10 @@ def plot_predicted_contributions_box(x, xlabel, predicted_variance: list, predic
     variable_info = create_text(**kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
     plt.tight_layout()
+
+    if save_dir is not None:
+        plt.savefig(os.path.join(save_dir, f"{xlabel}_predicted_contributions.png"))
+
     plt.show()
 
 
@@ -137,8 +142,8 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     plt.show()
 
 
-def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_residual: list,
-                            feature_space_weights, normalize=False, ignore_outliers=False, **kwargs):
+def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_residual: list, feature_space_weights,
+                            normalize=False, ignore_outliers=False, save_dir=None, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
     """
@@ -215,6 +220,55 @@ def plot_prediction_scatter(x, xlabel, predicted_variance: list, predicted_resid
 
     # Adjust layout to increase margins
     plt.tight_layout()
+
+    if save_dir is not None:
+        plt.savefig(os.path.join(save_dir, f"{xlabel}_predicted_contributions_scatter.png"))
+    plt.show()
+
+
+def plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+             x_is_log=False, save_dir=None, **kwargs):
+    figure_width = 1.5 * len(predicted_residual)
+    fig, ax = plt.subplots(figsize=(figure_width, 4.5))
+
+    # calculate mse
+    variance_mse = np.mean(np.square(predicted_variance - feature_space_weights[1]), axis=0)
+    resideal_mse = np.mean(np.square(predicted_residual - feature_space_weights[1]), axis=0)
+
+    ax.plot(variable_values, variance_mse, label="variance partitioning")
+    ax.plot(variable_values, resideal_mse, label="residual method")
+
+    ax.set_title("Mean Squared Error for Variance Partitioning and Residual Method")
+    ax.set_xlabel(variable_name)
+    ax.set_ylabel("MSE")
+
+    min_total = min(np.min(variance_mse), np.min(resideal_mse))
+    max_total = max(np.max(variance_mse), np.max(resideal_mse))
+    ax.set_ylim([min_total, max_total])
+
+    if isinstance(variable_values[0], (int, float)):
+        w = 1 / (2 * len(predicted_residual))
+        ax.set_xticks(variable_values)
+        ax.set_xticklabels(variable_values)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+        ax.set_xlim([10 ** (np.log10(variable_values[0]) - w * 2),
+                     10 ** (np.log10(variable_values[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
+            [variable_values[0] - w * 2, variable_values[-1] + w * 2])
+    else:
+        ax.set_xlim([-0.5, len(variable_values) - 0.5])
+        ax.set_xticks(np.arange(len(variable_values)))
+        ax.set_xticklabels(variable_values, rotation=45, ha='right')
+
+    if x_is_log:
+        ax.set_xscale("log")
+
+    # create additional plot for text containing variable information
+    fig.text(1, 0.5, create_text(**kwargs), ha='left', va='center',
+             fontsize=10)
+
+    plt.tight_layout()
+    if save_dir is not None:
+        plt.savefig(os.path.join(save_dir, f"{variable_name}_mse.png"))
     plt.show()
 
 
@@ -240,11 +294,13 @@ def calculate_plot_limits(residual, variance):
     return xlims, ylims
 
 
-def plot_experiment(variable_values, variable_name, predicted_variance, predicted_residual,
-                    feature_space_weights, x_is_log=False, **kwargs):
-    plot_predicted_contributions_box(variable_values, variable_name, predicted_variance, predicted_residual,
-                                     feature_space_weights, x_is_log=x_is_log, **kwargs)
-    plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
-                          feature_space_weights, x_is_log=x_is_log, **kwargs)
-    plot_prediction_scatter(variable_values, variable_name, predicted_variance, predicted_residual,
-                            feature_space_weights, **kwargs)
+def plot_experiment(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+                    x_is_log=False, save_dir=None, **kwargs):
+    plot_predicted_contributions_box(variable_name, variable_values, predicted_variance, predicted_residual,
+                                     feature_space_weights, x_is_log=x_is_log, save_dir=save_dir, **kwargs)
+    # plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
+    #                       feature_space_weights, x_is_log=x_is_log, **kwargs)
+    plot_prediction_scatter(variable_name, variable_values, predicted_variance, predicted_residual,
+                            feature_space_weights, save_dir=save_dir, **kwargs)
+    plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+             x_is_log=x_is_log, save_dir=save_dir, **kwargs)
