@@ -3,7 +3,7 @@ from himalaya.ridge import RidgeCV, GroupRidgeCV
 
 
 def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-10, 10, 41), cv=10,
-                          direct_variance_partitioning=False, ignore_negative_r2=False):
+                          direct_vp=False, ignore_negative_r2=False):
     """
     Perform variance partitioning on two feature spaces
 
@@ -21,7 +21,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
         List of alphas for Ridge regression
     cv : int, default=10
         Number of cross-validation folds
-    direct_variance_partitioning : bool, default=False
+    direct_vp : bool, default=False
         Whether to use direct result from feature space 1 (joint model - feature space 1)
         or to use both feature spaces (feature space 0 - shared)
     ignore_negative_r2: bool, default=False
@@ -41,7 +41,7 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
 
     # train single model(s)
     solver_params = dict(warn=False)
-    if direct_variance_partitioning:
+    if direct_vp:
         model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
         model.fit(Xs_train[1], Y_train)
         score = model.score(Xs_test[1], Y_test)

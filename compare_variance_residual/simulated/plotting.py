@@ -11,16 +11,29 @@ def normalize_to_unit_interval(array):
     return np.nan_to_num(scaled_array)
 
 
+def format_variable_values(variable_values):
+    # turn floats into two point precision
+    if isinstance(variable_values, (int, float)):
+        return f"{variable_values:.2f}"
+    elif isinstance(variable_values, (np.ndarray, list)):
+        if isinstance(variable_values[0], (int, float)):
+            return ",".join([f"{v:.2f}" for v in variable_values])
+        else:
+            return variable_values
+    else:
+        return variable_values
+
+
 def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim):
     figure_width = 1.5 * len(predicted_residual)
     fig, ax = plt.subplots(figsize=(figure_width, 4.5))
     if x_is_log:
-        w = 1 / (2 * len(predicted_residual))
+        w = 1 / (3 * len(predicted_residual))
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
         positions_variance = 10 ** (np.log10(x) - w / 2.)
         positions_residual = 10 ** (np.log10(x) + w / 2.)
     else:
-        w = 1 / (len(predicted_residual))
+        w = 0.05
         width = lambda _, w: w
         positions_variance = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) - w / 2.
         positions_residual = (x if isinstance(x[0], (int, float)) else np.arange(len(x))) + w / 2.
@@ -57,7 +70,7 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
 
 
 def plot_predicted_contributions_box(xlabel, x, predicted_variance: list, predicted_residual: list,
-                                     feature_space_weights, x_is_log=False, save_dir=None, **kwargs):
+                                     scalars, x_is_log=False, save_dir=None, **kwargs):
     title = "Predicted Contributions for Variance Partitioning and Residual Method"
     ylabel = "predicted contribution"
     ylim = [-0.1, 1.1]
@@ -65,7 +78,7 @@ def plot_predicted_contributions_box(xlabel, x, predicted_variance: list, predic
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    true_contribution = feature_space_weights[1]
+    true_contribution = scalars[1]
     ax.axhline(y=true_contribution, color='k', linestyle='--', label=r'true contribution of $X_0$')
 
     # Add legend
@@ -82,7 +95,7 @@ def plot_predicted_contributions_box(xlabel, x, predicted_variance: list, predic
     plt.show()
 
 
-def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, feature_space_weights,
+def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, scalars,
                           x_is_log=False, **kwargs):
     def calculate_whiskers(data):
         # Calculate Q1 (25th percentile) and Q3 (75th percentile) for each experiment
@@ -106,7 +119,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted contribution - true contribution"
 
     # transform data to reflect error from true contribution
-    true_contribution = feature_space_weights[1]
+    true_contribution = scalars[1]
     predicted_variance = np.array(predicted_variance) - true_contribution
     predicted_residual = np.array(predicted_residual) - true_contribution
 
@@ -142,7 +155,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     plt.show()
 
 
-def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_residual: list, feature_space_weights,
+def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_residual: list, scalars,
                             normalize=False, ignore_outliers=False, save_dir=None, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
@@ -155,7 +168,7 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true contribution
-    true_contribution = feature_space_weights[1]
+    true_contribution = scalars[1]
     predicted_variance = list(np.array(predicted_variance) - true_contribution)
     predicted_residual = list(np.array(predicted_residual) - true_contribution)
 
@@ -175,7 +188,7 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
-        title = f"{xlabel}: " + (f"{x[i]:02}" if isinstance(x[i], (int, float)) else str(x[i]))
+        title = f"{xlabel}: " + format_variable_values(x[i])
         ax[i // ncols, i % ncols].set_title(title)
 
         # add text box that displays the correlation coefficient
@@ -226,25 +239,29 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
     plt.show()
 
 
-def plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+def plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
              x_is_log=False, save_dir=None, **kwargs):
     figure_width = 1.5 * len(predicted_residual)
     fig, ax = plt.subplots(figsize=(figure_width, 4.5))
 
-    # calculate mse
-    variance_mse = np.mean(np.square(predicted_variance - feature_space_weights[1]), axis=0)
-    resideal_mse = np.mean(np.square(predicted_residual - feature_space_weights[1]), axis=0)
+    # calculate mse for each variable
+    variance_mse = [np.mean((np.array(var) - scalars[1]) ** 2) for var in predicted_variance]
+    residual_mse = [np.mean((np.array(res) - scalars[1]) ** 2) for res in predicted_residual]
 
     ax.plot(variable_values, variance_mse, label="variance partitioning")
-    ax.plot(variable_values, resideal_mse, label="residual method")
+    ax.plot(variable_values, residual_mse, label="residual method")
 
     ax.set_title("Mean Squared Error for Variance Partitioning and Residual Method")
     ax.set_xlabel(variable_name)
     ax.set_ylabel("MSE")
 
-    min_total = min(np.min(variance_mse), np.min(resideal_mse))
-    max_total = max(np.max(variance_mse), np.max(resideal_mse))
-    ax.set_ylim([min_total, max_total])
+    max_total = max(np.max(variance_mse), np.max(residual_mse)) * 1.1
+
+    if max_total > 1:
+        ax.set_yscale("log")
+        ax.yaxis.set_major_formatter(plt.LogFormatter())
+
+    ax.set_ylim([-0.01, max_total])
 
     if isinstance(variable_values[0], (int, float)):
         w = 1 / (2 * len(predicted_residual))
@@ -294,13 +311,13 @@ def calculate_plot_limits(residual, variance):
     return xlims, ylims
 
 
-def plot_experiment(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+def plot_experiment(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
                     x_is_log=False, save_dir=None, **kwargs):
     plot_predicted_contributions_box(variable_name, variable_values, predicted_variance, predicted_residual,
-                                     feature_space_weights, x_is_log=x_is_log, save_dir=save_dir, **kwargs)
+                                     scalars, x_is_log=x_is_log, save_dir=save_dir, **kwargs)
     # plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
-    #                       feature_space_weights, x_is_log=x_is_log, **kwargs)
+    #                       scalars, x_is_log=x_is_log, **kwargs)
     plot_prediction_scatter(variable_name, variable_values, predicted_variance, predicted_residual,
-                            feature_space_weights, save_dir=save_dir, **kwargs)
-    plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, feature_space_weights,
+                            scalars, save_dir=save_dir, **kwargs)
+    plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
              x_is_log=x_is_log, save_dir=save_dir, **kwargs)
