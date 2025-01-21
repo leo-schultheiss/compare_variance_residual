@@ -206,7 +206,7 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             d_list = [int(value)] * len(d_list)
         elif variable_name == "number of targets":
             n_targets = int(value)
-        elif variable_name == "relative amount of noise in the target":
+        elif variable_name == "scalar amount of noise in the target":
             noise_level = value
         elif variable_name == "sampling distribution":
             random_distribution = value
