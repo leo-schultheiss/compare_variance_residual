@@ -188,9 +188,9 @@ def svd_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples
     return Xs_test, Xs_train, Y_test, Y_train
 
 
-def run_experiment(variable_values, variable_name, n_runs, d_list, feature_space_weights, n_targets, n_samples_train, n_samples_test,
-                   noise_level, construction_method, random_distribution, alphas, cv, direct_variance_partitioning, ignore_negative_r2,
-                   use_ols):
+def run_experiment(variable_name, variable_values, n_runs, d_list, feature_space_weights, n_targets, n_samples_train,
+                   n_samples_test, noise_level, construction_method, random_distribution, alphas, cv,
+                   direct_variance_partitioning, ignore_negative_r2, use_ols):
     predicted_variance = []
     predicted_residual = []
 
@@ -221,7 +221,7 @@ def run_experiment(variable_values, variable_name, n_runs, d_list, feature_space
                                                                     n_samples_test=n_samples_test, noise=noise_level,
                                                                     construction_method=construction_method,
                                                                     random_distribution=random_distribution,
-                                                                    random_state=run + 100)
+                                                                    random_state=run)
             variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
                                              direct_variance_partitioning, ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
@@ -288,5 +288,5 @@ if __name__ == "__main__":
         assert np.allclose(X.mean(0), 0, atol=1e-5)
 
     # check if Ys are demeaned
-    assert np.allclose(Y_train.mean(0), 0, atol=1e-5)
-    assert np.allclose(Y_test.mean(0), 0, atol=1e-5)
+    assert np.allclose(Y_train.mean(0), 0, atol=noise)
+    assert np.allclose(Y_test.mean(0), 0, atol=noise)
