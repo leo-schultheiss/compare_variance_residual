@@ -41,7 +41,7 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         raise ValueError(f"Unknown distribution {distribution}.")
 
 
-def generate_dataset(d_list=None, feature_space_weights=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
+def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
                      random_distribution="normal", construction_method="stack", random_state=None):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
@@ -49,14 +49,14 @@ def generate_dataset(d_list=None, feature_space_weights=None, n_targets=100, n_s
     This function creates synthetic datasets with specified configurations of feature spaces, target variables,
     and sample sizes. The function allows for flexible dataset construction using various methods
     such as stacking feature spaces or applying Singular Value Decomposition (SVD) based strategies. The user
-    can control noise levels, distribution of random target values, and weights of feature spaces. The resulting
+    can control noise levels, distribution of random target values, and scalars of feature spaces. The resulting
     datasets are returned as structured arrays for training and testing purposes.
 
     Parameters:
         d_list: list of int, optional
             A list specifying the dimensions of the feature spaces. Defaults to [100, 100, 100].
-        feature_space_weights: list of float, optional
-            A list indicating the relative weights for each feature space. Must sum to 1. Defaults to [1/3, 1/3, 1/3].
+        scalars: list of float, optional
+            A list indicating the relative scalars for each feature space. Must sum to 1. Defaults to [1/3, 1/3, 1/3].
         n_targets: int
             The number of target variables in the dataset.
         n_samples_train: int
@@ -92,15 +92,15 @@ def generate_dataset(d_list=None, feature_space_weights=None, n_targets=100, n_s
     if d_list is None:
         d_list = [100] * 3
 
-    if feature_space_weights is None:
-        feature_space_weights = [1/3] * 3
+    if scalars is None:
+        scalars = [1/3] * 3
 
     if construction_method == "stack":
-        Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, feature_space_weights, n_samples_train,
+        Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, scalars, n_samples_train,
                                                                     n_samples_test, n_targets, noise,
                                                                     random_distribution)
     elif construction_method == "svd":
-        Xs_train, Xs_test, Y_train, Y_test = svd_feature_spaces(d_list, feature_space_weights, n_samples_train,
+        Xs_train, Xs_test, Y_train, Y_test = svd_feature_spaces(d_list, scalars, n_samples_train,
                                                                 n_samples_test, n_targets, noise, random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
@@ -113,7 +113,7 @@ def generate_dataset(d_list=None, feature_space_weights=None, n_targets=100, n_s
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def stacked_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
+def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
     # generate feature spaces
     feature_spaces_train = [create_random_distribution([n_samples_train, d], random_distribution) for d in d_list]
     feature_spaces_test = [create_random_distribution([n_samples_test, d], random_distribution) for d in d_list]
@@ -126,14 +126,14 @@ def stacked_feature_spaces(d_list, feature_space_weights, n_samples_train, n_sam
     Xs_train = [zscore(X) for X in Xs_train]
     Xs_test = [zscore(X) for X in Xs_test]
 
-    # generate weights
+    # generate scalars
     thetas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
 
     # generate targets
     Y_train = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(feature_space_weights, feature_spaces_train, thetas)])
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(scalars, feature_spaces_train, thetas)])
     Y_test = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(feature_space_weights, feature_spaces_test, thetas)])
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(scalars, feature_spaces_test, thetas)])
 
     Y_train = zscore(Y_train)
     Y_test = zscore(Y_test)
@@ -145,7 +145,7 @@ def stacked_feature_spaces(d_list, feature_space_weights, n_samples_train, n_sam
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def svd_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
+def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
     # create orthonormal S matrix
     S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
     S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
@@ -188,9 +188,9 @@ def svd_feature_spaces(d_list, feature_space_weights, n_samples_train, n_samples
     return Xs_test, Xs_train, Y_test, Y_train
 
 
-def run_experiment(variable_name, variable_values, n_runs, d_list, feature_space_weights, n_targets, n_samples_train,
+def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
                    n_samples_test, noise_level, construction_method, random_distribution, alphas, cv,
-                   direct_variance_partitioning, ignore_negative_r2, use_ols):
+                   direct_vp, ignore_negative_r2, use_ols):
     predicted_variance = []
     predicted_residual = []
 
@@ -210,12 +210,14 @@ def run_experiment(variable_name, variable_values, n_runs, d_list, feature_space
             noise_level = value
         elif variable_name == "sampling distribution":
             random_distribution = value
+        elif variable_name == "proportion of variance explained":
+            scalars = value
         else:
             raise ValueError(f"Unknown variable_name {variable_name}.")
 
         for run in range(n_runs):
             (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list=d_list,
-                                                                    feature_space_weights=feature_space_weights,
+                                                                    scalars=scalars,
                                                                     n_targets=n_targets,
                                                                     n_samples_train=n_samples_train,
                                                                     n_samples_test=n_samples_test, noise=noise_level,
@@ -223,7 +225,7 @@ def run_experiment(variable_name, variable_values, n_runs, d_list, feature_space
                                                                     random_distribution=random_distribution,
                                                                     random_state=run)
             variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
-                                             direct_variance_partitioning, ignore_negative_r2)
+                                             direct_vp, ignore_negative_r2)
             residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
             variance = np.nan_to_num(variance)
             residual = np.nan_to_num(residual)
@@ -237,14 +239,14 @@ def run_experiment(variable_name, variable_values, n_runs, d_list, feature_space
 
 if __name__ == "__main__":
     d_list = [100, 100, 100]
-    feature_space_weights = [1/3, 1/3, 1/3]
+    scalars = [1/3, 1/3, 1/3]
     n_targets = 100
     n_samples_train = 100
     n_samples_test = 50
     noise = 0.1
     random_distribution = "normal"
 
-    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, feature_space_weights, n_targets, n_samples_train,
+    (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, scalars, n_targets, n_samples_train,
                                                             n_samples_test, noise, random_distribution, "stack", 42)
 
     import matplotlib.pyplot as plt
