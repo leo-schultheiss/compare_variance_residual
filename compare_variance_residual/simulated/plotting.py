@@ -13,7 +13,7 @@ def normalize_to_unit_interval(array):
 
 def format_variable_values(variable_values):
     # turn floats into two point precision
-    if isinstance(variable_values, (int, float)):
+    if isinstance(variable_values, float):
         return f"{variable_values:.2f}"
     if isinstance(variable_values, list) and isinstance(variable_values[0], float):
         return [f"{v:.2f}" for v in variable_values]
@@ -52,7 +52,7 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
 
     if isinstance(x[0], (int, float)):
         ax.set_xticks(x)
-        ax.set_xticklabels(x)
+        ax.set_xticklabels(format_variable_values(x))
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
         ax.set_xlim([10 ** (np.log10(x[0]) - w * 2), 10 ** (np.log10(x[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
             [x[0] - w * 2, x[-1] + w * 2])
@@ -68,7 +68,7 @@ def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xl
 
 
 def plot_predicted_variances_box(xlabel, x, predicted_variance: list, predicted_residual: list,
-                                 scalars, x_is_log=False, save_dir=None, **kwargs):
+                                 x_is_log=False, save_dir=None, **kwargs):
     title = "Predicted Variance"
     ylabel = "predicted variance"
     ylim = [-0.1, 1.1]
@@ -92,7 +92,7 @@ def plot_predicted_variances_box(xlabel, x, predicted_variance: list, predicted_
         # add label for true variancde
         ax.plot([0, 0], [0, 0], color='k', linestyle='--', label=f"true contribution")
     else:
-        ax.axhline(y=scalars[1], color='k', linestyle='--', label='true variance')
+        ax.axhline(y=kwargs["scalars"][1], color='k', linestyle='--', label='true variance')
 
     # Add legend
     ax.legend(loc='upper right')
@@ -108,7 +108,7 @@ def plot_predicted_variances_box(xlabel, x, predicted_variance: list, predicted_
     plt.show()
 
 
-def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list, scalars,
+def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residual: list,
                           x_is_log=False, **kwargs):
     def calculate_whiskers(data):
         # Calculate Q1 (25th percentile) and Q3 (75th percentile) for each experiment
@@ -132,7 +132,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted variance - true variance"
 
     # transform data to reflect error from true variance
-    true_variance = scalars[1] if not xlabel == "proportion of variance explained" else x[1]
+    true_variance = kwargs["scalars"][1] if not xlabel == "proportion of variance explained" else x[1]
     predicted_variance = np.array(predicted_variance) - true_variance
     predicted_residual = np.array(predicted_residual) - true_variance
 
@@ -168,7 +168,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     plt.show()
 
 
-def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_residual: list, scalars,
+def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_residual: list,
                             normalize=False, ignore_outliers=False, save_dir=None, **kwargs):
     """
     create scatter plots of predicted variance vs predicted residual to show correlation
@@ -188,7 +188,7 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
             predicted_residual[i] = list(np.array(predicted_residual[i]) - variance)
         true_variance = max(true_variance)
     else:
-        true_variance = scalars[1]
+        true_variance = kwargs["scalars"][1]
         predicted_variance = list(np.array(predicted_variance) - true_variance)
         predicted_residual = list(np.array(predicted_residual) - true_variance)
 
@@ -342,15 +342,34 @@ def calculate_plot_limits(residual, variance):
     return xlims, ylims
 
 
-def plot_experiment(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
+def plot_experiment(variable_name, variable_values, predicted_variance, predicted_residual,
                     x_is_log=False, save_dir=None, **kwargs):
+    kwargs = kwargs.copy()
+
+    if variable_name == "sample size training":
+        kwargs["n_samples_train"] = int(value)
+    elif variable_name == "sample size testing":
+        kwargs["n_samples_test"] = int(value)
+    elif variable_name == "number of features":
+        kwargs["d_list"] = [int(value)] * len(d_list)
+    elif variable_name == "number of targets":
+        kwargs["n_targets"] = int(value)
+    elif variable_name == "scalar amount of noise in the target":
+        kwargs["noise_level"] = value
+    elif variable_name == "sampling distribution":
+        kwargs["random_distribution"] = value
+    elif variable_name == "proportion of variance explained":
+        kwargs["scalars"] = value
+    else:
+        raise ValueError(f"Unknown variable_name {variable_name}.")
+
     plot_predicted_variances_box(variable_name, variable_values, predicted_variance, predicted_residual,
-                                 scalars, x_is_log=x_is_log, save_dir=save_dir, **kwargs)
+                                 x_is_log=x_is_log, save_dir=save_dir, **kwargs)
     # plot_prediction_error(variable_values, variable_name, predicted_variance, predicted_residual,
     #                       scalars, x_is_log=x_is_log, **kwargs)
     plot_prediction_scatter(variable_name, variable_values, predicted_variance, predicted_residual,
-                            scalars, save_dir=save_dir, **kwargs)
-    plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
+                            save_dir=save_dir, **kwargs)
+    plot_mse(variable_name, variable_values, predicted_variance, predicted_residual,
              x_is_log=x_is_log, save_dir=save_dir, **kwargs)
 
 
