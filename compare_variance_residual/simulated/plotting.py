@@ -15,13 +15,11 @@ def format_variable_values(variable_values):
     # turn floats into two point precision
     if isinstance(variable_values, (int, float)):
         return f"{variable_values:.2f}"
-    elif isinstance(variable_values, (np.ndarray, list)):
-        if isinstance(variable_values[0], (int, float)):
-            return ",".join([f"{v:.2f}" for v in variable_values])
-        else:
-            return variable_values
-    else:
-        return variable_values
+    if isinstance(variable_values, list) and isinstance(variable_values[0], float):
+        return [f"{v:.2f}" for v in variable_values]
+    if isinstance(variable_values[0], (np.ndarray, list)) and isinstance(variable_values[0][0], float):
+        return [",".join([f"{v:.2f}" for v in l]) for l in variable_values]
+    return variable_values
 
 
 def plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim):
@@ -78,8 +76,23 @@ def plot_predicted_variances_box(xlabel, x, predicted_variance: list, predicted_
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    true_variance = scalars[1]
-    ax.axhline(y=true_variance, color='k', linestyle='--', label='true variance')
+    if xlabel == "proportion of variance explained":
+        # only draw horizontal line for 1/len(x)
+        for i in range(len(x)):
+            true_variance = x[i][1]
+            # determine x coordinates
+            x_min, x_max = ax.get_xlim()
+            plot_width = x_max - x_min
+            plot_sector = plot_width / len(x)
+            xs = [
+                x_min + i * plot_sector,
+                x_min + (i + 1) * plot_sector
+            ]
+            ax.plot(xs, [true_variance, true_variance], color='k', linestyle='--')
+        # add label for true variancde
+        ax.plot([0, 0], [0, 0], color='k', linestyle='--', label=f"true contribution")
+    else:
+        ax.axhline(y=scalars[1], color='k', linestyle='--', label='true variance')
 
     # Add legend
     ax.legend(loc='upper right')
@@ -119,7 +132,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted variance - true variance"
 
     # transform data to reflect error from true variance
-    true_variance = scalars[1]
+    true_variance = scalars[1] if not xlabel == "proportion of variance explained" else x[1]
     predicted_variance = np.array(predicted_variance) - true_variance
     predicted_residual = np.array(predicted_residual) - true_variance
 
@@ -168,9 +181,16 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true variance
-    true_variance = scalars[1]
-    predicted_variance = list(np.array(predicted_variance) - true_variance)
-    predicted_residual = list(np.array(predicted_residual) - true_variance)
+    if xlabel == "proportion of variance explained":
+        true_variance = [row[1] for row in x]
+        for i, variance in enumerate(true_variance):
+            predicted_variance[i] = list(np.array(predicted_variance[i]) - variance)
+            predicted_residual[i] = list(np.array(predicted_residual[i]) - variance)
+        true_variance = max(true_variance)
+    else:
+        true_variance = scalars[1]
+        predicted_variance = list(np.array(predicted_variance) - true_variance)
+        predicted_residual = list(np.array(predicted_residual) - true_variance)
 
     if normalize:
         predicted_variance = [normalize_to_unit_interval(variance) for variance in predicted_variance]
@@ -190,7 +210,7 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
 
     for i, (variance, residual) in enumerate(zip(predicted_variance, predicted_residual)):
         ax[i // ncols, i % ncols].scatter(variance, residual, alpha=0.5)
-        title = f"{xlabel}: " + format_variable_values(x[i])
+        title = f"{xlabel}: {format_variable_values(x)[i]}"
         ax[i // ncols, i % ncols].set_title(title)
 
         ax[i // ncols, i % ncols].set_xlabel("predicted - true variance")
@@ -247,8 +267,13 @@ def plot_mse(variable_name, variable_values, predicted_variance, predicted_resid
     # calculate and plot mse for each variable
     variance_mse = [np.mean((np.array(var) - scalars[1]) ** 2) for var in predicted_variance]
     residual_mse = [np.mean((np.array(res) - scalars[1]) ** 2) for res in predicted_residual]
-    ax.plot(variable_values, variance_mse, label="variance partitioning")
-    ax.plot(variable_values, residual_mse, label="residual method")
+
+    positions_variance = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
+        len(variable_values))
+    positions_residual = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
+        len(variable_values))
+    ax.plot(positions_variance, variance_mse, label="variance partitioning")
+    ax.plot(positions_residual, residual_mse, label="residual method")
 
     # plot y=0
     ax.axhline(y=0, color='k', linestyle='-')
@@ -271,7 +296,7 @@ def plot_mse(variable_name, variable_values, predicted_variance, predicted_resid
 
     if isinstance(variable_values[0], (int, float)):
         ax.set_xticks(variable_values)
-        ax.set_xticklabels(variable_values)
+        ax.set_xticklabels(format_variable_values(variable_values))
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
         ax.set_xlim([10 ** (np.log10(variable_values[0]) - w * 2),
                      10 ** (np.log10(variable_values[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
@@ -327,3 +352,14 @@ def plot_experiment(variable_name, variable_values, predicted_variance, predicte
                             scalars, save_dir=save_dir, **kwargs)
     plot_mse(variable_name, variable_values, predicted_variance, predicted_residual, scalars,
              x_is_log=x_is_log, save_dir=save_dir, **kwargs)
+
+
+if __name__ == '__main__':
+    test = [[1.333, 2.4444444], [1 / 3, 2 / 3]]
+    print(format_variable_values(test))
+
+    test = [["string1", "string2"], ["string3", "string4"]]
+    print(format_variable_values(test))
+
+    test = [1 / 3, 2 / 3]
+    print(format_variable_values(test))
