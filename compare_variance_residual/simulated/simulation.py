@@ -190,13 +190,11 @@ def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targe
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
                    n_samples_test, noise_level, construction_method, random_distribution, alphas, cv,
-                   direct_vp, ignore_negative_r2, use_ols):
-    predicted_variance = []
-    predicted_residual = []
+                   use_ols):
+    predicted_results = []
 
     for value in bar(variable_values, title=f"Varying {variable_name}"):
-        variance_runs = []
-        residual_runs = []
+        results_run = []
 
         if variable_name == "sample size training":
             n_samples_train = int(value)
@@ -224,17 +222,34 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
                                                                     construction_method=construction_method,
                                                                     random_distribution=random_distribution,
                                                                     random_state=run)
-            variance = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
-                                             direct_vp, ignore_negative_r2)
-            residual = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, ignore_negative_r2)
-            variance = np.nan_to_num(variance)
-            residual = np.nan_to_num(residual)
-            variance_runs.append(variance)
-            residual_runs.append(residual)
+            variance_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
+                                             False)
+            variance_direct_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
+            residual_r2 = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols)
 
-        predicted_variance.append(variance_runs)
-        predicted_residual.append(residual_runs)
-    return predicted_variance, predicted_residual
+            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False, use_r2=False)
+            variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True, use_r2=False)
+            residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, use_r2=False)
+
+            variance_r2 = np.nan_to_num(variance_r2)
+            variance_direct_r2 = np.nan_to_num(variance_direct_r2)
+            residual_r2 = np.nan_to_num(residual_r2)
+            variance_rho = np.nan_to_num(variance_rho)
+            variance_direct_rho = np.nan_to_num(variance_direct_rho)
+            residual_rho = np.nan_to_num(residual_rho)
+
+            results_run.append([variance_r2, variance_direct_r2, residual_r2, variance_rho, variance_direct_rho, residual_rho])
+
+        predicted_results.append(results_run)
+    result_names = [
+        "variance_r2",
+        "variance_direct_r2",
+        "residual_r2",
+        "variance_rho",
+        "variance_direct_rho",
+        "residual_rho"
+    ]
+    return predicted_results, result_names
 
 
 if __name__ == "__main__":
