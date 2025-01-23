@@ -55,16 +55,16 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     if x_is_log:
         w = 1 / (3 * len(results[0]))
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
-        positions = lambda i: 10 ** (np.log10(x[i]) + i * w)
+        positions = lambda i: [10 ** (np.log10(pos) + i * w) for pos in x]
     else:
         width = lambda _, w: w
         if isinstance(x[0], (int, float)):
             min_x, max_x = ax.get_xlim()
             w = (max_x - min_x) / (3 * len(results[0]))
-            positions = lambda i: x[i] + i * w
+            positions = lambda i: [pos + i * w for pos in x]
         else:
             w = 1 / 5
-            positions = lambda i: i + w / 2.
+            positions = lambda i: [pos + i * w for pos in range(len(results[0]))]
 
     # Plot variance partitioning
     medianprops = dict(color='black')
