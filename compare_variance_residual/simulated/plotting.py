@@ -76,7 +76,7 @@ def plot_predicted_variances_box(xlabel, x, predicted_variance: list, predicted_
     fig, ax = plot_boxplots(predicted_residual, predicted_variance, title, x, x_is_log, xlabel, ylabel, ylim)
 
     # draw center line
-    if xlabel == "proportion of variance explained":
+    if xlabel == "unique variance explained":
         # only draw horizontal line for 1/len(x)
         for i in range(len(x)):
             true_variance = x[i][1]
@@ -132,7 +132,7 @@ def plot_prediction_error(x, xlabel, predicted_variance: list, predicted_residua
     ylabel = "predicted variance - true variance"
 
     # transform data to reflect error from true variance
-    true_variance = kwargs["scalars"][1] if not xlabel == "proportion of variance explained" else x[1]
+    true_variance = kwargs["scalars"][1] if not xlabel == "unique variance explained" else x[1]
     predicted_variance = np.array(predicted_variance) - true_variance
     predicted_residual = np.array(predicted_residual) - true_variance
 
@@ -181,7 +181,7 @@ def plot_prediction_scatter(xlabel, x, predicted_variance: list, predicted_resid
                               predicted_residual]
 
     # center data around true variance
-    if xlabel == "proportion of variance explained":
+    if xlabel == "unique variance explained":
         true_variance = [row[1] for row in x]
         for i, variance in enumerate(true_variance):
             predicted_variance[i] = list(np.array(predicted_variance[i]) - variance)
@@ -358,7 +358,7 @@ def plot_experiment(variable_name, variable_values, predicted_variance, predicte
         kwargs["noise_level"] = value
     elif variable_name == "sampling distribution":
         kwargs["random_distribution"] = value
-    elif variable_name == "proportion of variance explained":
+    elif variable_name == "unique variance explained":
         kwargs["scalars"] = value
     else:
         raise ValueError(f"Unknown variable_name {variable_name}.")
