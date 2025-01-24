@@ -3,6 +3,7 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
+PLOT_HEIGHT = 6
 
 def normalize_to_unit_interval(array):
     min_val = np.min(array)
@@ -50,21 +51,21 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     ylabel = "predicted variance"
     ylim = [-0.1, 1.1]
 
-    figure_width = 1.5 * len(results)
-    fig, ax = plt.subplots(figsize=(figure_width, 4.5))
+    figure_width = 2 * len(x)
+    fig, ax = plt.subplots(figsize=(figure_width, PLOT_HEIGHT))
     if x_is_log:
-        w = 1 / (2 * len(results[0]))
+        w = 1 / (1.5 * len(results))
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
-        positions = lambda i: [10 ** (np.log10(pos) + i * w) for pos in x]
+        positions = lambda i: [10 ** (np.log10(pos) + i * w - (len(results) - 1) * w / 2) for pos in x]
     else:
         width = lambda _, w: w
         if isinstance(x[0], (int, float)):
             min_x, max_x = ax.get_xlim()
-            w = (max_x - min_x) / (3 * len(results[0]))
-            positions = lambda i: [pos + i * w for pos in x]
+            w = (max_x - min_x) / (2 * len(results))
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
         else:
-            w = 1 / 5
-            positions = lambda i: [pos + i * w for pos in range(len(results[0]))]
+            w = 1 / 7
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in range(len(results[0]))]
 
     # Plot variance partitioning
     medianprops = dict(color='black')
@@ -81,8 +82,8 @@ def plot_predicted_variances_box(xlabel, x, results, names,
         ax.set_xticks(x)
         ax.set_xticklabels(format_variable_values(x))
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
-        ax.set_xlim([10 ** (np.log10(x[0]) - w * 2), 10 ** (np.log10(x[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
-            [x[0] - w * 2, x[-1] + w * 2])
+        ax.set_xlim([10 ** (np.log10(x[0]) - w * (1 + len(results) / 2)), 10 ** (np.log10(x[-1]) + w * (1 + len(results) / 2))]) if x_is_log else ax.set_xlim(
+            [x[0] - w * (1 + len(results) / 2), x[-1] + w * (1 + len(results) / 2)])
     else:
         ax.set_xlim([-0.5, len(x) - 0.5])
         ax.set_xticks(np.arange(len(x)))
@@ -126,8 +127,8 @@ def plot_predicted_variances_box(xlabel, x, results, names,
 
 def plot_mse(variable_name, variable_values, results: list, names: list, scalars,
              x_is_log=False, save_dir=None, **kwargs):
-    figure_width = 1.5 * len(results[0])
-    fig, ax = plt.subplots(figsize=(figure_width, 4.5))
+    figure_width = 2 * len(variable_values)
+    fig, ax = plt.subplots(figsize=(figure_width, PLOT_HEIGHT))
 
     # calculate and plot mse for each variable
     if not variable_name == "unique variance explained":
@@ -142,7 +143,7 @@ def plot_mse(variable_name, variable_values, results: list, names: list, scalars
         len(variable_values))
 
     for i, (result, name) in enumerate(zip(results_mse, names)):
-        ax.plot(positions, result, label=name)
+        ax.plot(positions, result, label=name, color=f"C{i}")
 
     # plot y=0
     ax.axhline(y=0, color='k', linestyle='-')
