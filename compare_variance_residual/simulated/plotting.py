@@ -50,10 +50,10 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     ylabel = "predicted variance"
     ylim = [-0.1, 1.1]
 
-    figure_width = 1.5 * len(results[0])
+    figure_width = 1.5 * len(results)
     fig, ax = plt.subplots(figsize=(figure_width, 4.5))
     if x_is_log:
-        w = 1 / (3 * len(results[0]))
+        w = 1 / (2 * len(results[0]))
         width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
         positions = lambda i: [10 ** (np.log10(pos) + i * w) for pos in x]
     else:
@@ -69,8 +69,7 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     # Plot variance partitioning
     medianprops = dict(color='black')
     for i, (result, name) in enumerate(zip(results, names)):
-        ax.boxplot(result, positions=positions(i), widths=width(positions(i), w),
-                   patch_artist=True,
+        ax.boxplot(result, positions=positions(i), widths=width(positions(i), w), patch_artist=True,
                    boxprops=dict(facecolor=f"C{i}"), medianprops=medianprops, label=name)
     ax.set_title(title)
     ax.set_xlabel(xlabel)
@@ -125,28 +124,25 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     plt.show()
 
 
-def plot_mse(variable_name, variable_values, results, names, scalars,
+def plot_mse(variable_name, variable_values, results: list, names: list, scalars,
              x_is_log=False, save_dir=None, **kwargs):
-    figure_width = 1.5 * len(predicted_residual)
+    figure_width = 1.5 * len(results[0])
     fig, ax = plt.subplots(figsize=(figure_width, 4.5))
 
     # calculate and plot mse for each variable
     if not variable_name == "unique variance explained":
-        variance_mse = [np.mean((np.array(var) - scalars[1]) ** 2) for var in predicted_variance]
-        residual_mse = [np.mean((np.array(res) - scalars[1]) ** 2) for res in predicted_residual]
+        results_mse = [[np.mean((np.array(predicted_var) - scalars[1]) ** 2) for predicted_var in result] for result in
+                       results]
     else:
         true_variances = [row[1] for row in variable_values]
-        variance_mse = [np.mean((np.array(var) - variance) ** 2) for var, variance in
-                        zip(predicted_variance, true_variances)]
-        residual_mse = [np.mean((np.array(res) - variance) ** 2) for res, variance in
-                        zip(predicted_residual, true_variances)]
+        results_mse = [[np.mean((np.array(predicted) - true) ** 2) for predicted, true in
+                        zip(predicted_var, true_variances)] for predicted_var in results]
 
-    positions_variance = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
+    positions = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
         len(variable_values))
-    positions_residual = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
-        len(variable_values))
-    ax.plot(positions_variance, variance_mse, label="variance partitioning")
-    ax.plot(positions_residual, residual_mse, label="residual method")
+
+    for i, (result, name) in enumerate(zip(results_mse, names)):
+        ax.plot(positions, result, label=name)
 
     # plot y=0
     ax.axhline(y=0, color='k', linestyle='-')
@@ -154,7 +150,7 @@ def plot_mse(variable_name, variable_values, results, names, scalars,
     ax.set_title("Mean Squared Error")
     ax.set_xlabel(variable_name)
     ax.set_ylabel("MSE")
-    max_total = max(np.max(variance_mse), np.max(residual_mse)) * 1.1
+    max_total = max([np.max(result_mse) for result_mse in results_mse]) * 1.1
 
     if max_total > 1:
         ax.set_yscale("log")
@@ -163,10 +159,10 @@ def plot_mse(variable_name, variable_values, results, names, scalars,
     ax.set_ylim([max(-0.1 * max_total, -0.01), max_total])
 
     if x_is_log:
-        w = 1 / (3 * len(predicted_residual))
+        w = 1 / (3 * len(results[0]))
     else:
         min_x, max_x = ax.get_xlim()
-        w = (max_x - min_x) / (2 * len(predicted_residual))
+        w = (max_x - min_x) / (2 * len(results[0]))
 
     if isinstance(variable_values[0], (int, float)):
         ax.set_xticks(variable_values)
@@ -289,9 +285,8 @@ def plot_experiment(variable_name, variable_values, results, names,
                     x_is_log=False, save_dir=None, **kwargs):
     plot_predicted_variances_box(variable_name, variable_values, results, names,
                                  x_is_log=x_is_log, save_dir=save_dir, **kwargs)
-
-    # plot_mse(variable_name, variable_values, results, names,
-    #          x_is_log=x_is_log, save_dir=save_dir, **kwargs)
+    plot_mse(variable_name, variable_values, results, names,
+             x_is_log=x_is_log, save_dir=save_dir, **kwargs)
     # plot_prediction_scatter(variable_name, variable_values, results, names,
     #                         save_dir=save_dir, **kwargs)
 
