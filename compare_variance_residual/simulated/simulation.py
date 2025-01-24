@@ -93,7 +93,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
         d_list = [100] * 3
 
     if scalars is None:
-        scalars = [1/3] * 3
+        scalars = [1 / 3] * 3
 
     if construction_method == "stack":
         Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, scalars, n_samples_train,
@@ -131,9 +131,11 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
 
     # generate targets
     Y_train = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(scalars, feature_spaces_train, thetas)])
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in
+         zip(scalars, feature_spaces_train, thetas)])
     Y_test = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in zip(scalars, feature_spaces_test, thetas)])
+        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in
+         zip(scalars, feature_spaces_test, thetas)])
 
     Y_train = zscore(Y_train)
     Y_test = zscore(Y_test)
@@ -189,13 +191,10 @@ def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targe
 
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
-                   n_samples_test, noise_level, construction_method, random_distribution, alphas, cv,
-                   use_ols):
-    predicted_results = []
+                   n_samples_test, noise_level, construction_method, random_distribution, alphas, cv, use_ols):
+    predicted_results = [[] for _ in range(6)]
 
     for value in bar(variable_values, title=f"Varying {variable_name}"):
-        results_run = []
-
         if variable_name == "sample size training":
             n_samples_train = int(value)
         elif variable_name == "sample size testing":
@@ -213,6 +212,9 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
         else:
             raise ValueError(f"Unknown variable_name {variable_name}.")
 
+        variances_r2, variances_direct_r2, residuals_r2 = [], [], []
+        variances_rho, variances_direct_rho, residuals_rho = [], [], []
+
         for run in range(n_runs):
             (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list=d_list,
                                                                     scalars=scalars,
@@ -223,12 +225,13 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
                                                                     random_distribution=random_distribution,
                                                                     random_state=run)
             variance_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv,
-                                             False)
+                                                False)
             variance_direct_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
             residual_r2 = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols)
 
             variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False, use_r2=False)
-            variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True, use_r2=False)
+            variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True,
+                                                        use_r2=False)
             residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, use_r2=False)
 
             variance_r2 = np.nan_to_num(variance_r2)
@@ -238,23 +241,25 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             variance_direct_rho = np.nan_to_num(variance_direct_rho)
             residual_rho = np.nan_to_num(residual_rho)
 
-            results_run.append([variance_r2, variance_direct_r2, residual_r2, variance_rho, variance_direct_rho, residual_rho])
+            variances_r2.append(variance_r2)
+            variances_direct_r2.append(variance_direct_r2)
+            residuals_r2.append(residual_r2)
+            variances_rho.append(variance_rho)
+            variances_direct_rho.append(variance_direct_rho)
+            residuals_rho.append(residual_rho)
 
-        predicted_results.append(results_run)
-    result_names = [
-        "variance_r2",
-        "variance_direct_r2",
-        "residual_r2",
-        "variance_rho",
-        "variance_direct_rho",
-        "residual_rho"
-    ]
-    return predicted_results, result_names
+        predicted_results[0].append(variances_r2)
+        predicted_results[1].append(variances_direct_r2)
+        predicted_results[2].append(residuals_r2)
+        predicted_results[3].append(variances_rho)
+        predicted_results[4].append(variances_direct_rho)
+        predicted_results[5].append(residuals_rho)
+    return predicted_results
 
 
 if __name__ == "__main__":
     d_list = [100, 100, 100]
-    scalars = [1/3, 1/3, 1/3]
+    scalars = [1 / 3, 1 / 3, 1 / 3]
     n_targets = 100
     n_samples_train = 100
     n_samples_test = 50
@@ -288,6 +293,7 @@ if __name__ == "__main__":
 
     from himalaya.ridge import BandedRidgeCV
     from himalaya.backend import set_backend
+
     set_backend("cupy")
 
     model = BandedRidgeCV(groups="input")
