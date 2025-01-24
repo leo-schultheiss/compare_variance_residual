@@ -205,9 +205,9 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             n_targets = int(value)
         elif variable_name == "Proportion of Noise Added to Target":
             noise_level = value
-        elif variable_name == "sampling distribution":
+        elif variable_name == "Sampling Distribution":
             random_distribution = value
-        elif variable_name == "unique variance explained":
+        elif variable_name == "Unique Variance Explained":
             scalars = value
         else:
             raise ValueError(f"Unknown variable_name {variable_name}.")

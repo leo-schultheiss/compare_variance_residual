@@ -53,19 +53,7 @@ def plot_predicted_variances_box(xlabel, x, results, names,
 
     figure_width = 2 * len(x)
     fig, ax = plt.subplots(figsize=(figure_width, PLOT_HEIGHT))
-    if x_is_log:
-        w = 1 / (1.5 * len(results))
-        width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
-        positions = lambda i: [10 ** (np.log10(pos) + i * w - (len(results) - 1) * w / 2) for pos in x]
-    else:
-        width = lambda _, w: w
-        if isinstance(x[0], (int, float)):
-            min_x, max_x = ax.get_xlim()
-            w = (max_x - min_x) / (3 * len(results))
-            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
-        else:
-            w = 1 / 7
-            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in range(len(results[0]))]
+    positions, w, width = widths_and_posisions(ax, results, x, x_is_log)
 
     # Plot variance partitioning
     medianprops = dict(color='black')
@@ -78,22 +66,13 @@ def plot_predicted_variances_box(xlabel, x, results, names,
 
     ax.set_ylim(ylim)
 
-    if isinstance(x[0], (int, float)):
-        ax.set_xticks(x)
-        ax.set_xticklabels(format_variable_values(x))
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
-        ax.set_xlim([10 ** (np.log10(x[0]) - w * (1 + len(results) / 2)), 10 ** (np.log10(x[-1]) + w * (1 + len(results) / 2))]) if x_is_log else ax.set_xlim(
-            [x[0] - w * (1 + len(results) / 2), x[-1] + w * (1 + len(results) / 2)])
-    else:
-        ax.set_xlim([-0.5, len(x) - 0.5])
-        ax.set_xticks(np.arange(len(x)))
-        ax.set_xticklabels(format_variable_values(x), rotation=45, ha='right')
+    set_x_axis(ax, results, w, x, x_is_log)
 
     if x_is_log:
         ax.set_xscale("log")
 
     # draw center line
-    if xlabel == "unique variance explained":
+    if xlabel == "Unique Variance Explained":
         # only draw horizontal line for 1/len(x)
         for i in range(len(x)):
             true_variance = x[i][1]
@@ -125,13 +104,44 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     plt.show()
 
 
+def set_x_axis(ax, results, w, x, x_is_log):
+    if isinstance(x[0], (int, float)):
+        ax.set_xticks(x)
+        ax.set_xticklabels(format_variable_values(x))
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+        ax.set_xlim([10 ** (np.log10(x[0]) - w * (1 + len(results) / 2)),
+                     10 ** (np.log10(x[-1]) + w * (1 + len(results) / 2))]) if x_is_log else ax.set_xlim(
+            [x[0] - w * (1 + len(results) / 2), x[-1] + w * (1 + len(results) / 2)])
+    else:
+        ax.set_xlim([-0.5, len(x) - 0.5])
+        ax.set_xticks(np.arange(len(x)))
+        ax.set_xticklabels(format_variable_values(x), rotation=45, ha='right')
+
+
+def widths_and_posisions(ax, results, x, x_is_log):
+    if x_is_log:
+        w = 1 / (1.5 * len(results))
+        width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
+        positions = lambda i: [10 ** (np.log10(pos) + i * w - (len(results) - 1) * w / 2) for pos in x]
+    else:
+        width = lambda _, w: w
+        if isinstance(x[0], (int, float)):
+            min_x, max_x = ax.get_xlim()
+            w = (max_x - min_x) / (3 * len(results))
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
+        else:
+            w = 1 / 7
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in range(len(results[0]))]
+    return positions, w, width
+
+
 def plot_mse(variable_name, variable_values, results: list, names: list, scalars,
              x_is_log=False, save_dir=None, **kwargs):
     figure_width = 2 * len(variable_values)
     fig, ax = plt.subplots(figsize=(figure_width, PLOT_HEIGHT))
 
     # calculate and plot mse for each variable
-    if not variable_name == "unique variance explained":
+    if not variable_name == "Unique Variance Explained":
         results_mse = [[np.mean((np.array(predicted_var) - scalars[1]) ** 2) for predicted_var in result] for result in
                        results]
     else:
@@ -139,6 +149,7 @@ def plot_mse(variable_name, variable_values, results: list, names: list, scalars
         results_mse = [[np.mean((np.array(predicted) - true) ** 2) for predicted, true in
                         zip(predicted_var, true_variances)] for predicted_var in results]
 
+    _, w, _ = widths_and_posisions(ax, results_mse, variable_values, x_is_log)
     positions = variable_values if isinstance(variable_values[0], (int, float)) else np.arange(
         len(variable_values))
 
@@ -151,32 +162,17 @@ def plot_mse(variable_name, variable_values, results: list, names: list, scalars
     ax.set_title("Mean Squared Error")
     ax.set_xlabel(variable_name)
     ax.set_ylabel("MSE")
-    max_total = max([np.max(result_mse) for result_mse in results_mse]) * 1.1
+    max_total = max([np.max(result_mse) for result_mse in results_mse])
 
     if max_total > 1:
         ax.set_yscale("log")
         ax.yaxis.set_major_formatter(plt.LogFormatter())
-
-    ax.set_ylim([max(-0.1 * max_total, -0.01), max_total])
-
-    if x_is_log:
-        w = 1 / (3 * len(results[0]))
+        ax.set_ylim(bottom=0, top=ax.get_ylim()[1])  # Set explicit bottom limit and retain current top limit
     else:
-        min_x, max_x = ax.get_xlim()
-        w = (max_x - min_x) / (2 * len(results[0]))
+        ylims = ax.get_ylim()
+        ax.set_ylim([-0.1 * ylims[1], ylims[1]])  # Only adjust for linear scale
 
-    if isinstance(variable_values[0], (int, float)):
-        ax.set_xticks(variable_values)
-        ax.set_xticklabels(format_variable_values(variable_values))
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
-        ax.set_xlim([10 ** (np.log10(variable_values[0]) - w * 2),
-                     10 ** (np.log10(variable_values[-1]) + w * 2)]) if x_is_log else ax.set_xlim(
-            [variable_values[0] - w * 2, variable_values[-1] + w * 2])
-    else:
-        ax.set_xlim([-0.5, len(variable_values) - 0.5])
-        ax.set_xticks(np.arange(len(variable_values)))
-        ax.set_xticklabels(variable_values, rotation=45, ha='right')
-
+    set_x_axis(ax, variable_values, w, variable_values, x_is_log)
     if x_is_log:
         ax.set_xscale("log")
 
@@ -205,7 +201,7 @@ def plot_mse(variable_name, variable_values, results: list, names: list, scalars
 #                               predicted_residual]
 #
 #     # center data around true variance
-#     if xlabel == "unique variance explained":
+#     if xlabel == "Unique Variance Explained":
 #         true_variances = [row[1] for row in x]
 #         predicted_variance = [np.array(variance) - true_variance for variance, true_variance in zip(predicted_variance, true_variances)]
 #         predicted_residual = [np.array(residual) - true_variance for residual, true_variance in zip(predicted_residual, true_variances)]
