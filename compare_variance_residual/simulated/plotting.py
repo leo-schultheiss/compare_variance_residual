@@ -48,7 +48,7 @@ def calculate_plot_limits(residual, variance):
 def plot_predicted_variances_box(xlabel, x, results, names,
                                  x_is_log=False, save_dir=None, **kwargs):
     title = "Predicted Variance"
-    ylabel = "predicted variance"
+    ylabel = "Predicted Variance"
     ylim = [-0.1, 1.1]
 
     figure_width = 2 * len(x)
