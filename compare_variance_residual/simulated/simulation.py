@@ -195,15 +195,15 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
     predicted_results = [[] for _ in range(6)]
 
     for value in bar(variable_values, title=f"Varying {variable_name}"):
-        if variable_name == "sample size training":
+        if variable_name == "Number of Samples Training":
             n_samples_train = int(value)
-        elif variable_name == "sample size testing":
+        elif variable_name == "Number of Samples Testing":
             n_samples_test = int(value)
-        elif variable_name == "number of features":
+        elif variable_name == "Number of Features":
             d_list = [int(value)] * len(d_list)
-        elif variable_name == "number of targets":
+        elif variable_name == "Number of Targets":
             n_targets = int(value)
-        elif variable_name == "scalar amount of noise in the target":
+        elif variable_name == "Proportion of Noise Added to Target":
             noise_level = value
         elif variable_name == "sampling distribution":
             random_distribution = value
