@@ -61,7 +61,7 @@ def plot_predicted_variances_box(xlabel, x, results, names,
         width = lambda _, w: w
         if isinstance(x[0], (int, float)):
             min_x, max_x = ax.get_xlim()
-            w = (max_x - min_x) / (2 * len(results))
+            w = (max_x - min_x) / (3 * len(results))
             positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
         else:
             w = 1 / 7
