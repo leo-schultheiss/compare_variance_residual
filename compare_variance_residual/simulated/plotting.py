@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 
 PLOT_HEIGHT = 6
 
+
 def normalize_to_unit_interval(array):
     min_val = np.min(array)
     max_val = np.max(array)
@@ -45,11 +46,42 @@ def calculate_plot_limits(residual, variance):
     return xlims, ylims
 
 
+def widths_and_posisions(ax, results, x, x_is_log):
+    if x_is_log:
+        w = 1 / (1.5 * len(results))
+        width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
+        positions = lambda i: [10 ** (np.log10(pos) + i * w - (len(results) - 1) * w / 2) for pos in x]
+    else:
+        if isinstance(x[0], (int, float)):
+            min_x, max_x = ax.get_xlim()
+            w = (max_x - min_x) / (3 * len(results))
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
+        else:
+            w = 1 / 8
+            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in range(len(results[0]))]
+        width = lambda _, w: w
+    return positions, w, width
+
+
+def set_x_axis(ax, results, w, x, x_is_log):
+    if isinstance(x[0], (int, float)):
+        ax.set_xticks(x)
+        ax.set_xticklabels(format_variable_values(x))
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+        ax.set_xlim([10 ** (np.log10(x[0]) - w * (1 + len(results) / 2)),
+                     10 ** (np.log10(x[-1]) + w * (1 + len(results) / 2))]) if x_is_log else ax.set_xlim(
+            [x[0] - w * (1 + len(results) / 2), x[-1] + w * (1 + len(results) / 2)])
+    else:
+        ax.set_xlim([-0.5, len(x) - 0.5])
+        ax.set_xticks(np.arange(len(x)))
+        ax.set_xticklabels(format_variable_values(x))
+
+
 def plot_predicted_variances_box(xlabel, x, results, names,
                                  x_is_log=False, save_dir=None, **kwargs):
     title = "Predicted Variance"
     ylabel = "Predicted Variance"
-    ylim = [-0.1, 1.1]
+    ylim = [-0.05, 0.5]
 
     figure_width = 2 * len(x)
     fig, ax = plt.subplots(figsize=(figure_width, PLOT_HEIGHT))
@@ -90,49 +122,17 @@ def plot_predicted_variances_box(xlabel, x, results, names,
     else:
         ax.axhline(y=kwargs["scalars"][1], color='k', linestyle='--', label='true variance')
 
-    # Add legend
-    ax.legend(loc='upper left')
-
     # Add text field with variable information
     variable_info = create_text(**kwargs)
     fig.text(1, 0.5, variable_info, ha='left', va='center', fontsize=10)
+
+    plt.legend()
     plt.tight_layout()
 
     if save_dir is not None:
         plt.savefig(os.path.join(save_dir, f"{xlabel}_predicted_variances.png"))
 
     plt.show()
-
-
-def set_x_axis(ax, results, w, x, x_is_log):
-    if isinstance(x[0], (int, float)):
-        ax.set_xticks(x)
-        ax.set_xticklabels(format_variable_values(x))
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
-        ax.set_xlim([10 ** (np.log10(x[0]) - w * (1 + len(results) / 2)),
-                     10 ** (np.log10(x[-1]) + w * (1 + len(results) / 2))]) if x_is_log else ax.set_xlim(
-            [x[0] - w * (1 + len(results) / 2), x[-1] + w * (1 + len(results) / 2)])
-    else:
-        ax.set_xlim([-0.5, len(x) - 0.5])
-        ax.set_xticks(np.arange(len(x)))
-        ax.set_xticklabels(format_variable_values(x), rotation=45, ha='right')
-
-
-def widths_and_posisions(ax, results, x, x_is_log):
-    if x_is_log:
-        w = 1 / (1.5 * len(results))
-        width = lambda p, w: 10 ** (np.log10(p) + w / 2.) - 10 ** (np.log10(p) - w / 2.)
-        positions = lambda i: [10 ** (np.log10(pos) + i * w - (len(results) - 1) * w / 2) for pos in x]
-    else:
-        width = lambda _, w: w
-        if isinstance(x[0], (int, float)):
-            min_x, max_x = ax.get_xlim()
-            w = (max_x - min_x) / (3 * len(results))
-            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in x]
-        else:
-            w = 1 / 7
-            positions = lambda i: [pos + i * w - (len(results) - 1) * w / 2 for pos in range(len(results[0]))]
-    return positions, w, width
 
 
 def plot_mse(variable_name, variable_values, results: list, names: list, scalars,
