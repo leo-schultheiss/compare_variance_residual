@@ -3,7 +3,7 @@ import numpy as np
 from himalaya.ridge import RidgeCV, GroupRidgeCV
 
 
-def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-10, 10, 41), cv=10,
+def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=50,
                           use_r2=True) -> tuple:
     """
     Perform variance partitioning on two feature spaces
@@ -40,16 +40,18 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
     shared : float
         Shared variance between the two feature spaces.
     """
+    from himalaya.backend import get_backend
+    backend = get_backend()
 
     score_func = himalaya.scoring.r2_score if use_r2 else himalaya.scoring.correlation_score
 
-    solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func)
+    solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func, n_targets_batch=1000)
     # train joint model
     joint_model = GroupRidgeCV(groups="input", solver_params=solver_params)
     joint_model.fit(Xs_train, Y_train)
     joint_score = joint_model.score(Xs_test, Y_test)
 
-    solver_params = dict(warn=False, score_func=score_func)
+    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
     # train single model(s)
     model_0 = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
     model_0.fit(Xs_train[0], Y_train)
@@ -64,4 +66,12 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
     x0_unique = score_0 - shared
     x1_unique = score_1 - shared
 
-    return score_0, score_1, joint_score, x0_unique, x1_unique, shared
+    # convert back to numpy
+    score_0 = backend.to_numpy(score_0)
+    score_1 = backend.to_numpy(score_1)
+    joint_score = backend.to_numpy(joint_score)
+    shared = backend.to_numpy(shared)
+    x0_unique = backend.to_numpy(x0_unique)
+    x1_unique = backend.to_numpy(x1_unique)
+
+    return score_0, score_1, joint_score, shared, x0_unique, x1_unique
