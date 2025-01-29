@@ -127,15 +127,16 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Xs_test = [zscore(X) for X in Xs_test]
 
     # generate scalars
-    thetas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+    betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+    betas = [zscore(beta) for beta in betas]
 
     # generate targets
     Y_train = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in
-         zip(scalars, feature_spaces_train, thetas)])
+        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
+         zip(scalars, feature_spaces_train, betas)])
     Y_test = sum(
-        [alpha * zscore(feature_space @ theta) for alpha, feature_space, theta in
-         zip(scalars, feature_spaces_test, thetas)])
+        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
+         zip(scalars, feature_spaces_test, betas)])
 
     Y_train = zscore(Y_train)
     Y_test = zscore(Y_test)
