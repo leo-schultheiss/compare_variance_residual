@@ -122,8 +122,9 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
 
     # Handle feature modeling
     if use_ols:
-        feature_scores = list(map(backend.asarray, feature_scores))
-        residual_scores = list(map(backend.asarray, residual_scores))
+        full_scores = list(map(backend.to_numpy, full_scores))
+        feature_scores = list(map(backend.to_numpy, feature_scores))
+        residual_scores = list(map(backend.to_numpy, residual_scores))
 
     return full_scores[0], full_scores[1], feature_scores[0], feature_scores[1], residual_scores[0], \
     residual_scores[1]
