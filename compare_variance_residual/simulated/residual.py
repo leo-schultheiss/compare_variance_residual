@@ -1,3 +1,5 @@
+import logging
+
 import himalaya.backend
 import numpy as np
 from himalaya.ridge import RidgeCV
@@ -5,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 
 
 def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=50, use_ols=False,
-                    return_full_variance=False, use_r2=True):
+                    return_full_variance=False, use_r2=True, logger=None):
     """
     Provide a function that trains models to compute residuals and scores their predictive
     power using Ridge regression or Ordinary Least Squares (OLS). It also provides an option
@@ -62,6 +64,10 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
     cross-validation.
 
     """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
     backend = himalaya.backend.get_backend()
     score_func = himalaya.scoring.r2_score if use_r2 else himalaya.scoring.correlation_score
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
@@ -102,16 +108,10 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         if use_ols:
             from himalaya.scoring import r2_score
             feature_score = r2_score(Xs_test[i], test_predict)
-
-            # plt.title("Coefficients for residual model")
-            # plt.hist(feature_model.coef_)
-            # plt.show()
+            logger.debug(feature_model.coef_)
         else:
             feature_score = feature_model.score(Xs_test[i], test_predict)
-
-            # plt.title("Best alphas for residual model")
-            # plt.hist(backend.to_numpy(feature_model.best_alphas_))
-            # plt.show()
+            logger.debug(feature_model.best_alphas_)
         feature_scores.append(feature_score)
 
         # Train residual model
