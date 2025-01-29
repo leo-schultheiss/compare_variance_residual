@@ -66,60 +66,64 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
     score_func = himalaya.scoring.r2_score if use_r2 else himalaya.scoring.correlation_score
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
 
-    def train_model(model, train_X, train_y, test_X, test_y):
-        """Helper function to fit a model and return predictions and score."""
-        model.fit(train_X, train_y)
-        train_pred = model.predict(train_X)
-        test_pred = model.predict(test_X)
-        score = model.score(test_X, test_y)
-        train_pred = backend.asarray(train_pred)
-        test_pred = backend.asarray(test_pred)
-        return train_pred, test_pred, score
+    full_scores = []
+
+    # compute on full feature sets for comparison
+    if return_full_variance:
+        for i in range(len(Xs_train)):
+            full_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
+            full_model.fit(Xs_train[i], Y_train)
+            full_score = full_model.score(Xs_test[i], Y_test)
+            full_scores.append(full_score)
 
     # Handle feature modeling
     if use_ols:
-        features_train, targets_train, features_test, target_test = map(backend.to_numpy,
-                                                                        [Xs_train[1], Xs_train[0], Xs_test[1],
-                                                                         Xs_test[0]])
+        Xs_train = list(map(backend.to_numpy, Xs_train))
+        Xs_test = list(map(backend.to_numpy, Xs_test))
         feature_model = LinearRegression()
     else:
-        features_train, targets_train, features_test, target_test = Xs_train[1], Xs_train[0], Xs_test[1], Xs_test[0]
         feature_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
-    train_predict, test_predict, feature_score = train_model(
-        feature_model, features_train, targets_train, features_test, target_test
-    )
+    feature_scores = []
+    residual_scores = []
 
-    if not use_ols:
+    for i in range(len(Xs_train)):
+        i_from = (i + 1) % len(Xs_train)
+        # fit model between feature spaces
+        feature_model.fit(Xs_train[i_from], Xs_train[i])
+        train_predict = feature_model.predict(Xs_train[i_from])
+        test_predict = feature_model.predict(Xs_test[i_from])
+
+        # Compute residuals
+        train_residual = Xs_train[i] - train_predict
+        test_residual = Xs_test[i] - test_predict
+
         from matplotlib import pyplot as plt
-        plt.title("Best alphas for residual model")
-        plt.hist(backend.to_numpy(feature_model.best_alphas_))
-        plt.show()
-    else:
-        from matplotlib import pyplot as plt
-        plt.title("Coefficients for residual model")
-        plt.hist(feature_model.coef_)
-        plt.show()
+        if use_ols:
+            from himalaya.scoring import r2_score
+            feature_score = r2_score(Xs_test[i], test_predict)
 
-    # Compute residuals
-    train_residual = Xs_train[0] - train_predict
-    test_residual = Xs_test[0] - test_predict
+            plt.title("Coefficients for residual model")
+            plt.hist(feature_model.coef_)
+            plt.show()
+        else:
+            feature_score = feature_model.score(Xs_test[i], test_predict)
 
-    # Train residual model
-    residual_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-    residual_model.fit(train_residual, Y_train)
-    residual_score = residual_model.score(test_residual, Y_test)
+            plt.title("Best alphas for residual model")
+            plt.hist(backend.to_numpy(feature_model.best_alphas_))
+            plt.show()
+        feature_scores.append(feature_score)
 
-    # Optionally compute full variance score
-    full_score = None
-    if return_full_variance:
-        residual_model.fit(Xs_train[0], Y_train)
-        full_score = residual_model.score(Xs_test[0], Y_test)
+        # Train residual model
+        residual_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
+        residual_model.fit(train_residual, Y_train)
+        residual_score = residual_model.score(test_residual, Y_test)
+        residual_scores.append(residual_score)
 
-    # Convert results to NumPy
-    residual_score, feature_score, full_score = map(
-        lambda x: backend.to_numpy(x) if x is not None else None,
-        [residual_score, feature_score, full_score]
-    )
+    # Handle feature modeling
+    if use_ols:
+        feature_scores = list(map(backend.asarray, feature_scores))
+        residual_scores = list(map(backend.asarray, residual_scores))
 
-    return residual_score, feature_score, full_score
+    return full_scores[0], full_scores[1], feature_scores[0], feature_scores[1], residual_scores[0], \
+    residual_scores[1]
