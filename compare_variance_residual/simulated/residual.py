@@ -98,20 +98,20 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         train_residual = Xs_train[i] - train_predict
         test_residual = Xs_test[i] - test_predict
 
-        from matplotlib import pyplot as plt
+        # from matplotlib import pyplot as plt
         if use_ols:
             from himalaya.scoring import r2_score
             feature_score = r2_score(Xs_test[i], test_predict)
 
-            plt.title("Coefficients for residual model")
-            plt.hist(feature_model.coef_)
-            plt.show()
+            # plt.title("Coefficients for residual model")
+            # plt.hist(feature_model.coef_)
+            # plt.show()
         else:
             feature_score = feature_model.score(Xs_test[i], test_predict)
 
-            plt.title("Best alphas for residual model")
-            plt.hist(backend.to_numpy(feature_model.best_alphas_))
-            plt.show()
+            # plt.title("Best alphas for residual model")
+            # plt.hist(backend.to_numpy(feature_model.best_alphas_))
+            # plt.show()
         feature_scores.append(feature_score)
 
         # Train residual model
