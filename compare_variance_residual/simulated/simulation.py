@@ -230,10 +230,10 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             variance_direct_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
             residual_r2 = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols)
 
-            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False, use_r2=False)
+            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False, score_func=False)
             variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True,
-                                                        use_r2=False)
-            residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, use_r2=False)
+                                                        score_func=False)
+            residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, score_func=False)
 
             variance_r2 = np.nan_to_num(variance_r2)
             variance_direct_r2 = np.nan_to_num(variance_direct_r2)
