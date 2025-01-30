@@ -6,8 +6,8 @@ from himalaya.ridge import RidgeCV
 from sklearn.linear_model import LinearRegression
 
 
-def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=50, use_ols=False,
-                    return_full_variance=False, use_r2=True, logger=None):
+def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=10, use_ols=False,
+                    return_full_variance=False, score_func=himalaya.scoring.r2_score, logger=None):
     """
     Provide a function that trains models to compute residuals and scores their predictive
     power using Ridge regression or Ordinary Least Squares (OLS). It also provides an option
@@ -35,20 +35,26 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         Default is False.
     return_full_variance : bool, optional
         If True, computes the full variance score using original inputs. Default is False.
-    use_r2 : bool, optional
-        If True, the r2_score metric is used for scoring. If False, the correlation_score metric
-        is used. Default is True.
+    score_func : callable, optional
+        Scoring function used for evaluating models. Default is himalaya.scoring.r2_score
+
 
     Returns
     -------
     tuple
-        A tuple containing:
-        - residual_score : ndarray
-            Scores of the predictive power of residuals.
-        - feature_score : ndarray
-            Scores of the predictive power of features in the model.
-        - full_score : ndarray
-            Full variance scores of the model (optional, returned if return_full_variance is True).
+        full_scores[0] : float
+            Variance explained by the first full feature set on the test data.
+        full_scores[1] : float
+            Variance explained by the second full feature set on the test data.
+        feature_scores[0] : float
+            Score of the first feature predictor's model using the target features.
+        feature_scores[1] : float
+            Score of the second feature predictor's model using the target features.
+        residual_scores[0] : float
+            Variance explained by the residual model of the first feature set on the target data.
+        residual_scores[1] : float
+            Variance explained by the residual model of the second feature set on the target data.
+    
 
     Raises
     ------
@@ -69,7 +75,6 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         logger.setLevel(logging.DEBUG)
 
     backend = himalaya.backend.get_backend()
-    score_func = himalaya.scoring.r2_score if use_r2 else himalaya.scoring.correlation_score
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
 
     full_scores = []
@@ -108,7 +113,7 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         if use_ols:
             from himalaya.scoring import r2_score
             feature_score = r2_score(Xs_test[i], test_predict)
-            logger.debug(feature_model.coef_)
+            logger.debug(f"linear model coefficients: {feature_model.coef_}")
         else:
             feature_score = feature_model.score(Xs_test[i], test_predict)
             logger.debug(feature_model.best_alphas_)
