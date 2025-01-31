@@ -115,8 +115,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
 
 def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
     # generate feature spaces
-    feature_spaces_train = [create_random_distribution([n_samples_train, d], random_distribution) for d in d_list]
-    feature_spaces_test = [create_random_distribution([n_samples_test, d], random_distribution) for d in d_list]
+    feature_spaces_train = [zscore(create_random_distribution([n_samples_train, d], random_distribution)) for d in d_list]
+    feature_spaces_test = [zscore(create_random_distribution([n_samples_test, d], random_distribution)) for d in d_list]
 
     # concatenate the first feature with all other feature spaces
     # [0, 1], [0, 2], [0, 3], ...
@@ -126,7 +126,7 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Xs_train = [zscore(X) for X in Xs_train]
     Xs_test = [zscore(X) for X in Xs_test]
 
-    # generate scalars
+    # generate weights
     betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
     betas = [zscore(beta) for beta in betas]
 
@@ -142,8 +142,10 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Y_test = zscore(Y_test)
 
     # add noise
-    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
-    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
+    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
+    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
+    Y_train += noise_train * noise
+    Y_test += noise_test * noise
 
     return Xs_train, Xs_test, Y_train, Y_test
 
