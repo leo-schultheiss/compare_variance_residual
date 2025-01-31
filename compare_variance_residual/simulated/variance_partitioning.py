@@ -2,11 +2,10 @@ import logging
 
 import himalaya.scoring
 import numpy as np
-from himalaya.ridge import RidgeCV, GroupRidgeCV
-
+from himalaya.ridge import RidgeCV, GroupRidgeCV, Ridge
 
 def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=50,
-                          score_func=himalaya.scoring.r2_score, logger=None) -> tuple:
+                          score_func=himalaya.scoring.r2_score, use_ols=False, logger=None) -> tuple:
     """
     Perform variance partitioning on two feature spaces
 
@@ -24,8 +23,9 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
         List of alphas for Ridge regression
     cv : int, default=10
         Number of cross-validation folds
-    score_func : bool, default=True
-        Determines the score metric: if True, use r2 as the score metric; if False, use correlation.
+    score_func : callable, default=himalaya.scoring.r2_score
+        Scoring function used to evaluate the model predictions. Common options include R²
+        or other regression metrics compatible with the `himalaya` library.
     logger : logging.logger, default=None
         Logger, if none a new one gets instantiated
 
@@ -56,23 +56,53 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
                          n_targets_batch=1000)
     # train joint model
     joint_model = GroupRidgeCV(groups="input", solver_params=solver_params)
+
     joint_model.fit(Xs_train, Y_train)
-    joint_score = joint_model.score(Xs_test, Y_test)
-    logger.debug(fr"$X_0\cup X_1$ best $\alpha$s: {joint_model.best_alphas_}")
+    Y_pred = joint_model.predict(Xs_test)
+    joint_score = score_func(Y_test, Y_pred)
+    import matplotlib.pyplot as plt
+    plt.hist(backend.to_numpy(joint_model.best_alphas_))
+    plt.xlabel("alpha")
+    plt.ylabel("count")
+    plt.title(fr"$X_0\cup X_1$ best $\alpha$s")
+    plt.show()
+    plt.hist(backend.to_numpy(joint_model.coef_))
+    plt.xlabel("coefficient")
+    plt.ylabel("count")
+    plt.title(fr"$X_0\cup X_1$ coefficients")
+    plt.show()
 
-    # train single model(s)
-    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
-    model_0 = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-    model_0.fit(Xs_train[0], Y_train)
-    score_0 = model_0.score(Xs_test[0], Y_test)
-    logger.debug(fr"$X_0$ best $\alpha$s: {model_0.best_alphas_}")
+    # train single models
+    if use_ols:
+        solver_params = dict(warn=False, n_targets_batch=1000)
+        single_model = Ridge(alpha=0.0, solver_params=solver_params)
+    else:
+        solver_params = dict(warn=False, score_func=score_func,
+                             n_targets_batch=1000)
+        single_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
-    model_1 = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-    model_1.fit(Xs_train[1], Y_train)
-    score_1 = model_1.score(Xs_test[1], Y_test)
-    logger.debug(fr"$X_1$ best $\alpha$s: {model_1.best_alphas_}")
+    scores = []
+    for i in range(2):
+        single_model.fit(Xs_train[i], Y_train)
+        Y_pred = single_model.predict(Xs_test[i])
+        score = score_func(Y_test, Y_pred)
+        scores.append(score)
 
-    # calculate unique variance explained by feature space 0
+        if not use_ols:
+            plt.hist(backend.to_numpy(single_model.best_alphas_))
+            plt.xlabel("alpha")
+            plt.ylabel("count")
+            plt.title(fr"$X_{i}$ best $\alpha$s")
+            plt.show()
+        plt.hist(backend.to_numpy(single_model.coef_))
+        plt.xlabel("coefficient")
+        plt.ylabel("count")
+        plt.title(fr"$X_{i}$ coefficients")
+        plt.show()
+
+    score_0, score_1 = scores
+
+    # calculate unique and shared variance
     shared = (score_0 + score_1) - joint_score
     x0_unique = score_0 - shared
     x1_unique = score_1 - shared
