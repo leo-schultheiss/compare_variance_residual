@@ -42,7 +42,7 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         raise ValueError(f"Unknown distribution {distribution}.")
 
 
-def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
+def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise_scalar=0.1,
                      random_distribution="normal", construction_method="stack", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
@@ -64,7 +64,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
             The number of samples in the training dataset.
         n_samples_test: int
             The number of samples in the testing dataset.
-        noise: float
+        noise_scalar: float
             The standard deviation of the Gaussian noise to be added to the targets.
         random_distribution: str
             The type of random distribution to use for generating target values. Defaults to "normal".
@@ -97,11 +97,11 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
 
     if construction_method == "stack":
         Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, scalars, n_samples_train,
-                                                                    n_samples_test, n_targets, noise,
+                                                                    n_samples_test, n_targets, noise_scalar,
                                                                     random_distribution)
     elif construction_method == "svd":
         Xs_train, Xs_test, Y_train, Y_test = svd_feature_spaces(d_list, scalars, n_samples_train,
-                                                                n_samples_test, n_targets, noise, random_distribution)
+                                                                n_samples_test, n_targets, noise_scalar, random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
@@ -115,7 +115,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
+def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar, random_distribution):
     # generate feature spaces
     feature_spaces_train = [zscore(create_random_distribution([n_samples_train, d], random_distribution)) for d in d_list]
     feature_spaces_test = [zscore(create_random_distribution([n_samples_test, d], random_distribution)) for d in d_list]
@@ -144,15 +144,15 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Y_test = zscore(Y_test)
 
     # add noise
-    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
-    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
-    Y_train += noise_train * noise
-    Y_test += noise_test * noise
+    noise_scalar_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
+    noise_scalar_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
+    Y_train += noise_scalar_train * noise_scalar
+    Y_test += noise_scalar_test * noise_scalar
 
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise, random_distribution):
+def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar, random_distribution):
     # create orthonormal S matrix
     S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
     S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
@@ -189,14 +189,14 @@ def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targe
     Y_test = S_test @ theta_S + sum(U_test @ theta_U for U_test, theta_U in zip(Us_test, thetas_U))
 
     # add noise
-    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise
-    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise
+    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise_scalar
+    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise_scalar
 
     return Xs_test, Xs_train, Y_test, Y_train
 
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
-                   n_samples_test, noise_level, construction_method, random_distribution, alphas, cv, use_ols):
+                   n_samples_test, noise_scalar_level, construction_method, random_distribution, alphas, cv, use_ols):
     predicted_results = [[] for _ in range(6)]
 
     for value in bar(variable_values, title=f"Varying {variable_name}"):
@@ -209,7 +209,7 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
         elif variable_name == "Number of Targets":
             n_targets = int(value)
         elif variable_name == "Proportion of Noise Added to Target":
-            noise_level = value
+            noise_scalar_level = value
         elif variable_name == "Sampling Distribution":
             random_distribution = value
         elif variable_name == "Unique Variance Explained":
@@ -225,7 +225,7 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
                                                                     scalars=scalars,
                                                                     n_targets=n_targets,
                                                                     n_samples_train=n_samples_train,
-                                                                    n_samples_test=n_samples_test, noise=noise_level,
+                                                                    n_samples_test=n_samples_test, noise_scalar=noise_scalar_level,
                                                                     construction_method=construction_method,
                                                                     random_distribution=random_distribution,
                                                                     random_state=run)
@@ -264,16 +264,20 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
 
 
 if __name__ == "__main__":
+    from himalaya.ridge import GroupRidgeCV, RidgeCV, Ridge
+    from himalaya.backend import set_backend
+
+    set_backend("cupy")
     d_list = [100, 100, 100]
     scalars = [0.6, 0.3, 0.1]
     n_targets = 1000
     n_samples_train = 10000
     n_samples_test = 100
-    noise = 0.1
+    noise_scalar = 0.1
     random_distribution = "normal"
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, scalars, n_targets, n_samples_train,
-                                                            n_samples_test, noise, random_distribution, "stack", 42)
+                                                            n_samples_test, noise_scalar, random_distribution, "stack", 42)
 
     from sklearn.metrics import r2_score
 
@@ -294,15 +298,13 @@ if __name__ == "__main__":
     Y_pred = model.predict(X_test_stack)
     print(f"R^2 score on stacked features: {r2_score(Y_test, Y_pred)}")
 
-    from himalaya.ridge import GroupRidgeCV
-    from himalaya.backend import set_backend
 
-    set_backend("cupy")
-
-    model = GroupRidgeCV(groups="input")
+    model = GroupRidgeCV(groups="input", solver_params=dict(progress_bar=False))
     model.fit(Xs_train, Y_train)
     Y_pred = model.predict(Xs_test)
     print(f"R^2 score for banded: {r2_score(Y_test, Y_pred)}")
+
+
 
     # check if Xs are random
     assert not np.allclose(Xs_train[0], Xs_train[1], atol=1e-5)
@@ -314,5 +316,5 @@ if __name__ == "__main__":
         assert np.allclose(X.mean(0), 0, atol=1e-5)
 
     # check if Ys are demeaned
-    assert np.allclose(Y_train.mean(0), 0, atol=noise)
-    assert np.allclose(Y_test.mean(0), 0, atol=noise)
+    assert np.allclose(Y_train.mean(0), 0, atol=noise_scalar)
+    assert np.allclose(Y_test.mean(0), 0, atol=noise_scalar)
