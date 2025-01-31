@@ -3,6 +3,7 @@ from himalaya.backend import get_backend
 from himalaya.progress_bar import bar
 from scipy.linalg import orth
 from scipy.stats import zscore
+from sklearn.linear_model import LinearRegression
 
 from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
@@ -42,7 +43,7 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
 
 
 def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise=0.1,
-                     random_distribution="normal", construction_method="stack", random_state=None):
+                     random_distribution="normal", construction_method="stack", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
 
@@ -87,7 +88,6 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
 
     if random_state is not None:
         np.random.seed(random_state)
-    backend = get_backend()
 
     if d_list is None:
         d_list = [100] * 3
@@ -104,6 +104,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
                                                                 n_samples_test, n_targets, noise, random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
+
+    backend = get_backend()
 
     Xs_train = [backend.asarray(X, dtype="float32") for X in Xs_train]
     Xs_test = [backend.asarray(X, dtype="float32") for X in Xs_test]
@@ -232,7 +234,8 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             variance_direct_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
             residual_r2 = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols)
 
-            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False, score_func=False)
+            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False,
+                                                 score_func=False)
             variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True,
                                                         score_func=False)
             residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, score_func=False)
@@ -262,47 +265,44 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
 
 if __name__ == "__main__":
     d_list = [100, 100, 100]
-    scalars = [1 / 3, 1 / 3, 1 / 3]
-    n_targets = 100
-    n_samples_train = 100
-    n_samples_test = 50
+    scalars = [0.6, 0.3, 0.1]
+    n_targets = 1000
+    n_samples_train = 10000
+    n_samples_test = 100
     noise = 0.1
     random_distribution = "normal"
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, scalars, n_targets, n_samples_train,
                                                             n_samples_test, noise, random_distribution, "stack", 42)
 
-    import matplotlib.pyplot as plt
-
-    plt.scatter(Xs_train[0][:, 0], Y_train[:, 0], label="train")
-    plt.show()
-
-    from sklearn.linear_model import LinearRegression
     from sklearn.metrics import r2_score
 
     model = LinearRegression()
     model.fit(Xs_train[0], Y_train)
-
     Y_pred = model.predict(Xs_test[0])
-    print(f"R^2 score on one train: {r2_score(Y_test, Y_pred)}")
+    print(fr"R^2 score for $X_0$: {r2_score(Y_test, Y_pred) ** 2} vs expected {scalars[0] + scalars[1]}")
 
-    X_stack = np.hstack(Xs_train)
     model = LinearRegression()
-    model.fit(X_stack, Y_train)
+    model.fit(Xs_train[1], Y_train)
+    Y_pred = model.predict(Xs_test[1])
+    print(fr"R^2 score for $X_1$: {r2_score(Y_test, Y_pred)} vs expected {scalars[0] + scalars[2]}")
 
-    X_test = np.hstack(Xs_test)
-    Y_pred = model.predict(X_test)
-    print(f"R^2 score on all train: {r2_score(Y_test, Y_pred)}")
+    X_train_stack = np.hstack(Xs_train)
+    X_test_stack = np.hstack(Xs_test)
+    model = LinearRegression()
+    model.fit(X_train_stack, Y_train)
+    Y_pred = model.predict(X_test_stack)
+    print(f"R^2 score on stacked features: {r2_score(Y_test, Y_pred)}")
 
-    from himalaya.ridge import BandedRidgeCV
+    from himalaya.ridge import GroupRidgeCV
     from himalaya.backend import set_backend
 
     set_backend("cupy")
 
-    model = BandedRidgeCV(groups="input")
+    model = GroupRidgeCV(groups="input")
     model.fit(Xs_train, Y_train)
     Y_pred = model.predict(Xs_test)
-    print(f"R^2 score on banded: {r2_score(Y_test, Y_pred)}")
+    print(f"R^2 score for banded: {r2_score(Y_test, Y_pred)}")
 
     # check if Xs are random
     assert not np.allclose(Xs_train[0], Xs_train[1], atol=1e-5)
