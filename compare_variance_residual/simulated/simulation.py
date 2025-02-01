@@ -171,35 +171,44 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
 
 def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
     """
-    Create orthogonal feature spaces based on specified dimensions.
+    Generates three orthogonal feature spaces with increasing ranks.
 
     Parameters:
-    -----------
-    num_samples : int
-        Total number of samples across all feature spaces.
-    dimensionalities : list of int
-        List of dimensionalities for each feature space.
+        num_samples (int): The number of dimensions for each feature space.
+        d_list (list): A list containing rank/dimension for each feature space.
 
     Returns:
-    --------
-    feature_spaces : list of np.ndarray
-        List of orthogonal feature spaces, each of shape (num_samples, d).
+        list: A list of numpy arrays representing orthogonal feature spaces.
     """
-    total_dim = sum(d_list)
+    assert num_samples > sum(d_list), "Number of samples must be greater than the sum of ranks."
 
-    # Total matrix of shape (num_samples, total_dim), randomly initialized
-    random_matrix = create_random_distribution((num_samples, total_dim), random_distribution)
-    random_matrix = zscore(random_matrix)
-    orthogonalized_matrix = orth(random_matrix)  # Create orthogonalized combined space
+    # backend = get_backend()
 
-    # Extract sub-matrices for individual feature spaces
     feature_spaces = []
-    start = 0
-    for dim in d_list:
-        sub_matrix = orthogonalized_matrix[:, start:start + dim]  # Extract subspace
-        feature_spaces.append(sub_matrix)  # Store in the list
-        start += dim
 
+    # Generate a random matrix of shape (dim, rank)
+    M = create_random_distribution((num_samples, sum(d_list)), random_distribution)
+    M = zscore(M)
+
+    # may reduce rank
+    U, S, Vt = np.linalg.svd(M, full_matrices=True)
+
+    # U = backend.asarray(U)
+    # S = backend.asarray(S)
+    # Vt = backend.asarray(Vt)
+
+    start = 0
+    for rank in d_list:
+        _S = np.zeros(len(S))
+        _S[start:start + rank] = S[start:start + rank]
+
+        # create rectangular diagonal sigma matrix
+        diag_S = np.diag(_S)
+        diag_S = np.pad(diag_S, ((0, U.shape[0] - diag_S.shape[0]), (0, Vt.shape[0] - diag_S.shape[1])))
+
+        feature_space = U @ diag_S @ Vt
+        feature_spaces.append(feature_space)
+        start += rank
     return feature_spaces
 
 
@@ -247,7 +256,7 @@ def orthogonal_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, 
     Xs_test = [zscore(X) for X in Xs_test]
 
     # generate weights
-    betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+    betas = [create_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
     betas = [zscore(beta) for beta in betas]
 
     # generate targets
