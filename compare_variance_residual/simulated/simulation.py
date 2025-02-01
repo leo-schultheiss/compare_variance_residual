@@ -42,8 +42,8 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
         raise ValueError(f"Unknown distribution {distribution}.")
 
 
-def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=100, n_samples_test=100, noise_scalar=0.1,
-                     random_distribution="normal", construction_method="stack", random_state=42):
+def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train=1000, n_samples_test=100,
+                     noise_scalar=0.1, random_distribution="normal", construction_method="orthogonal", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
 
@@ -99,9 +99,10 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
         Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, scalars, n_samples_train,
                                                                     n_samples_test, n_targets, noise_scalar,
                                                                     random_distribution)
-    elif construction_method == "svd":
-        Xs_train, Xs_test, Y_train, Y_test = svd_feature_spaces(d_list, scalars, n_samples_train,
-                                                                n_samples_test, n_targets, noise_scalar, random_distribution)
+    elif construction_method == "orthogonal":
+        Xs_train, Xs_test, Y_train, Y_test = orthogonal_feature_spaces(d_list, scalars, n_samples_train,
+                                                                       n_samples_test, n_targets, noise_scalar,
+                                                                       random_distribution)
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
@@ -115,10 +116,47 @@ def generate_dataset(d_list=None, scalars=None, n_targets=100, n_samples_train=1
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar, random_distribution):
+def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
+    """
+    Create orthogonal feature spaces based on specified dimensions.
+
+    Parameters:
+    -----------
+    num_samples : int
+        Total number of samples across all feature spaces.
+    dimensionalities : list of int
+        List of dimensionalities for each feature space.
+
+    Returns:
+    --------
+    feature_spaces : list of np.ndarray
+        List of orthogonal feature spaces, each of shape (num_samples, d).
+    """
+    total_dim = sum(d_list)
+
+    # Total matrix of shape (num_samples, total_dim), randomly initialized
+    random_matrix = create_random_distribution((num_samples, total_dim), random_distribution)
+    random_matrix = zscore(random_matrix)
+    orthogonalized_matrix = orth(random_matrix)  # Create orthogonalized combined space
+
+    # Extract sub-matrices for individual feature spaces
+    feature_spaces = []
+    start = 0
+    for dim in d_list:
+        sub_matrix = orthogonalized_matrix[:, start:start + dim]  # Extract subspace
+        feature_spaces.append(sub_matrix)  # Store in the list
+        start += dim
+
+    return feature_spaces
+
+
+def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
+                           random_distribution):
     # generate feature spaces
-    feature_spaces_train = [zscore(create_random_distribution([n_samples_train, d], random_distribution)) for d in d_list]
-    feature_spaces_test = [zscore(create_random_distribution([n_samples_test, d], random_distribution)) for d in d_list]
+    feature_spaces_train = [zscore(create_random_distribution((n_samples_train, dim), random_distribution)) for dim in
+                            d_list]
+    feature_spaces_test = [zscore(create_random_distribution((n_samples_test, dim), random_distribution)) for dim in
+                           d_list]
 
     # concatenate the first feature with all other feature spaces
     # [0, 1], [0, 2], [0, 3], ...
@@ -144,55 +182,50 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Y_test = zscore(Y_test)
 
     # add noise
-    noise_scalar_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
-    noise_scalar_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
-    Y_train += noise_scalar_train * noise_scalar
-    Y_test += noise_scalar_test * noise_scalar
+    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
+    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
+    Y_train += noise_train * noise_scalar
+    Y_test += noise_test * noise_scalar
 
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def svd_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar, random_distribution):
-    # create orthonormal S matrix
-    S_train = orth(create_random_distribution([n_samples_train, d_shared], random_distribution))
-    S_test = orth(create_random_distribution([n_samples_test, d_shared], random_distribution))
+def orthogonal_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
+                              random_distribution):
+    # generate feature spaces
+    feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
+    feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
 
-    Us_train, Us_test = [], []
+    # concatenate the first feature with all other feature spaces
+    # [0, 1], [0, 2], [0, 3], ...
+    Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
+    Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
 
-    # create orthonormal U_i matrices and ensure they are orthogonal to S and each other
-    for d_unique in d_unique_list:
-        U_train = orth(create_random_distribution([n_samples_train, d_unique], random_distribution))
-        U_test = orth(create_random_distribution([n_samples_test, d_unique], random_distribution))
+    Xs_train = [zscore(X) for X in Xs_train]
+    Xs_test = [zscore(X) for X in Xs_test]
 
-        # remove projections onto S and all previously created U_i matrices
-        for prev_U_train, prev_U_test in zip(Us_train, Us_test):
-            U_train -= prev_U_train @ (prev_U_train.T @ U_train)
-            U_test -= prev_U_test @ (prev_U_test.T @ U_test)
-        U_train -= S_train @ (S_train.T @ U_train)
-        U_test -= S_test @ (S_test.T @ U_test)
+    # generate weights
+    betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+    betas = [zscore(beta) for beta in betas]
 
-        # re-orthonormalize after removing projections
-        U_train = orth(U_train)
-        U_test = orth(U_test)
+    # generate targets
+    Y_train = sum(
+        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
+         zip(scalars, feature_spaces_train, betas)])
+    Y_test = sum(
+        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
+         zip(scalars, feature_spaces_test, betas)])
 
-        Us_train.append(U_train)
-        Us_test.append(U_test)
-
-    # combine S and Ui to each feature
-    Xs_train = [np.hstack([S_train, U_train]) for U_train in Us_train]
-    Xs_test = [np.hstack([S_test, U_test]) for U_test in Us_test]
-
-    # combine target out of S and U_i
-    theta_S = create_random_distribution([d_shared, n_targets], "normal")
-    thetas_U = [create_random_distribution([U_train.shape[1], n_targets], "normal") for U_train in Us_train]
-    Y_train = S_train @ theta_S + sum(U_train @ theta_U for U_train, theta_U in zip(Us_train, thetas_U))
-    Y_test = S_test @ theta_S + sum(U_test @ theta_U for U_test, theta_U in zip(Us_test, thetas_U))
+    Y_train = zscore(Y_train)
+    Y_test = zscore(Y_test)
 
     # add noise
-    Y_train += create_random_distribution([n_samples_train, n_targets], "normal") * noise_scalar
-    Y_test += create_random_distribution([n_samples_test, n_targets], "normal") * noise_scalar
+    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
+    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
+    Y_train += noise_train * noise_scalar
+    Y_test += noise_test * noise_scalar
 
-    return Xs_test, Xs_train, Y_test, Y_train
+    return Xs_train, Xs_test, Y_train, Y_test
 
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
@@ -225,7 +258,8 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
                                                                     scalars=scalars,
                                                                     n_targets=n_targets,
                                                                     n_samples_train=n_samples_train,
-                                                                    n_samples_test=n_samples_test, noise_scalar=noise_scalar_level,
+                                                                    n_samples_test=n_samples_test,
+                                                                    noise_scalar=noise_scalar_level,
                                                                     construction_method=construction_method,
                                                                     random_distribution=random_distribution,
                                                                     random_state=run)
@@ -264,7 +298,7 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
 
 
 if __name__ == "__main__":
-    from himalaya.ridge import GroupRidgeCV, RidgeCV, Ridge
+    from himalaya.ridge import GroupRidgeCV
     from himalaya.backend import set_backend
 
     set_backend("cupy")
@@ -277,7 +311,8 @@ if __name__ == "__main__":
     random_distribution = "normal"
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, scalars, n_targets, n_samples_train,
-                                                            n_samples_test, noise_scalar, random_distribution, "stack", 42)
+                                                            n_samples_test, noise_scalar, random_distribution, "stack",
+                                                            42)
 
     from sklearn.metrics import r2_score
 
@@ -298,13 +333,10 @@ if __name__ == "__main__":
     Y_pred = model.predict(X_test_stack)
     print(f"R^2 score on stacked features: {r2_score(Y_test, Y_pred)}")
 
-
     model = GroupRidgeCV(groups="input", solver_params=dict(progress_bar=False))
     model.fit(Xs_train, Y_train)
     Y_pred = model.predict(Xs_test)
     print(f"R^2 score for banded: {r2_score(Y_test, Y_pred)}")
-
-
 
     # check if Xs are random
     assert not np.allclose(Xs_train[0], Xs_train[1], atol=1e-5)
