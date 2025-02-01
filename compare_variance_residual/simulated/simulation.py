@@ -1,9 +1,22 @@
+"""
+simulation.py: Synthetic data generation and experiment execution.
+
+This module provides functionality to generate synthetic datasets
+with customizable feature spaces and target variables, and perform
+machine learning experiments to study the impact of various data
+parameters. Includes:
+
+- Dataset generation with structured feature spaces (`generate_dataset`)
+- Experimentation with variance partitioning and residual methods
+  (`run_experiment`)
+- Utility functions for feature space stacking and orthogonalization
+"""
+
 import numpy as np
 from himalaya.backend import get_backend
 from himalaya.progress_bar import bar
 from scipy.linalg import orth
 from scipy.stats import zscore
-from sklearn.linear_model import LinearRegression
 
 from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
@@ -116,40 +129,6 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
-    """
-    Create orthogonal feature spaces based on specified dimensions.
-
-    Parameters:
-    -----------
-    num_samples : int
-        Total number of samples across all feature spaces.
-    dimensionalities : list of int
-        List of dimensionalities for each feature space.
-
-    Returns:
-    --------
-    feature_spaces : list of np.ndarray
-        List of orthogonal feature spaces, each of shape (num_samples, d).
-    """
-    total_dim = sum(d_list)
-
-    # Total matrix of shape (num_samples, total_dim), randomly initialized
-    random_matrix = create_random_distribution((num_samples, total_dim), random_distribution)
-    random_matrix = zscore(random_matrix)
-    orthogonalized_matrix = orth(random_matrix)  # Create orthogonalized combined space
-
-    # Extract sub-matrices for individual feature spaces
-    feature_spaces = []
-    start = 0
-    for dim in d_list:
-        sub_matrix = orthogonalized_matrix[:, start:start + dim]  # Extract subspace
-        feature_spaces.append(sub_matrix)  # Store in the list
-        start += dim
-
-    return feature_spaces
-
-
 def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
                            random_distribution):
     # generate feature spaces
@@ -190,8 +169,71 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     return Xs_train, Xs_test, Y_train, Y_test
 
 
+def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
+    """
+    Create orthogonal feature spaces based on specified dimensions.
+
+    Parameters:
+    -----------
+    num_samples : int
+        Total number of samples across all feature spaces.
+    dimensionalities : list of int
+        List of dimensionalities for each feature space.
+
+    Returns:
+    --------
+    feature_spaces : list of np.ndarray
+        List of orthogonal feature spaces, each of shape (num_samples, d).
+    """
+    total_dim = sum(d_list)
+
+    # Total matrix of shape (num_samples, total_dim), randomly initialized
+    random_matrix = create_random_distribution((num_samples, total_dim), random_distribution)
+    random_matrix = zscore(random_matrix)
+    orthogonalized_matrix = orth(random_matrix)  # Create orthogonalized combined space
+
+    # Extract sub-matrices for individual feature spaces
+    feature_spaces = []
+    start = 0
+    for dim in d_list:
+        sub_matrix = orthogonalized_matrix[:, start:start + dim]  # Extract subspace
+        feature_spaces.append(sub_matrix)  # Store in the list
+        start += dim
+
+    return feature_spaces
+
+
 def orthogonal_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
                               random_distribution):
+    """
+    Generate datasets with orthogonal feature spaces and target variables.
+
+    Parameters:
+    -----------
+    d_list : list of int
+        List specifying dimensions of the feature spaces.
+    scalars : list of float
+        Relative scalars for feature spaces, must sum to 1.
+    n_samples_train : int
+        Number of training samples in the dataset.
+    n_samples_test : int
+        Number of testing samples in the dataset.
+    n_targets : int
+        Number of target variables.
+    noise_scalar : float
+        Standard deviation of Gaussian noise added to targets.
+    random_distribution : str
+        Type of distribution for generating random values, e.g., 'normal'.
+
+    Returns:
+    --------
+    tuple
+        - Xs_train: list of ndarray, Training feature spaces.
+        - Xs_test: list of ndarray, Testing feature spaces.
+        - Y_train: ndarray, Training set target variables.
+        - Y_test: ndarray, Testing set target variables.
+    """
+
     # generate feature spaces
     feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
     feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
@@ -230,6 +272,48 @@ def orthogonal_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, 
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
                    n_samples_test, noise_scalar_level, construction_method, random_distribution, alphas, cv, use_ols):
+    """
+    Execute machine learning experiments by varying specified parameters.
+
+    Parameters:
+    -----------
+    variable_name : str
+        Name of the variable to vary, e.g., 'Number of Features'.
+    variable_values : list
+        Values for the variable being tested.
+    n_runs : int
+        Number of experiment runs for each value.
+    n_observations : int
+        Number of observations in the dataset.
+    d_list : list of int
+        Dimensions of the feature spaces.
+    scalars : list of float
+        Scalars for feature spaces, must sum to 1.
+    n_targets : int
+        Number of target variables.
+    n_samples_train : int
+        Number of training samples.
+    n_samples_test : int
+        Number of testing samples.
+    noise_scalar_level : float
+        Proportion of noise added to target variables.
+    construction_method : str
+        'stack' or 'orthogonal' for the dataset construction method.
+    random_distribution : str
+        Distribution to use, e.g., 'normal', 'uniform'.
+    alphas : ndarray
+        Regularization parameters for ridge regression.
+    cv : int
+        Number of cross-validation folds.
+    use_ols : bool
+        Whether to use Ordinary Least Squares (OLS) regression.
+
+    Returns:
+    --------
+    list
+        Nested list containing variance results for different metrics (R-squared, rho).
+    """
+
     predicted_results = [[] for _ in range(6)]
 
     for value in bar(variable_values, title=f"Varying {variable_name}"):
@@ -268,10 +352,8 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
             variance_direct_r2 = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
             residual_r2 = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols)
 
-            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False,
-                                                 score_func=False)
-            variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True,
-                                                        score_func=False)
+            variance_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, False)
+            variance_direct_rho = variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, True)
             residual_rho = residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas, cv, use_ols, score_func=False)
 
             variance_r2 = np.nan_to_num(variance_r2)
@@ -294,6 +376,7 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
         predicted_results[3].append(variances_rho)
         predicted_results[4].append(variances_direct_rho)
         predicted_results[5].append(residuals_rho)
+
     return predicted_results
 
 
