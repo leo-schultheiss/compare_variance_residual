@@ -14,6 +14,7 @@ parameters. Includes:
 
 import numpy as np
 from himalaya.progress_bar import bar
+from himalaya.backend import get_backend, set_backend
 from scipy.stats import zscore
 
 from compare_variance_residual.simulated.residual import residual_method
@@ -116,26 +117,28 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         # [0, 1], [0, 2], [0, 3], ...
         Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
         Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
+
+        # generate weights
+        betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
     elif construction_method == "orthogonal":
-        feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
-        feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
+        feature_spaces = create_orthogonal_feature_spaces(n_samples_train + n_samples_test, d_list, random_distribution)
+        feature_spaces_train = [feature_space[:n_samples_train] for feature_space in feature_spaces]
+        feature_spaces_test = [feature_space[n_samples_train:] for feature_space in feature_spaces]
 
         # add the first feature with all other feature spaces
-        # [0, 1], [0, 2], [0, 3], ...
-        # Xs_train = [feature_spaces_train[0] + feature_space for feature_space in feature_spaces_train[1:]]
-        # Xs_test = [feature_spaces_test[0] + feature_space for feature_space in feature_spaces_test[1:]]
+        # [0 + 1, 0 + 2, 0 + 3, ...]
+        Xs_train = [feature_spaces_train[0] + feature_space for feature_space in feature_spaces_train[1:]]
+        Xs_test = [feature_spaces_test[0] + feature_space for feature_space in feature_spaces_test[1:]]
 
-        Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
-        Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
+        # generate weights
+        betas = [create_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
     Xs_train = [zscore(x) for x in Xs_train]
     Xs_test = [zscore(x) for x in Xs_test]
-
-    # generate weights
-    betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
     betas = [zscore(beta) for beta in betas]
+
     # generate targets
     Y_train = sum(
         [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
