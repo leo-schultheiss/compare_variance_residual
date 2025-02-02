@@ -13,9 +13,7 @@ parameters. Includes:
 """
 
 import numpy as np
-from himalaya.backend import get_backend
 from himalaya.progress_bar import bar
-from scipy.linalg import orth
 from scipy.stats import zscore
 
 from compare_variance_residual.simulated.residual import residual_method
@@ -109,46 +107,35 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         scalars = [1 / 3] * 3
 
     if construction_method == "stack":
-        Xs_train, Xs_test, Y_train, Y_test = stacked_feature_spaces(d_list, scalars, n_samples_train,
-                                                                    n_samples_test, n_targets, noise_scalar,
-                                                                    random_distribution)
+        # generate feature spaces
+        feature_spaces_train = [zscore(create_random_distribution((n_samples_train, dim), random_distribution)) for dim in
+                                d_list]
+        feature_spaces_test = [zscore(create_random_distribution((n_samples_test, dim), random_distribution)) for dim in
+                               d_list]
+        # concatenate the first feature with all other feature spaces
+        # [0, 1], [0, 2], [0, 3], ...
+        Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
+        Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
     elif construction_method == "orthogonal":
-        Xs_train, Xs_test, Y_train, Y_test = orthogonal_feature_spaces(d_list, scalars, n_samples_train,
-                                                                       n_samples_test, n_targets, noise_scalar,
-                                                                       random_distribution)
+        feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
+        feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
+
+        # add the first feature with all other feature spaces
+        # [0, 1], [0, 2], [0, 3], ...
+        # Xs_train = [feature_spaces_train[0] + feature_space for feature_space in feature_spaces_train[1:]]
+        # Xs_test = [feature_spaces_test[0] + feature_space for feature_space in feature_spaces_test[1:]]
+
+        Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
+        Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
-    backend = get_backend()
-
-    Xs_train = [backend.asarray(X, dtype="float32") for X in Xs_train]
-    Xs_test = [backend.asarray(X, dtype="float32") for X in Xs_test]
-    Y_train = backend.asarray(Y_train, dtype="float32")
-    Y_test = backend.asarray(Y_test, dtype="float32")
-
-    return Xs_train, Xs_test, Y_train, Y_test
-
-
-def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
-                           random_distribution):
-    # generate feature spaces
-    feature_spaces_train = [zscore(create_random_distribution((n_samples_train, dim), random_distribution)) for dim in
-                            d_list]
-    feature_spaces_test = [zscore(create_random_distribution((n_samples_test, dim), random_distribution)) for dim in
-                           d_list]
-
-    # concatenate the first feature with all other feature spaces
-    # [0, 1], [0, 2], [0, 3], ...
-    Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
-    Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
-
-    Xs_train = [zscore(X) for X in Xs_train]
-    Xs_test = [zscore(X) for X in Xs_test]
+    Xs_train = [zscore(x) for x in Xs_train]
+    Xs_test = [zscore(x) for x in Xs_test]
 
     # generate weights
     betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
     betas = [zscore(beta) for beta in betas]
-
     # generate targets
     Y_train = sum(
         [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
@@ -156,15 +143,20 @@ def stacked_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_t
     Y_test = sum(
         [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
          zip(scalars, feature_spaces_test, betas)])
-
     Y_train = zscore(Y_train)
     Y_test = zscore(Y_test)
-
     # add noise
     noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
     noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
     Y_train += noise_train * noise_scalar
     Y_test += noise_test * noise_scalar
+
+    backend = get_backend()
+
+    Xs_train = [backend.asarray(X, dtype="float32") for X in Xs_train]
+    Xs_test = [backend.asarray(X, dtype="float32") for X in Xs_test]
+    Y_train = backend.asarray(Y_train, dtype="float32")
+    Y_test = backend.asarray(Y_test, dtype="float32")
 
     return Xs_train, Xs_test, Y_train, Y_test
 
@@ -182,6 +174,7 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
     """
     assert num_samples > sum(d_list), "Number of samples must be greater than the sum of ranks."
 
+
     # backend = get_backend()
 
     feature_spaces = []
@@ -192,10 +185,6 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
 
     # may reduce rank
     U, S, Vt = np.linalg.svd(M, full_matrices=True)
-
-    # U = backend.asarray(U)
-    # S = backend.asarray(S)
-    # Vt = backend.asarray(Vt)
 
     start = 0
     for rank in d_list:
@@ -210,74 +199,6 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
         feature_spaces.append(feature_space)
         start += rank
     return feature_spaces
-
-
-def orthogonal_feature_spaces(d_list, scalars, n_samples_train, n_samples_test, n_targets, noise_scalar,
-                              random_distribution):
-    """
-    Generate datasets with orthogonal feature spaces and target variables.
-
-    Parameters:
-    -----------
-    d_list : list of int
-        List specifying dimensions of the feature spaces.
-    scalars : list of float
-        Relative scalars for feature spaces, must sum to 1.
-    n_samples_train : int
-        Number of training samples in the dataset.
-    n_samples_test : int
-        Number of testing samples in the dataset.
-    n_targets : int
-        Number of target variables.
-    noise_scalar : float
-        Standard deviation of Gaussian noise added to targets.
-    random_distribution : str
-        Type of distribution for generating random values, e.g., 'normal'.
-
-    Returns:
-    --------
-    tuple
-        - Xs_train: list of ndarray, Training feature spaces.
-        - Xs_test: list of ndarray, Testing feature spaces.
-        - Y_train: ndarray, Training set target variables.
-        - Y_test: ndarray, Testing set target variables.
-    """
-
-    # generate feature spaces
-    feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
-    feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
-
-    # concatenate the first feature with all other feature spaces
-    # [0, 1], [0, 2], [0, 3], ...
-    Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
-    Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
-
-    Xs_train = [zscore(X) for X in Xs_train]
-    Xs_test = [zscore(X) for X in Xs_test]
-
-    # generate weights
-    betas = [create_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
-    betas = [zscore(beta) for beta in betas]
-
-    # generate targets
-    Y_train = sum(
-        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
-         zip(scalars, feature_spaces_train, betas)])
-    Y_test = sum(
-        [alpha * zscore(feature_space @ beta) for alpha, feature_space, beta in
-         zip(scalars, feature_spaces_test, betas)])
-
-    Y_train = zscore(Y_train)
-    Y_test = zscore(Y_test)
-
-    # add noise
-    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
-    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
-    Y_train += noise_train * noise_scalar
-    Y_test += noise_test * noise_scalar
-
-    return Xs_train, Xs_test, Y_train, Y_test
-
 
 def run_experiment(variable_name, variable_values, n_runs, n_observations, d_list, scalars, n_targets, n_samples_train,
                    n_samples_test, noise_scalar_level, construction_method, random_distribution, alphas, cv, use_ols):
@@ -391,22 +312,30 @@ def run_experiment(variable_name, variable_values, n_runs, n_observations, d_lis
 
 if __name__ == "__main__":
     from himalaya.ridge import GroupRidgeCV
-    from himalaya.backend import set_backend
+    from himalaya.backend import get_backend, set_backend
 
     set_backend("cupy")
+    backend = get_backend()
     d_list = [100, 100, 100]
     scalars = [0.6, 0.3, 0.1]
     n_targets = 1000
     n_samples_train = 10000
-    n_samples_test = 100
+    n_samples_test = 1000
     noise_scalar = 0.1
     random_distribution = "normal"
 
     (Xs_train, Xs_test, Y_train, Y_test) = generate_dataset(d_list, scalars, n_targets, n_samples_train,
-                                                            n_samples_test, noise_scalar, random_distribution, "stack",
+                                                            n_samples_test, noise_scalar, random_distribution, "orthogonal",
                                                             42)
 
+    # import matplotlib.pyplot as plt
+    # plt.plot(Xs_train[:][0], Y_train[:][0])
+    # plt.show()
+
+    Xs_train, Xs_test, Y_train, Y_test = [backend.to_numpy(X) for X in Xs_train], [backend.to_numpy(X) for X in Xs_test], backend.to_numpy(Y_train), backend.to_numpy(Y_test)
+
     from sklearn.metrics import r2_score
+    from sklearn.linear_model import LinearRegression
 
     model = LinearRegression()
     model.fit(Xs_train[0], Y_train)
