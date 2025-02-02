@@ -105,18 +105,21 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         train_predict = feature_model.predict(Xs_train[i_from])
         test_predict = feature_model.predict(Xs_test[i_from])
 
+        if not use_ols:
+            train_predict = backend.asarray(train_predict)
+            test_predict = backend.asarray(test_predict)
+
         # Compute residuals
         train_residual = Xs_train[i] - train_predict
         test_residual = Xs_test[i] - test_predict
 
-        # from matplotlib import pyplot as plt
         if use_ols:
             from himalaya.scoring import r2_score
             feature_score = r2_score(Xs_test[i], test_predict)
-            logger.debug(f"linear model coefficients: {feature_model.coef_}")
+            # logger.debug(f"linear model coefficients: {feature_model.coef_}")
         else:
             feature_score = feature_model.score(Xs_test[i], test_predict)
-            logger.debug(feature_model.best_alphas_)
+            # logger.debug(feature_model.best_alphas_)
         feature_scores.append(feature_score)
 
         # Train residual model
@@ -125,11 +128,9 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         residual_score = residual_model.score(test_residual, Y_test)
         residual_scores.append(residual_score)
 
-    # Handle feature modeling
-    if use_ols:
-        full_scores = list(map(backend.to_numpy, full_scores))
-        feature_scores = list(map(backend.to_numpy, feature_scores))
-        residual_scores = list(map(backend.to_numpy, residual_scores))
+    full_scores = list(map(backend.to_numpy, full_scores))
+    feature_scores = list(map(backend.to_numpy, feature_scores))
+    residual_scores = list(map(backend.to_numpy, residual_scores))
 
     return full_scores[0], full_scores[1], feature_scores[0], feature_scores[1], residual_scores[0], \
     residual_scores[1]
