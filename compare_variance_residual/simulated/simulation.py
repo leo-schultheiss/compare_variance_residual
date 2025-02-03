@@ -14,14 +14,14 @@ parameters. Includes:
 
 import numpy as np
 from himalaya.progress_bar import bar
-from himalaya.backend import get_backend, set_backend
+from himalaya.backend import get_backend
 from scipy.stats import zscore
 
 from compare_variance_residual.simulated.residual import residual_method
 from compare_variance_residual.simulated.variance_partitioning import variance_partitioning
 
 
-def create_random_distribution(shape, distribution) -> np.ndarray:
+def sample_random_distribution(shape, distribution) -> np.ndarray:
     """Create a random distribution.
 
     Parameters
@@ -55,7 +55,7 @@ def create_random_distribution(shape, distribution) -> np.ndarray:
 
 
 def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train=1000, n_samples_test=100,
-                     noise_scalar=0.1, random_distribution="normal", construction_method="orthogonal", random_state=42):
+                     noise_scalar=0.1, random_distribution="normal", construction_method="orthogonal", split_train_and_test=True, random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
 
@@ -70,18 +70,20 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
             A list specifying the dimensions of the feature spaces. Defaults to [100, 100, 100].
         scalars: list of float, optional
             A list indicating the relative scalars for each feature space. Must sum to 1. Defaults to [1/3, 1/3, 1/3].
-        n_targets: int
+        n_targets: int, optional
             The number of target variables in the dataset.
-        n_samples_train: int
+        n_samples_train: int, optional
             The number of samples in the training dataset.
-        n_samples_test: int
+        n_samples_test: int, optional
             The number of samples in the testing dataset.
-        noise_scalar: float
+        noise_scalar: float, optional
             The standard deviation of the Gaussian noise to be added to the targets.
-        random_distribution: str
+        random_distribution: str, optional
             The type of random distribution to use for generating target values. Defaults to "normal".
-        construction_method: str
+        construction_method: str, optional
             The method to use for constructing the feature spaces. Can be either "stack" or "svd". Defaults to "stack".
+        split_train_and_test: bool, optional
+            If train and test set should be created out of the
         random_state: int, optional
             Seed for the random number generator to ensure reproducibility. Defaults to None.
 
@@ -109,21 +111,37 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
 
     if construction_method == "stack":
         # generate feature spaces
-        feature_spaces_train = [zscore(create_random_distribution((n_samples_train, dim), random_distribution)) for dim in
-                                d_list]
-        feature_spaces_test = [zscore(create_random_distribution((n_samples_test, dim), random_distribution)) for dim in
-                               d_list]
+        if split_train_and_test:
+            # generate feature spaces
+            feature_spaces = [zscore(sample_random_distribution((n_samples_train + n_samples_test, dim), random_distribution)) for dim in
+                              d_list]
+
+            # split into train and test set
+            feature_spaces_train = [feature_space[:n_samples_train] for feature_space in feature_spaces]
+            feature_spaces_test = [feature_space[n_samples_train:] for feature_space in feature_spaces]
+        else:
+
+            feature_spaces_train = [zscore(sample_random_distribution((n_samples_train, dim), random_distribution)) for dim in
+                                    d_list]
+            feature_spaces_test = [zscore(sample_random_distribution((n_samples_test, dim), random_distribution)) for dim in
+                                   d_list]
+
+
         # concatenate the first feature with all other feature spaces
         # [0, 1], [0, 2], [0, 3], ...
         Xs_train = [np.hstack([feature_spaces_train[0], feature_space]) for feature_space in feature_spaces_train[1:]]
         Xs_test = [np.hstack([feature_spaces_test[0], feature_space]) for feature_space in feature_spaces_test[1:]]
 
         # generate weights
-        betas = [create_random_distribution([d, n_targets], "normal") for d in d_list]
+        betas = [sample_random_distribution([d, n_targets], "normal") for d in d_list]
     elif construction_method == "orthogonal":
-        feature_spaces = create_orthogonal_feature_spaces(n_samples_train + n_samples_test, d_list, random_distribution)
-        feature_spaces_train = [feature_space[:n_samples_train] for feature_space in feature_spaces]
-        feature_spaces_test = [feature_space[n_samples_train:] for feature_space in feature_spaces]
+        if split_train_and_test:
+            feature_spaces = create_orthogonal_feature_spaces(n_samples_train + n_samples_test, d_list, random_distribution)
+            feature_spaces_train = [feature_space[:n_samples_train] for feature_space in feature_spaces]
+            feature_spaces_test = [feature_space[n_samples_train:] for feature_space in feature_spaces]
+        else:
+            feature_spaces_train = create_orthogonal_feature_spaces(n_samples_train, d_list, random_distribution)
+            feature_spaces_test = create_orthogonal_feature_spaces(n_samples_test, d_list, random_distribution)
 
         # add the first feature with all other feature spaces
         # [0 + 1, 0 + 2, 0 + 3, ...]
@@ -131,7 +149,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         Xs_test = [feature_spaces_test[0] + feature_space for feature_space in feature_spaces_test[1:]]
 
         # generate weights
-        betas = [create_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
+        betas = [sample_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
 
@@ -149,8 +167,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
     Y_train = zscore(Y_train)
     Y_test = zscore(Y_test)
     # add noise
-    noise_train = zscore(create_random_distribution([n_samples_train, n_targets], "normal"))
-    noise_test = zscore(create_random_distribution([n_samples_test, n_targets], "normal"))
+    noise_train = zscore(sample_random_distribution([n_samples_train, n_targets], "normal"))
+    noise_test = zscore(sample_random_distribution([n_samples_test, n_targets], "normal"))
     Y_train += noise_train * noise_scalar
     Y_test += noise_test * noise_scalar
 
@@ -166,7 +184,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
 
 def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
     """
-    Generates three orthogonal feature spaces with increasing ranks.
+    Generates three orthogonal feature spaces with ranks specified by d_list.
 
     Parameters:
         num_samples (int): The number of dimensions for each feature space.
@@ -183,7 +201,7 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
     feature_spaces = []
 
     # Generate a random matrix of shape (dim, rank)
-    M = create_random_distribution((num_samples, sum(d_list)), random_distribution)
+    M = sample_random_distribution(shape=(num_samples, sum(d_list)), distribution=random_distribution)
     M = zscore(M)
 
     # may reduce rank
