@@ -4,3 +4,6 @@ scipy>=1.14.1
 himalaya>=0.4.6
 scikit-learn>=1.5.2
 matplotlib>=3.9.2
+seaborn~=0.13.2
+requests~=2.32.3
+array-api-compat
