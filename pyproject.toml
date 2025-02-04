@@ -6,7 +6,7 @@ authors = [
 ]
 description = "Code for the bachelor thesis of Leo Schultheiss"
 readme = "Readme.md"
-requires-python = "=3.8"
+requires-python = "=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: POSIX :: Linux",
