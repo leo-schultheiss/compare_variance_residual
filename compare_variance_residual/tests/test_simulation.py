@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from compare_variance_residual.simulated.simulation import create_orthogonal_feature_spaces
+from compare_variance_residual.simulation import create_orthogonal_feature_spaces
 
 
 class TestSimulationFunctions(unittest.TestCase):

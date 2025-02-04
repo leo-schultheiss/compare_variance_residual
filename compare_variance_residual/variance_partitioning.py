@@ -61,16 +61,16 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
     Y_pred = joint_model.predict(Xs_test)
     joint_score = score_func(Y_test, Y_pred)
     import matplotlib.pyplot as plt
-    plt.hist(backend.to_numpy(joint_model.best_alphas_))
-    plt.xlabel("alpha")
-    plt.ylabel("count")
-    plt.title(fr"$X_0\cup X_1$ best $\alpha$s")
-    plt.show()
-    plt.hist(backend.to_numpy(joint_model.coef_))
-    plt.xlabel("coefficient")
-    plt.ylabel("count")
-    plt.title(fr"$X_0\cup X_1$ coefficients")
-    plt.show()
+    # plt.hist(backend.to_numpy(joint_model.best_alphas_))
+    # plt.xlabel("alpha")
+    # plt.ylabel("count")
+    # plt.title(fr"$X_0\cup X_1$ best $\alpha$s")
+    # plt.show()
+    # plt.hist(backend.to_numpy(joint_model.coef_))
+    # plt.xlabel("coefficient")
+    # plt.ylabel("count")
+    # plt.title(fr"$X_0\cup X_1$ coefficients")
+    # plt.show()
 
     # train single models
     if use_ols:
@@ -88,17 +88,17 @@ def variance_partitioning(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace
         score = score_func(Y_test, Y_pred)
         scores.append(score)
 
-        if not use_ols:
-            plt.hist(backend.to_numpy(single_model.best_alphas_))
-            plt.xlabel("alpha")
-            plt.ylabel("count")
-            plt.title(fr"$X_{i}$ best $\alpha$s")
-            plt.show()
-        plt.hist(backend.to_numpy(single_model.coef_))
-        plt.xlabel("coefficient")
-        plt.ylabel("count")
-        plt.title(fr"$X_{i}$ coefficients")
-        plt.show()
+        # if not use_ols:
+        #     plt.hist(backend.to_numpy(single_model.best_alphas_))
+        #     plt.xlabel("alpha")
+        #     plt.ylabel("count")
+        #     plt.title(fr"$X_{i}$ best $\alpha$s")
+        #     plt.show()
+        # plt.hist(backend.to_numpy(single_model.coef_))
+        # plt.xlabel("coefficient")
+        # plt.ylabel("count")
+        # plt.title(fr"$X_{i}$ coefficients")
+        # plt.show()
 
     score_0, score_1 = scores
 
