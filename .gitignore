@@ -1,7 +1,5 @@
 /venv/
 /.idea/
-/data/
-/cache/
 /build/
 /dist/
 *.egg-info/
