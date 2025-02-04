@@ -16,8 +16,6 @@ keywords = ["statistics", "variance partitioning"]
 
 dependencies = [
     "requests>=2.32.3",
-    "tqdm>=4.66.5",
-    "transformers>=4.45.2",
     "pandas>=2.2.3",
     "numpy>=2.1.2",
     "scipy>=1.14.1",
