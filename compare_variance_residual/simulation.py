@@ -81,7 +81,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         random_distribution: str, optional
             The type of random distribution to use for generating target values. Defaults to "normal".
         construction_method: str, optional
-            The method to use for constructing the feature spaces. Can be either "stack" or "svd". Defaults to "stack".
+            The method to use for constructing the feature spaces. Can be either "random" or "svd". Defaults to "random".
         split_train_and_test: bool, optional
             If train and test set should be created out of the
         random_state: int, optional
@@ -109,7 +109,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
     if scalars is None:
         scalars = [1 / 3] * 3
 
-    if construction_method == "stack":
+    if construction_method == "random":
         # generate feature spaces
         if split_train_and_test:
             # generate feature spaces
