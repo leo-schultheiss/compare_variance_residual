@@ -2,8 +2,7 @@ import logging
 
 import himalaya.backend
 import numpy as np
-from himalaya.ridge import RidgeCV
-from sklearn.linear_model import LinearRegression
+from himalaya.ridge import RidgeCV, Ridge
 
 
 def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4, 9), cv=10, use_ols=False,
@@ -91,7 +90,7 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
     if use_ols:
         Xs_train = list(map(backend.to_numpy, Xs_train))
         Xs_test = list(map(backend.to_numpy, Xs_test))
-        feature_model = LinearRegression()
+        feature_model = Ridge(alpha=1, solver_params=solver_params)
     else:
         feature_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
@@ -104,23 +103,15 @@ def residual_method(Xs_train, Xs_test, Y_train, Y_test, alphas=np.logspace(-4, 4
         feature_model.fit(Xs_train[i_from], Xs_train[i])
         train_predict = feature_model.predict(Xs_train[i_from])
         test_predict = feature_model.predict(Xs_test[i_from])
+        train_predict = backend.asarray(train_predict)
+        test_predict = backend.asarray(test_predict)
 
-        if not use_ols:
-            train_predict = backend.asarray(train_predict)
-            test_predict = backend.asarray(test_predict)
+        feature_score = feature_model.score(Xs_test[i], test_predict)
+        feature_scores.append(feature_score)
 
         # Compute residuals
         train_residual = Xs_train[i] - train_predict
         test_residual = Xs_test[i] - test_predict
-
-        if use_ols:
-            from himalaya.scoring import r2_score
-            feature_score = r2_score(Xs_test[i], test_predict)
-            # logger.debug(f"linear model coefficients: {feature_model.coef_}")
-        else:
-            feature_score = feature_model.score(Xs_test[i], test_predict)
-            # logger.debug(feature_model.best_alphas_)
-        feature_scores.append(feature_score)
 
         # Train residual model
         residual_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
