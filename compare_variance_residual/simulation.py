@@ -149,8 +149,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
 
         # add the first feature with all other feature spaces
         # [0 + 1, 0 + 2, 0 + 3, ...]
-        Xs_train = [1/2 * (feature_spaces_train[0] + feature_space) for feature_space in feature_spaces_train[1:]]
-        Xs_test = [1/2 * (feature_spaces_test[0] + feature_space) for feature_space in feature_spaces_test[1:]]
+        Xs_train = [1 / 2 * (feature_spaces_train[0] + feature_space) for feature_space in feature_spaces_train[1:]]
+        Xs_test = [1 / 2 * (feature_spaces_test[0] + feature_space) for feature_space in feature_spaces_test[1:]]
 
         # generate weights
         betas = [sample_random_distribution([sum(d_list), n_targets], "normal") for _ in d_list]
