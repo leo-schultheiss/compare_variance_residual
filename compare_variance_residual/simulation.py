@@ -54,7 +54,7 @@ def sample_random_distribution(shape, distribution) -> np.ndarray:
 
 
 def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train=1000, n_samples_test=100,
-                     noise_scalar=0.1, random_distribution="normal", construction_method="orthogonal",
+                     noise_scalar=0.1, random_distribution="normal", construction_method="orthogonal", shuffle=True,
                      split_train_and_test=True, random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
@@ -82,6 +82,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
             The type of random distribution to use for generating target values. Defaults to "normal".
         construction_method: str, optional
             The method to use for constructing the feature spaces. Can be either "random" or "svd". Defaults to "random".
+        shuffle: bool, optional
+            Whether or not to shuffle indices for orthogonal feature spaces. Defaults to True.
         split_train_and_test: bool, optional
             If train and test set should be created out of the
         random_state: int, optional
@@ -114,7 +116,8 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         if split_train_and_test:
             # generate feature spaces
             feature_spaces = [
-                zscore(sample_random_distribution((n_samples_train + n_samples_test, dim), random_distribution)) for dim
+                zscore(sample_random_distribution((n_samples_train + n_samples_test, dim), random_distribution), axis=0)
+                for dim
                 in
                 d_list]
 
@@ -139,7 +142,7 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
         betas = [sample_random_distribution([d, n_targets], "normal") for d in d_list]
     elif construction_method == "orthogonal":
         if split_train_and_test:
-            feature_spaces = create_orthogonal_feature_spaces(n_samples_train + n_samples_test, d_list,
+            feature_spaces = create_orthogonal_feature_spaces(n_samples_train + n_samples_test, d_list, shuffle,
                                                               random_distribution)
             feature_spaces_train = [feature_space[:n_samples_train] for feature_space in feature_spaces]
             feature_spaces_test = [feature_space[n_samples_train:] for feature_space in feature_spaces]
@@ -188,20 +191,44 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples_train
     return Xs_train, Xs_test, Y_train, Y_test
 
 
-def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="normal"):
+def create_orthogonal_feature_spaces(num_samples, d_list, shuffle=True, random_distribution="normal"):
     """
-    Generates three orthogonal feature spaces with ranks specified by d_list.
+        Creates a set of orthogonal feature spaces from a random matrix using Singular Value
+        Decomposition (SVD). The function ensures the output feature spaces are mutually
+        orthogonal and have dimensions specified by the input rank list.
 
-    Parameters:
-        num_samples (int): The number of dimensions for each feature space.
-        d_list (list): A list containing rank/dimension for each feature space.
+        The input matrix is generated using a specified random distribution, normalized
+        using z-score normalization, and processed using SVD. The singular values
+        are optionally shuffled to allow for randomness in how the orthogonal spaces
+        are constructed.
 
-    Returns:
-        list: A list of numpy arrays representing orthogonal feature spaces.
+        Parameters:
+            num_samples: int
+                The number of samples (rows) in the generated feature spaces. Must be
+                greater than the sum of ranks specified in the rank list.
+            d_list: list[int]
+                A list defining the ranks (columns) for each orthogonal feature space.
+                The sum of all ranks should not exceed the number of samples.
+            shuffle: bool, optional
+                Whether to shuffle the singular values after SVD decomposition. This
+                can introduce randomness in the distribution of singular values.
+                Default is True.
+            random_distribution: str, optional
+                The type of random distribution to use for generating the input
+                matrix. Options include "normal" or any other supported distribution.
+                Default is "normal".
+
+        Returns:
+            list[np.ndarray]
+                A list of orthogonal feature spaces, each being a numpy array of
+                shape (num_samples, rank) corresponding to the ranks defined in
+                the input `d_list`.
+
+        Raises:
+            AssertionError
+                If `num_samples` is not greater than the sum of ranks in `d_list`.
     """
     assert num_samples > sum(d_list), "Number of samples must be greater than the sum of ranks."
-
-    # backend = get_backend()
 
     feature_spaces = []
 
@@ -209,8 +236,15 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
     M = sample_random_distribution(shape=(num_samples, sum(d_list)), distribution=random_distribution)
     M = zscore(M)
 
-    # may reduce rank
-    U, S, Vt = np.linalg.svd(M, full_matrices=True)
+    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+
+    if shuffle:  # since S is sorted in descending order, it might make sense to shuffle
+        import random
+        index_shuffle = list(range(U.shape[1]))
+        random.shuffle(index_shuffle)
+        U = U[:, index_shuffle]
+        S = S[index_shuffle]
+        Vt = Vt[index_shuffle, :]
 
     start = 0
     for rank in d_list:
@@ -219,7 +253,6 @@ def create_orthogonal_feature_spaces(num_samples, d_list, random_distribution="n
 
         # create rectangular diagonal sigma matrix
         diag_S = np.diag(_S)
-        diag_S = np.pad(diag_S, ((0, U.shape[0] - diag_S.shape[0]), (0, Vt.shape[0] - diag_S.shape[1])))
 
         feature_space = U @ diag_S @ Vt
         feature_spaces.append(feature_space)
