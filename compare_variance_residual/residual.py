@@ -1,12 +1,10 @@
-import logging
-
 import himalaya.backend
 import numpy as np
 from himalaya.ridge import RidgeCV, Ridge
 
 
 def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10, use_ols=False,
-                    score_func=himalaya.scoring.r2_score, logger=None):
+                    score_func=himalaya.scoring.r2_score):
     """
     Compute performance scores for models using residual-based feature extraction.
 
@@ -27,8 +25,6 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
             regression instead of RidgeCV for feature modeling. Defaults to False.
         score_func (Optional[callable]): Function to compute a performance score
             between predictions and true targets. Defaults to himalaya.scoring.r2_score.
-        logger (Optional[logging.Logger]): Logger instance for debugging. If None,
-            a default logger is created. Defaults to None.
 
     Returns:
         tuple: Contains the following six scores in order:
@@ -39,10 +35,6 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
             - Residual score for the first feature space
             - Residual score for the second feature space
     """
-    if logger is None:
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)
-
     backend = himalaya.backend.get_backend()
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
 
