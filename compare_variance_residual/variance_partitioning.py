@@ -6,8 +6,7 @@ from himalaya.ridge import RidgeCV, GroupRidgeCV, Ridge
 
 
 def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=50,
-                          score_func=himalaya.scoring.r2_score,
-                          use_ols=False, logger=None) -> tuple:
+                          score_func=himalaya.scoring.r2_score, use_ols=False) -> tuple:
     """
         Calculate the shared and unique variance contributions of inputs to an output.
 
@@ -33,9 +32,6 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
             The scoring function to evaluate predictions (default is himalaya.scoring.r2_score).
         use_ols: bool, optional
             Whether to use ordinary least squares instead of group ridge regression (default is False).
-        logger: logging.Logger, optional
-            A logger instance for controlling logging behavior. If None, a default logger is
-            initialized with logging level DEBUG.
 
         Returns:
         tuple
@@ -47,11 +43,6 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
             - x0_unique: Unique variance contribution of the first input group.
             - x1_unique: Unique variance contribution of the second input group.
     """
-    # Set default logger if not provided
-    if logger is None:
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
-
     from himalaya.backend import get_backend
     backend = get_backend()
 
