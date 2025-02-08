@@ -201,13 +201,8 @@ def create_orthogonal_feature_spaces(num_samples, d_list, shuffle=True, random_d
 
     U, S, Vt = np.linalg.svd(M, full_matrices=False)
 
-    if shuffle:  # since S is sorted in descending order, it might make sense to shuffle
-        import random
-        index_shuffle = list(range(U.shape[1]))
-        random.shuffle(index_shuffle)
-        U = U[:, index_shuffle]
-        S = S[index_shuffle]
-        Vt = Vt[index_shuffle, :]
+    # normalize S
+    S = np.ones_like(S)
 
     start = 0
     for rank in d_list:
