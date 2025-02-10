@@ -136,12 +136,12 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=1000,
     betas = [zscore(beta) for beta in betas]
 
     # generate target
-    Y = sum([(alpha ** 0.5) * zscore(feature_space @ beta) for alpha, feature_space, beta in
+    Y = sum([(alpha ** 0.5) * zscore(np.dot(feature_space, beta)) for alpha, feature_space, beta in
              zip(scalars, feature_spaces, betas)])
     Y = zscore(Y)
     # add noise
     noise = zscore(sample_random_distribution([n_samples, n_targets], "normal"))
-    Y += noise * noise_scalar
+    Y += noise * (noise_scalar ** 0.5)
     Y = zscore(Y)
 
     from himalaya.backend import get_backend
