@@ -46,10 +46,10 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
     from himalaya.backend import get_backend
     backend = get_backend()
 
-    solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func,
+    joint_solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func,
                          n_targets_batch=1000)
     # train joint model
-    joint_model = GroupRidgeCV(groups="input", solver_params=solver_params)
+    joint_model = GroupRidgeCV(groups="input", solver_params=joint_solver_params)
 
     joint_model.fit([x[:n_samples_train] for x in Xs], Y[:n_samples_train])
     joint_score = joint_model.score([x[n_samples_train:] for x in Xs], Y[n_samples_train:])
