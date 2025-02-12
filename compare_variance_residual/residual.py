@@ -4,7 +4,7 @@ from himalaya.ridge import RidgeCV, Ridge
 
 
 def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10, use_ols=False,
-                    score_func=himalaya.scoring.r2_score):
+                    score_func=himalaya.scoring.r2_score, full_scores=False):
     """
     Compute performance scores for models using residual-based feature extraction.
 
@@ -39,13 +39,16 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
 
     full_scores = []
+    if full_scores:
 
-    # compute on full feature sets for comparison
-    for i in range(len(Xs)):
-        full_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-        full_model.fit(Xs[i][:n_samples_train], Y[:n_samples_train])
-        full_score = full_model.score(Xs[i][n_samples_train:], Y[n_samples_train:])
-        full_scores.append(full_score)
+        # compute on full feature sets for comparison
+        for i in range(len(Xs)):
+            full_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
+            full_model.fit(Xs[i][:n_samples_train], Y[:n_samples_train])
+            full_score = full_model.score(Xs[i][n_samples_train:], Y[n_samples_train:])
+            full_scores.append(full_score)
+    else:
+        full_scores = [np.nan, np.nan]
 
     # Handle feature modeling
     if use_ols:
