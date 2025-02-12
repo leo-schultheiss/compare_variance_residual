@@ -1,9 +1,12 @@
 import os
 
 import numpy as np
+import seaborn as sns
 from matplotlib import pyplot as plt
 
 PLOT_HEIGHT = 6
+
+plt.style.use('nord')
 
 
 def normalize_to_unit_interval(array):
@@ -286,6 +289,129 @@ def plot_experiment(variable_name, variable_values, results, names,
              x_is_log=x_is_log, save_dir=save_dir, **kwargs)
     # plot_prediction_scatter(variable_name, variable_values, results, names,
     #                         save_dir=save_dir, **kwargs)
+
+
+def plot_variance_partitioning_results(scalars, scores):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.barplot(
+        data=scores,
+        palette=["C0", "C0", "C0", "C0", "C1", "C1"],  # Define colors: one for joint/X₁/X₂, one for unique/shared
+        ax=ax
+    )
+    sns.despine(fig)
+    theoretical_scores = [sum(scalars), scalars[0] + scalars[1], scalars[0] + scalars[2], scalars[0], scalars[1],
+                          scalars[2]]
+
+    # Add lines indicating the maximum possible height for each bar
+    for idx, column in enumerate(scores.columns):  # iterate over rows in the DataFrame
+        xmin = idx / len(scores.columns)  # Calculate xmin for each bar
+        xmax = (idx + 1) / len(scores.columns)  # Calculate xmax for each bar
+        plt.axhline(theoretical_scores[idx], linestyle='--', alpha=0.7,
+                    xmin=xmin, xmax=xmax, label=fr'Theoretically Explained Variance' if idx == 0 else "")
+
+        plt.text(idx, scores[column].mean() / 2,
+                 f"{scores[column].mean():.2f}", ha='center', va='bottom')
+
+    plt.xticks(range(len(scores.columns)), scores.columns, rotation=45)
+
+    plt.ylim(0, 1.05)
+
+    # Ensure the legend is displayed properly
+    # plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.ylabel(r"Variance Explained (avg. $R^2$ across targets)")
+    plt.xlabel(r"Ridge Regression / Variance Partitioning")
+    plt.title("Variance Partitioning")
+    return fig, ax
+
+
+def plot_residual_method_results(scalars, d_list, scores):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.barplot(
+        data=scores,
+        ax=ax,
+        palette=["C0", "C0", "C0", "C0", "C1", "C1"]
+    )
+
+    sns.despine()
+
+    # Add lines indicating the maximum possible height for each bar
+    theoretical_scores = [
+        scalars[0] + scalars[1],
+        scalars[0] + scalars[2],
+        d_list[0] / (d_list[0] + d_list[1]),
+        d_list[0] / (d_list[0] + d_list[2]),
+        scalars[1],
+        scalars[2],
+    ]
+
+    for idx, column in enumerate(scores.columns):  # iterate over rows in the DataFrame
+        # Ensure index compatibility
+        if column not in scores:
+            print(f"Column '{column}' is not present in DataFrame. Available columns are: {list(scores.columns)}")
+            continue
+
+        xmin = idx / len(scores.columns)  # Calculate xmin for each bar
+        xmax = (idx + 1) / len(scores.columns)  # Calculate xmax for each bar
+        plt.axhline(theoretical_scores[idx], linestyle='--', alpha=0.7, xmin=xmin, xmax=xmax,
+                    label='Theoretically Explained Variance' if idx == 0 else "")
+
+        # Use the mean of the column for positioning text
+        mean_column_value = scores[column].mean()
+        plt.text(idx, mean_column_value / 2,
+                 f"{mean_column_value:.2f}", ha='center', va='center')
+
+    # make xtickmarks diagonal
+    plt.xticks(range(len(scores.columns)), scores.columns, rotation=45)
+
+    plt.ylim(0, 1)
+
+    # Ensure the legend is displayed properly
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.ylabel(r"Variance Explained (avg. $R^2$ across targets)")
+    plt.xlabel("Ridge Regression / Residual Method")
+    plt.title("Residual Method")
+    return fig, ax
+
+
+def plot_variance_vs_residual_joint(scalars, error_data):
+    fig = plt.figure(figsize=(20, 10))
+
+    range_min = min(error_data["VP Error"].min(), error_data["Residual Error"].min())
+    range_max = max(error_data["VP Error"].max(), error_data["Residual Error"].max())
+    # add 5% padding
+    range_min -= 0.1 * abs(range_min)
+    range_max += 0.1 * abs(range_max)
+
+    sns.jointplot(
+        data=error_data,
+        x="VP Error",  # Variance Partitioning Error
+        y="Residual Error",  # Residual Method Error
+        hue="Feature Space",
+        alpha=0.8,
+        kind="scatter",
+        xlim=(range_min, range_max),
+        ylim=(range_min, range_max),
+    )
+
+    # make x and y tick labels black
+    plt.tick_params(axis="both", which="major", labelcolor="black")
+
+    # draw 0 lines
+    plt.axhline(0, color="black", linestyle="-")
+    plt.axvline(0, color="black", linestyle="-")
+
+    # plot x=y line
+    plt.plot([-1, 1], [-1, 1], linestyle="--", label="y=x")
+
+    plt.legend()
+    plt.suptitle(r"Estimated Unique Contribution per Target ($R^2$)", y=1.05)
+    plt.title(rf"$a_\mathbf{{A}}={scalars[0]:.2f}, a_\mathbf{{B}}={scalars[1]:.2f}, a_\mathbf{{C}}={scalars[2]:.2f}$",
+              y=1.2)
+    plt.xlabel("Variance Partitioning Error")
+    plt.ylabel("Residual Method Error")
+    plt.show()
 
 
 if __name__ == '__main__':
