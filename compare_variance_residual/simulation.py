@@ -16,7 +16,7 @@ import numpy as np
 from scipy.stats import zscore
 
 
-def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=1000, noise_target=0.1, noise_features=0.01,
+def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0.01,
                      construction_method="orthogonal", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
@@ -37,11 +37,13 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=1000,
         n_samples: int, optional
             The number of samples (rows) in the dataset.
         noise_target: float, optional
-            The standard deviation of the Gaussian noise to be added to the targets.
+            The standard deviation of the Gaussian noise to be added to the targets. Defaults to 0.1.
+        noise_features: float, optional
+            The standard deviation of the Gaussian noise to be added to the features. Defaults to 0.01.
         construction_method: str, optional
-            The method to use for constructing the feature spaces. Can be either "random" or "svd". Defaults to "random".
+            The method to use for constructing the feature spaces. Can be either "orthogonal" or "random". Defaults to "orthogonal".
         random_state: int, optional
-            Seed for the random number generator to ensure reproducibility. Defaults to None.
+            Seed for the random number generator to ensure reproducibility. Defaults to 42.
 
     Returns:
         tuple:
