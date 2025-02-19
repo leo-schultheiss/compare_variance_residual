@@ -47,7 +47,7 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
     backend = get_backend()
 
     joint_solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func,
-                         n_targets_batch=1000)
+                         n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
     # train joint model
     joint_model = GroupRidgeCV(groups="input", solver_params=joint_solver_params)
 
