@@ -5,7 +5,7 @@ import numpy as np
 from himalaya.ridge import RidgeCV, GroupRidgeCV, Ridge
 
 
-def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=50,
+def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
                           score_func=himalaya.scoring.r2_score, use_ols=False) -> tuple:
     """
         Calculate the shared and unique variance contributions of inputs to an output.
@@ -27,7 +27,7 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
             Regularization parameter/values for RidgeCV. The default value is a logarithmic
             scale from 10^-4 to 10^4.
         cv: int, optional
-            Number of cross-validation folds for RidgeCV (default is 50).
+            Number of cross-validation folds for RidgeCV (default is 5).
         score_func: callable, optional
             The scoring function to evaluate predictions (default is himalaya.scoring.r2_score).
         use_ols: bool, optional
