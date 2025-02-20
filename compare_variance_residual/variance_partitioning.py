@@ -56,10 +56,10 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), 
 
     # train single models
     if use_ols:
-        solver_params = dict(warn=False, n_targets_batch=1000)
+        solver_params = dict(warn=False, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
         single_model = Ridge(alpha=1.0, solver_params=solver_params)
     else:
-        solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
+        solver_params = dict(warn=False, score_func=score_func, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
         single_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
     scores = []

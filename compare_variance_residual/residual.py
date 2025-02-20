@@ -36,7 +36,7 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
             - Residual score for the second feature space
     """
     backend = himalaya.backend.get_backend()
-    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=1000)
+    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
 
     full_scores = []
     if return_full_scores:
@@ -51,7 +51,7 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
 
     # Handle feature modeling
     if use_ols:
-        feature_model = Ridge(alpha=1, solver_params=dict(warn=False, n_targets_batch=1000))
+        feature_model = Ridge(alpha=1, solver_params=dict(warn=False, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2))
     else:
         feature_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
