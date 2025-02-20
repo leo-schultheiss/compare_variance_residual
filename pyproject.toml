@@ -22,6 +22,8 @@ dependencies = [
     "himalaya>=0.4.6",
     "scikit-learn>=1.5.2",
     "matplotlib>=3.9.2",
+    "simplstyles",
+    "seaborn"
 ]
 
 [project.optional-dependencies]
