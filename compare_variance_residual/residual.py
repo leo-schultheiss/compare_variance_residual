@@ -3,7 +3,7 @@ import numpy as np
 from himalaya.ridge import RidgeCV, Ridge
 
 
-def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10, use_ols=True,
+def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5, use_ols=True,
                     score_func=himalaya.scoring.r2_score, return_full_scores=False):
     """
     Compute performance scores for models using residual-based feature extraction.
@@ -19,8 +19,8 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-4, 4, 9), cv=10,
         Y (ndarray): Target matrix of shape (n_samples, n_targets).
         n_samples_train (int): Number of samples to use for training.
         alphas (Optional[ndarray]): Array of regularization parameter values
-            to explore for Ridge regression. Defaults to np.logspace(-4, 4, 9).
-        cv (Optional[int]): Number of cross-validation folds. Defaults to 10.
+            to explore for Ridge regression. Defaults to np.logspace(-5, 5, 10).
+        cv (Optional[int]): Number of cross-validation folds. Defaults to 5.
         use_ols (Optional[bool]): If True, use Ordinary Least Squares (OLS)
             regression instead of RidgeCV for feature modeling. Defaults to False.
         score_func (Optional[callable]): Function to compute a performance score
