@@ -23,7 +23,9 @@ dependencies = [
     "scikit-learn>=1.5.2",
     "matplotlib>=3.9.2",
     "simplstyles",
-    "seaborn"
+    "seaborn",
+    "pyvenny",
+    "array-api-compat",
 ]
 
 [project.optional-dependencies]
