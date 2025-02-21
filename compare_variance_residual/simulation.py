@@ -11,9 +11,14 @@ parameters. Includes:
   (`run_experiment`)
 - Utility functions for feature space stacking and orthogonalization
 """
+import os
 
 import numpy as np
+import pandas as pd
 from scipy.stats import zscore
+
+from compare_variance_residual.residual import residual_method
+from compare_variance_residual.variance_partitioning import variance_partitioning
 
 
 def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0.01,
@@ -235,3 +240,40 @@ if __name__ == "__main__":
     # check if Ys are demeaned
     assert np.allclose(Y_train.mean(0), 0, atol=noise_scalar)
     assert np.allclose(Y_test.mean(0), 0, atol=noise_scalar)
+
+
+def save_scores(path, samples_train, d_list, scalars, n_targets, n_samples_test, noise_target, cv, alphas):
+    for n_samples_train in samples_train:
+        print(n_samples_train)
+        csv_path = os.path.join(path, f"scores_{n_samples_train}.csv")
+        scores = pd.DataFrame()
+        if os.path.exists(csv_path):
+            print("skipping, already exists")
+            continue
+        Xs, Y = generate_dataset(d_list, scalars, n_targets, n_samples_train + n_samples_test, noise_target)
+        print("data generated")
+        x1_score, x2_score, joint_score, x1_and_x2_score, vp_x1_unique_score, vp_x2_unique_score = variance_partitioning(
+            Xs, Y, n_samples_train, alphas, cv)
+        print("variance partitioning done")
+
+        scores["x1_score"] = x1_score
+        scores["x2_score"] = x2_score
+        scores["vp_joint_score"] = joint_score
+        scores["vp_shared_score"] = x1_and_x2_score
+        scores["vp_x1_unique_score"] = vp_x1_unique_score
+        scores["vp_x2_unique_score"] = vp_x2_unique_score
+        del x1_score, x2_score, joint_score, x1_and_x2_score, vp_x1_unique_score, vp_x2_unique_score
+
+        _, _, x2_to_x1_score, x1_to_x2_score, rm_x1_unique_score, rm_x2_unique_score = residual_method(
+            Xs, Y, n_samples_train, alphas, cv)
+        print("residual method done")
+        scores["rm_x2_to_x1_score"] = np.concatenate(
+            [x2_to_x1_score, np.full(len(rm_x1_unique_score) - len(x2_to_x1_score), np.nan)])
+        scores["rm_x1_to_x2_score"] = np.concatenate(
+            [x1_to_x2_score, np.full(len(rm_x1_unique_score) - len(x1_to_x2_score), np.nan)])
+        scores["rm_x1_unique_score"] = rm_x1_unique_score
+        scores["rm_x2_unique_score"] = rm_x2_unique_score
+        print(scores.head())
+        del x2_to_x1_score, x1_to_x2_score, rm_x1_unique_score, rm_x2_unique_score
+        del Xs, Y
+        scores.to_csv(csv_path, index=False)
