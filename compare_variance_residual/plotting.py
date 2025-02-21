@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 PLOT_HEIGHT = 6
 
-plt.style.use('nord')
+plt.style.use('nord-light-talk')
 
 
 def normalize_to_unit_interval(array):
