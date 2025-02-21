@@ -4,36 +4,28 @@ from himalaya.ridge import RidgeCV, Ridge
 
 
 def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5, use_ols=True,
-                    score_func=himalaya.scoring.r2_score, n_targets_batch=100, n_alphas_batch=5):
+                    score_func=himalaya.scoring.r2_score, n_targets_batch=100, n_alphas_batch=None):
     """
-    Compute performance scores for models using residual-based feature extraction.
+    Compute scores using the residual method.
 
-    This function calculates the full model scores, feature modeling scores,
-    and residual-based scores for datasets represented by multiple feature spaces.
-    Residual modeling allows extracting unique contributions from individual
-    feature spaces by iteratively predicting and removing shared information.
-
-    Parameters:
-        Xs (list of ndarray): A list of feature matrices. Each ndarray represents
-            a feature space with dimensions (n_samples, n_features).
-        Y (ndarray): Target matrix of shape (n_samples, n_targets).
-        n_samples_train (int): Number of samples to use for training.
-        alphas (Optional[ndarray]): Array of regularization parameter values
-            to explore for Ridge regression. Defaults to np.logspace(-5, 5, 10).
-        cv (Optional[int]): Number of cross-validation folds. Defaults to 5.
-        use_ols (Optional[bool]): If True, use Ordinary Least Squares (OLS)
-            regression instead of RidgeCV for feature modeling. Defaults to False.
-        score_func (Optional[callable]): Function to compute a performance score
-            between predictions and true targets. Defaults to himalaya.scoring.r2_score.
-
-    Returns:
-        tuple: Contains the following six scores in order:
-            - Full score for the first feature space
-            - Full score for the second feature space
-            - Feature modeling score for the first feature space
-            - Feature modeling score for the second feature space
-            - Residual score for the first feature space
-            - Residual score for the second feature space
+    Parameters
+    ----------
+    Xs : list of ndarray
+        List of feature spaces.
+    Y : ndarray
+        Target variable.
+    n_samples_train : int
+        Number of training samples.
+    alphas : ndarray, optional
+    cv : int, optional
+        Number of cross-validation folds.
+    use_ols : bool, optional
+        Whether to use ordinary least squares or ridge regression in cross-feature prediction.
+    score_func : callable, optional
+        Scoring function.
+    n_targets_batch : int, optional
+        Number of targets to process in parallel.
+    n_alphas_batch : int, optional
     """
     backend = himalaya.backend.get_backend()
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=n_targets_batch,
