@@ -10,3 +10,6 @@ array-api-compat
 simplstyles
 pyvenny
 voxelwise-tutorials
+torch
+torchvision
+transformers
