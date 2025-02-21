@@ -1,8 +1,8 @@
 import os.path
 
 import numpy as np
-from himalaya.ridge import ColumnTransformerNoStack
 from ridge_utils.util import make_delayed
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from voxelwise_tutorials.delayer import Delayer
 
@@ -21,16 +21,14 @@ def train_low_level_model(data_dir: str, subject_num: int, modality: str, low_le
     :param number_of_delays: int, number of delays to use
     """
     Rstim, Pstim = load_z_low_level_feature(data_dir, low_level_feature)
-    print(f"Rstim shape: {Rstim.shape}\nPstim shape: {Pstim.shape}")
     Rresp, Presp = load_subject_fmri(data_dir, subject_num, modality)
-    print(f"Rresp shape: {Rresp.shape}\nPresp shape: {Presp.shape}")
 
     # delay stimuli to account for hemodynamic lag
     delays = range(1, number_of_delays + 1)
+    ct = ColumnTransformer([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
 
     # fit bootstrapped ridge regression model
-    ct = ColumnTransformerNoStack([("low_level", Delayer(delays), slice(0, Rstim.shape[1] - 1))])
-    wt, corrs, alphas, all_corrs, ind = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
+    corrs, coef, alphas = bootstrap_ridge(Rstim, Rresp, Pstim, Presp, ct)
 
     # save voxelwise correlations and predictions
     output_file = get_prediction_path(language_model=None, feature="low-level", modality=modality, subject=subject_num,
