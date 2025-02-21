@@ -6,7 +6,8 @@ from himalaya.ridge import RidgeCV, GroupRidgeCV, Ridge
 
 
 def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
-                          score_func=himalaya.scoring.r2_score, use_ols=False) -> tuple:
+                          score_func=himalaya.scoring.r2_score, use_ols=False, n_iter=10, n_targets_batch=50,
+                          n_targets_batch_refit=50, n_alphas_batch=1) -> tuple:
     """
         Calculate the shared and unique variance contributions of inputs to an output.
 
@@ -32,6 +33,14 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10),
             The scoring function to evaluate predictions (default is himalaya.scoring.r2_score).
         use_ols: bool, optional
             Whether to use ordinary least squares instead of group ridge regression (default is False).
+        n_iter: int, optional
+            Number of iterations for the joint model (default is 10).
+        n_targets_batch: int, optional
+            Number of targets to process in parallel (default is 50).
+        n_targets_batch_refit: int, optional
+            Number of targets to process in parallel during refitting (default is 50).
+        n_alphas_batch: int, optional
+            Number of alphas to process in parallel (default is 1).
 
         Returns:
         tuple
@@ -46,8 +55,9 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10),
     from himalaya.backend import get_backend
     backend = get_backend()
 
-    joint_solver_params = dict(n_iter=10, alphas=alphas, progress_bar=False, warn=False, score_func=score_func,
-                         n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
+    joint_solver_params = dict(n_iter=n_iter, alphas=alphas, progress_bar=False, warn=False, score_func=score_func,
+                               n_targets_batch=n_targets_batch, n_targets_batch_refit=n_targets_batch_refit,
+                               n_alphas_batch=n_alphas_batch)
     # train joint model
     joint_model = GroupRidgeCV(groups="input", solver_params=joint_solver_params)
 
@@ -56,10 +66,11 @@ def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10),
 
     # train single models
     if use_ols:
-        solver_params = dict(warn=False, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=2)
+        solver_params = dict(warn=False, n_targets_batch=n_targets_batch)
         single_model = Ridge(alpha=1.0, solver_params=solver_params)
     else:
-        solver_params = dict(warn=False, score_func=score_func, n_targets_batch=100, n_targets_batch_refit=100, n_alphas_batch=1)
+        solver_params = dict(warn=False, score_func=score_func, n_targets_batch=n_targets_batch,
+                             n_targets_batch_refit=n_targets_batch_refit, n_alphas_batch=n_alphas_batch)
         single_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
     scores = []
