@@ -26,7 +26,10 @@ dependencies = [
     "seaborn",
     "pyvenny",
     "array-api-compat",
-    "voxelwise-tutorials"
+    "voxelwise-tutorials",
+    "torch",
+    "torchvision",
+    "transformers",
 ]
 
 [project.optional-dependencies]
