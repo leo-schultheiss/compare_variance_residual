@@ -4,7 +4,7 @@ from himalaya.ridge import RidgeCV, Ridge
 
 
 def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5, use_ols=True,
-                    score_func=himalaya.scoring.r2_score, return_full_scores=False):
+                    score_func=himalaya.scoring.r2_score, n_targets_batch=100, n_alphas_batch=5):
     """
     Compute performance scores for models using residual-based feature extraction.
 
@@ -36,22 +36,12 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
             - Residual score for the second feature space
     """
     backend = himalaya.backend.get_backend()
-    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=100, n_alphas_batch=5)
-
-    full_scores = []
-    if return_full_scores:
-        # compute on full feature sets for comparison
-        for i in range(len(Xs)):
-            full_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-            full_model.fit(Xs[i][:n_samples_train], Y[:n_samples_train])
-            full_score = full_model.score(Xs[i][n_samples_train:], Y[n_samples_train:])
-            full_scores.append(full_score)
-    else:
-        full_scores = [np.nan, np.nan]
+    solver_params = dict(warn=False, score_func=score_func, n_targets_batch=n_targets_batch,
+                         n_alphas_batch=n_alphas_batch)
 
     # Handle feature modeling
     if use_ols:
-        feature_model = Ridge(alpha=1, solver_params=dict(warn=False, n_targets_batch=100))
+        feature_model = Ridge(alpha=1, solver_params=dict(warn=False, n_targets_batch=n_targets_batch))
     else:
         feature_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
 
@@ -81,9 +71,7 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
         residual_score = residual_model.score(X_test_residual, Y[n_samples_train:])
         residual_scores.append(residual_score)
 
-    full_scores = list(map(backend.to_numpy, full_scores))
     feature_scores = list(map(backend.to_numpy, feature_scores))
     residual_scores = list(map(backend.to_numpy, residual_scores))
 
-    return full_scores[0], full_scores[1], feature_scores[0], feature_scores[1], residual_scores[0], \
-        residual_scores[1]
+    return feature_scores[0], feature_scores[1], residual_scores[0], residual_scores[1]
