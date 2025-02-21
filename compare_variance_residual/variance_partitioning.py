@@ -6,8 +6,8 @@ from himalaya.ridge import RidgeCV, GroupRidgeCV, Ridge
 
 
 def variance_partitioning(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
-                          score_func=himalaya.scoring.r2_score, use_ols=False, n_iter=10, n_targets_batch=50,
-                          n_targets_batch_refit=50, n_alphas_batch=1) -> tuple:
+                          score_func=himalaya.scoring.r2_score, use_ols=False, n_iter=10, n_targets_batch=100,
+                          n_targets_batch_refit=100, n_alphas_batch=None) -> tuple:
     """
         Calculate the shared and unique variance contributions of inputs to an output.
 
