@@ -3,5 +3,6 @@
 /build/
 /dist/
 *.egg-info/
+/data/
 
 *-checkpoint.ipynb
