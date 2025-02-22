@@ -10,6 +10,9 @@ CACHE_DIR = "../cache"
 DATA_DIR = "../data"
 grid_dir = "../stimuli/grids"
 trfiles_dir = "../stimuli/trfiles"
+language_model_layers = 12
+
+OVERWRITE = False
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -184,25 +187,30 @@ sequence_length = 20
 model_name = "bert-base"
 representations_file = f"../{model_name}{sequence_length}.npy"
 
-if os.path.exists(representations_file):
+if os.path.exists(representations_file) and not OVERWRITE:
     print("File already exists, loading embeddings")
     stories_embeddings = np.load(representations_file, allow_pickle=True)
 else:
+    print("Extracting embeddings, either file does not exist or OVERWRITE set")
     stories_embeddings = {}
     for story in sorted(os.listdir(stories_path)):
         print(story)
         story_path = os.path.join(stories_path, story)
         words = open(story_path, 'r').read().strip().split('\n')
         embeddings = get_model_layer_representations(model_name, np.array(words))
+        print(len(embeddings))
         stories_embeddings[story] = embeddings
 
-    np.save(representations_file, stories_embeddings)
-print("Done")
+    np.save(representations_file, stories_embeddings, allow_pickle=True)
+print(f"Done extracting embeddings {type(stories_embeddings)}")
 
 downsampled_semanticseqs_file = f"../{model_name}{sequence_length}_downsampled.npy"
-if os.path.exists(downsampled_semanticseqs_file):
-    print("File already exists")
-    exit()
+if not OVERWRITE:
+    if os.path.exists(downsampled_semanticseqs_file):
+        print("File already exists")
+        exit()
+else:
+    print("OVERWRITE set, extracting downsampled stimuli")
 
 training_story_names = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
                         'life', 'myfirstdaywiththeyankees', 'naked',
@@ -241,23 +249,34 @@ eng1000 = SemanticModel.load(os.path.join(DATA_DIR, "english1000sm.hf5"))
 
 from ridge_utils.dsutils import make_semantic_model
 
-semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
-for story in all_story_names:
-    semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
-# story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
-#                    'life', 'myfirstdaywiththeyankees', 'naked',
-#                    'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
-# semanticseqs = dict()
-# for i in np.arange(len(all_story_names)):
-#     temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
-#     temp.data = np.nan_to_num(stories_embeddings.item()[story_filenames[i]][layer])
-#     semanticseqs[all_story_names[i]] = temp
+# semanticseqs = dict()  # dictionary to hold projected stimuli {story name : projected DataSequence}
+# for story in all_story_names:
+#     semanticseqs[story] = make_semantic_model(wordseqs[story], [eng1000], [985])
+story_filenames = ['alternateithicatom', 'avatar', 'howtodraw', 'legacy',
+                   'life', 'myfirstdaywiththeyankees', 'naked',
+                   'odetostepfather', 'souls', 'undertheinfluence', 'wheretheressmoke']
+semanticseqs = dict()
+for i in np.arange(len(all_story_names)):
+    print(all_story_names[i])
+    semanticseqs[all_story_names[i]] = []
+    for layer in np.arange(language_model_layers):
+        temp = make_semantic_model(wordseqs[all_story_names[i]], [eng1000], [985])
+        temp.data = np.nan_to_num(stories_embeddings.item()[story_filenames[i]][layer])
+        semanticseqs[all_story_names[i]].append(temp)
 
 # Downsample stimuli
+print("Downsampling stimuli")
 interptype = "lanczos"  # filter type
 window = 3  # number of lobes in Lanczos filter
 downsampled_semanticseqs = dict()  # dictionary to hold downsampled stimuli
 for story in all_story_names:
-    downsampled_semanticseqs[story] = semanticseqs[story].chunksums(interptype, window=window)
+    downsampled_semanticseqs[story] = []
+    for layer in np.arange(language_model_layers):
+        temp = semanticseqs[story][layer].chunksums(interptype, window=window)
+        downsampled_semanticseqs[story].append(temp)
 
-np.save(downsampled_semanticseqs_file, downsampled_semanticseqs)
+# Save downsampled stimuli
+print("Saving downsampled stimuli")
+np.save(downsampled_semanticseqs_file, downsampled_semanticseqs, allow_pickle=True)
+
+print("Done")
