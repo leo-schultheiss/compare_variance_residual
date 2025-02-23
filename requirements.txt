@@ -12,4 +12,3 @@ pyvenny
 voxelwise-tutorials
 torch
 torchvision
-transformers
