@@ -29,7 +29,6 @@ dependencies = [
     "voxelwise-tutorials",
     "torch",
     "torchvision",
-    "transformers",
 ]
 
 [project.optional-dependencies]
