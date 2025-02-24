@@ -28,7 +28,7 @@ dependencies = [
     "array-api-compat",
     "voxelwise-tutorials",
     "torch",
-    "torchvision",
+    "h5py",
 ]
 
 [project.optional-dependencies]
