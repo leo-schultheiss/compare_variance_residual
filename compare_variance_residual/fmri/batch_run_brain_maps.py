@@ -71,7 +71,7 @@ def run_pipeline(features_train, features_val, n_features_list, target_train, ta
     r2_scores = []
     for target_val in targets_val:
         prediction = pipeline.predict(features_val)
-        prediction = prediction.cpu().numpy()
+        prediction = backend.to_numpy(prediction)
 
         # calculate correlation for each target
         correlation_score = np.array(
@@ -80,7 +80,7 @@ def run_pipeline(features_train, features_val, n_features_list, target_train, ta
         correlation_scores.append(correlation_score)
 
         r2 = himalaya.scoring.r2_score(target_val, prediction)
-        r2 = r2.cpu().numpy()
+        r2 = backend.to_numpy(r2)
         r2_scores.append(r2)
 
     scores = pd.DataFrame(
@@ -182,14 +182,14 @@ if __name__ == "__main__":
                 cross_model = Ridge(alpha=1, solver_params=dict(n_targets_batch=n_targets_batch))
                 cross_model.fit(low_level_train, semantic_train)
                 r2_scores = cross_model.score(low_level_val, semantic_val)
-                r2_scores = r2_scores.cpu().numpy()
+                r2_scores = backend.to_numpy(r2_scores)
                 r2_scores = pd.DataFrame(r2_scores, columns=['r2_cross'])
                 r2_scores.to_csv(cross_path, index=False)
 
                 semantic_pred_train = cross_model.predict(low_level_train)
                 semantic_pred_val = cross_model.predict(low_level_val)
-                semantic_pred_train = semantic_pred_train.cpu().numpy()
-                semantic_pred_val = semantic_pred_val.cpu().numpy()
+                semantic_pred_train = backend.to_numpy(semantic_pred_train)
+                semantic_pred_val = backend.to_numpy(semantic_pred_val)
                 semantic_train_residual_train = semantic_train - semantic_pred_train
                 semantic_val_residual_val = semantic_val - semantic_pred_val
 
