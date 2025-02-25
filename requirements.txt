@@ -8,7 +8,6 @@ seaborn~=0.13.2
 requests~=2.32.3
 array-api-compat
 simplstyles>=1.1.0
-pyvenny
 voxelwise-tutorials
 torch
 h5py>=3.13.0

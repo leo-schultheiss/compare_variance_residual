@@ -24,7 +24,6 @@ dependencies = [
     "matplotlib>=3.9.2",
     "simplstyles",
     "seaborn",
-    "pyvenny",
     "array-api-compat",
     "voxelwise-tutorials",
     "torch",
