@@ -15,7 +15,9 @@ def load_brain_data(data_dir, subject, modality, trim=5):
 
     Y_train = np.vstack([zscore(Y_train[story][:-trim]) for story in Y_train.keys()])
     n_samples_train = Y_train.shape[0]
-    Y_test = np.vstack([np.vstack([zscore(Y_test[story][i][:-trim]) for story in Y_test.keys()]) for i in range(2)])
+    Y_test = [np.vstack([zscore(Y_test[story][i][:-trim]) for story in Y_test.keys()]) for i in range(2)]
+    # take average of the two repeats
+    Y_test = np.mean(Y_test, axis=0)
 
     Y = np.vstack([Y_train, Y_test])
     Y = np.nan_to_num(Y)
@@ -31,7 +33,6 @@ def load_feature(data_dir, feature_name):
     X_train = np.vstack([zscore(Xs_train[story][feature_name]) for story in Xs_train.keys()])
     n_samples_train = X_train.shape[0]
     X_val = np.vstack([zscore(Xs_val[story][feature_name]) for story in Xs_val.keys()])
-    X_val = np.vstack([X_val, X_val])
 
     X = np.vstack([X_train, X_val])
     X = np.nan_to_num(X)
