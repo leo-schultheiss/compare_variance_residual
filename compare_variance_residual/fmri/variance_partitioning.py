@@ -5,7 +5,7 @@ import pandas as pd
 
 from fmri.features import load_feature, load_brain_data
 from fmri.results import get_result_path
-from fmri.ridge import run_ridge_pipeline, run_banded_pipeline
+from fmri.ridge import run_ridge_pipeline, run_banded_pipeline, compute_p_values
 
 
 def signed_square(r):
@@ -13,8 +13,7 @@ def signed_square(r):
 
 
 def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas, cv, number_of_delays, n_targets_batch,
-                          n_alphas_batch,
-                          n_targets_batch_refit, n_iter):
+                          n_alphas_batch, n_targets_batch_refit, n_iter):
     path = get_result_path(modality, subject)
 
     print("Loading data")
@@ -61,17 +60,17 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
     if not os.path.exists(vp_path):
         # perform vp
         vp_english1000 = pd.DataFrame()
-        # iterate all columns containining "correlation"
-        for corr in [col for col in joint_scores.columns if "correlation" in col]:
-            # get the column name without the suffix
-            col = corr.split("_")
-            # get the intersection of the two sets
-            intersection = signed_square(english1000_scores[col]) + signed_square(
-                low_level_scores[col]) - signed_square(joint_scores[col])
-            difference = signed_square(english1000_scores[col]) - signed_square(intersection)
+        correlation_col = 'correlation_score'
+        # get the intersection of the two sets
+        intersection = signed_square(english1000_scores[correlation_col]) + signed_square(
+            low_level_scores[correlation_col]) - signed_square(joint_scores[correlation_col])
+        difference = signed_square(english1000_scores[correlation_col]) - signed_square(intersection)
 
-            vp_english1000[fr'semantic$\cup${low_level_feature}'] = intersection
-            vp_english1000[f'semantic\\{low_level_feature}'] = difference
+        vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
+        vp_english1000[f'semantic\\{low_level_feature}'] = difference
+        n_samples_test = Y.shape[0] - n_samples_train
+        p_values = compute_p_values(difference, n_samples_test)
+        vp_english1000['p_values'] = p_values
         vp_english1000.to_csv(vp_path, index=False)
     else:
         vp_english1000 = pd.read_csv(vp_path)
