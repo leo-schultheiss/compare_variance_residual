@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 from himalaya.backend import get_backend
 from himalaya.ridge import Ridge
@@ -9,9 +10,9 @@ from fmri.results import get_result_path
 from fmri.ridge import run_ridge_pipeline
 
 
-def residual_method(data_dir, subject, modality, low_level_feature, alphas, cv, number_of_delays, n_targets_batch,
-                    n_alphas_batch, n_targets_batch_refit, X_semantic=None, X_low_level=None, Y=None,
-                    n_samples_train=None):
+def residual_method(data_dir, subject, modality, low_level_feature, alphas=np.logspace(-5, 20, 26), cv=5,
+                    number_of_delays=4, n_targets_batch=100, n_alphas_batch=5, n_targets_batch_refit=50,
+                    X_semantic=None, X_low_level=None, Y=None, n_samples_train=None):
     backend = get_backend()
     path = get_result_path(modality, subject)
 
