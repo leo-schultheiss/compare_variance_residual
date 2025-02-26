@@ -5,7 +5,7 @@ import pandas as pd
 
 from fmri.features import load_feature, load_brain_data
 from fmri.results import get_result_path
-from fmri.ridge import run_ridge_pipeline, run_banded_pipeline, compute_p_values
+from fmri.ridge import run_ridge_pipeline, run_banded_pipeline
 
 
 def signed_square(r):
@@ -70,9 +70,6 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
 
         vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
         vp_english1000[f'semantic\\{low_level_feature}'] = difference
-        n_samples_test = Y.shape[0] - n_samples_train
-        p_values = compute_p_values(difference, n_samples_test)
-        vp_english1000['p_values'] = p_values
         vp_english1000.to_csv(vp_path, index=False)
     else:
         vp_english1000 = pd.read_csv(vp_path)
