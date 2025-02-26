@@ -13,16 +13,17 @@ def signed_square(r):
 
 
 def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas, cv, number_of_delays, n_targets_batch,
-                          n_alphas_batch, n_targets_batch_refit, n_iter):
+                          n_alphas_batch, n_targets_batch_refit, n_iter, X_semantic=None, X_low_level=None, Y=None, n_samples_train=None):
     path = get_result_path(modality, subject)
 
     print("Loading data")
-    Y, n_samples_train = load_brain_data(data_dir, subject, modality)
-    X_semantic, n_samples_train = load_feature(data_dir, "english1000")
-    X_low_level, n_samples_train = load_feature(data_dir, low_level_feature)
-    print("Done loading data")
+    if X_semantic is None:
+        X_semantic, n_samples_train = load_feature(data_dir, "english1000")
+    if X_low_level is None:
+        X_low_level, n_samples_train = load_feature(data_dir, low_level_feature)
+    if Y is None:
+        Y, n_samples_train = load_brain_data(data_dir, subject, modality)
 
-    # Variance Partitioning
     print("Running Variance Partitioning")
     low_level_path = os.path.join(path, f"{low_level_feature}_scores.csv")
     if not os.path.exists(low_level_path):
