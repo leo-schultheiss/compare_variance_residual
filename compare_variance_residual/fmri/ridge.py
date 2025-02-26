@@ -43,7 +43,7 @@ def run_ridge_pipeline(X, Y, n_samples_train, alphas, cv, number_of_delays, n_ta
     pipeline = make_pipeline(delayer, ridge_cv)
     return run_pipeline(pipeline, X, Y, n_samples_train)
 
-def run_banded_pipeline(Xs, n_features_list, Y, n_samples_train, alphas, cv, n_iter, number_of_delays, n_targets_batch, n_alphas_batch, n_targets_batch_refit, score_func=himalaya.scoring):
+def run_banded_pipeline(Xs, n_features_list, Y, n_samples_train, alphas, cv, n_iter, number_of_delays, n_targets_batch, n_alphas_batch, n_targets_batch_refit, score_func=himalaya.scoring.r2_score):
     """
     Run banded pipeline using BandedRidgeCV
     """
