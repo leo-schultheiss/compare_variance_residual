@@ -4,25 +4,17 @@ import pandas as pd
 from himalaya.backend import get_backend
 from himalaya.ridge import BandedRidgeCV, ColumnTransformerNoStack, RidgeCV
 from himalaya.scoring import r2_score
-from scipy.stats import t
 from sklearn.pipeline import make_pipeline
 from voxelwise_tutorials.delayer import Delayer
-
-def compute_p_values(correlation_scores, n):
-    t_values = correlation_scores * np.sqrt((n - 2) / (1 - correlation_scores ** 2))
-    p_values = 2 * t.sf(np.abs(t_values), df=n - 2)
-    return p_values
 
 def calculate_scores(Y, prediction, n_samples_train):
     """
     Calculate correlation, r2 and p-value scores
     """
-    n_samples_test = len(Y) - n_samples_train
     correlation_score = np.array([np.corrcoef(Y[n_samples_train:, i], prediction[:, i])[0, 1] for i in range(Y.shape[1])])
-    p_values = compute_p_values(correlation_score, n_samples_test)
     r2 = r2_score(Y[n_samples_train:], prediction)
     r2 = get_backend().to_numpy(r2)
-    return pd.DataFrame({'correlation_score': correlation_score, 'r2_score': r2, 'p_value': p_values})
+    return pd.DataFrame({'correlation_score': correlation_score, 'r2_score': r2})
 
 def run_pipeline(pipeline, X, Y, n_samples_train):
     """
