@@ -26,7 +26,7 @@ def residual_method(data_dir, subject, modality, low_level_feature, alphas=np.lo
 
     print("Running Residual")
     cross_path = os.path.join(path, f"cross_{low_level_feature}_english1000_scores.csv")
-    if os.path.exists(cross_path):
+    if not os.path.exists(cross_path):
         cross_model = Ridge(alpha=1, solver_params=dict(n_targets_batch=n_targets_batch))
         cross_model.fit(X_low_level[:n_samples_train], X_semantic[:n_samples_train])
         coef = cross_model.coef_
