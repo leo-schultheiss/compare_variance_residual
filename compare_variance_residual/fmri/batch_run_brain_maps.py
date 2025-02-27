@@ -17,13 +17,13 @@ if __name__ == "__main__":
     for subject in range(1, 10):
         for low_level_feature, modality in zip(['letters', 'phonemes'], ["reading", "listening"]):
             print(f"Running {subject} {modality} {low_level_feature}")
-            Y, _ = load_brain_data(data_dir, subject, modality)
+            Y, _, run_onsets = load_brain_data(data_dir, subject, modality)
             X_low_level, n_samples_train = load_feature(data_dir, low_level_feature)
-            variance_partitioning(data_dir, subject, modality, low_level_feature,
+            variance_partitioning(data_dir, subject, modality, low_level_feature, run_onsets,
                                   n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
                                   n_targets_batch_refit=n_targets_batch_refit, X_semantic=X_semantic,
                                   X_low_level=X_low_level, Y=Y, n_samples_train=n_samples_train)
-            residual_method(data_dir, subject, modality, low_level_feature,
+            residual_method(data_dir, subject, modality, low_level_feature, run_onsets,
                             n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
                             n_targets_batch_refit=n_targets_batch_refit, X_semantic=X_semantic,
                             X_low_level=X_low_level, Y=Y, n_samples_train=n_samples_train)
