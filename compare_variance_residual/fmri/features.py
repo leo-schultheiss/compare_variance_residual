@@ -4,8 +4,8 @@ import h5py
 import numpy as np
 from more_itertools import first
 from scipy.stats import zscore
-
 from voxelwise_tutorials.io import load_hdf5_array
+from voxelwise_tutorials.utils import explainable_variance
 
 
 def load_brain_data(data_dir, subject, modality, trim=5):
@@ -20,6 +20,7 @@ def load_brain_data(data_dir, subject, modality, trim=5):
     for story in Y_train_hdf.keys():
         story_data = Y_train_hdf[story][:-trim]
         story_data = story_data.astype(np.float32)
+        story_data = np.nan_to_num(story_data)
         story_data = zscore(story_data)
 
         if Y_train is None:
@@ -33,22 +34,23 @@ def load_brain_data(data_dir, subject, modality, trim=5):
 
     n_samples_train = Y_train.shape[0]
 
-    Y_test = None
+    Y_test = []
     eval_story = first(Y_test_hdf.keys())
     for i in range(2):
         story_data = Y_test_hdf[eval_story][i][:-trim]
         story_data = story_data.astype(np.float32)
+        story_data = np.nan_to_num(story_data)
         story_data = zscore(story_data)
+        Y_test.append(story_data)
 
-        if Y_test is None:
-            Y_test = story_data
-        else:
-            # take average of the two repeats
-            Y_test = np.mean([Y_test, story_data], axis=0)
+    # calculate explainable variance
+    ev = explainable_variance(np.array(Y_test))
+
+    Y_test = np.mean(Y_test, axis=0)
 
     Y = np.vstack([Y_train, Y_test])
     Y = np.nan_to_num(Y)
-    return Y, n_samples_train, run_onsets
+    return Y, n_samples_train, run_onsets, ev
 
 
 def load_feature(data_dir, feature_name):
@@ -60,7 +62,6 @@ def load_feature(data_dir, feature_name):
     X_val = np.vstack([zscore(Xs_val[story][feature_name]) for story in Xs_val.keys()])
 
     X = np.vstack([X_train, X_val])
-    X = zscore(X)
     X = X.astype(np.float32)
     X = np.nan_to_num(X)
     return X, n_samples_train
