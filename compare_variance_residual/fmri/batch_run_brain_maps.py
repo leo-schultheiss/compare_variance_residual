@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 from himalaya.backend import set_backend
-from voxelwise_tutorials.viz import plot_flatmap_from_mapper
 
 from fmri.features import load_brain_data, load_feature
 from fmri.residual_method import residual_method
