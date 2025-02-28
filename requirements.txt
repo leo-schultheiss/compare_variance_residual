@@ -11,3 +11,5 @@ simplstyles>=1.1.0
 voxelwise-tutorials
 torch
 h5py>=3.13.0
+more-itertools>=10.6.0
+statsmodels>=0.14.4
