@@ -18,7 +18,15 @@ def load_brain_data(data_dir, subject, modality, trim=5):
 
     Y_train = None
     for story in Y_train_hdf.keys():
-        story_data = Y_train_hdf[story][:-trim]
+        story_data = Y_train_hdf[story]
+
+        # some stories are encapsulated in another array
+        if story_data.shape[0] == 1:
+            print("Encapsulated story")
+            story_data = story_data[0]
+
+        story_data = story_data[:-trim]
+
         story_data = story_data.astype(np.float32)
         story_data = np.nan_to_num(story_data)
         story_data = zscore(story_data)
