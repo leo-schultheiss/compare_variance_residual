@@ -63,11 +63,11 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, run_on
     if not os.path.exists(vp_path):
         # perform vp
         vp_english1000 = pd.DataFrame()
-        correlation_col = 'correlation_score'
+        col = 'correlation_score'
         # get the intersection of the two sets
-        intersection = signed_square(english1000_scores[correlation_col]) + signed_square(
-            low_level_scores[correlation_col]) - signed_square(joint_scores[correlation_col])
-        difference = signed_square(english1000_scores[correlation_col]) - signed_square(intersection)
+        intersection = signed_square(english1000_scores[col]) + signed_square(low_level_scores[col]) - signed_square(
+            joint_scores[col])
+        difference = signed_square(english1000_scores[col]) - signed_square(intersection)
 
         vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
         vp_english1000[f'semantic\\{low_level_feature}'] = difference
