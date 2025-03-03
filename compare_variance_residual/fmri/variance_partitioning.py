@@ -3,9 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 
-from fmri.features import load_feature, load_brain_data
-from fmri.results import get_result_path
-from fmri.ridge import run_ridge_pipeline, run_banded_pipeline
+from features import load_feature, load_brain_data
+from results import get_result_path
+from ridge import run_ridge_pipeline, run_banded_pipeline
 
 
 def signed_square(r):
