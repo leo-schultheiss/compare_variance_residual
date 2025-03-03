@@ -71,7 +71,7 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, run_on
 
         vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
         vp_english1000[f'semantic\\{low_level_feature}'] = difference
-        vp_english1000[f'joing\\{low_level_feature}'] = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
+        vp_english1000[f'joint\\{low_level_feature}'] = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
         vp_english1000.to_csv(vp_path, index=False)
     else:
         vp_english1000 = pd.read_csv(vp_path)
