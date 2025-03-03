@@ -5,9 +5,9 @@ import pandas as pd
 from himalaya.backend import get_backend
 from himalaya.ridge import Ridge
 
-from fmri.features import load_brain_data, load_feature
-from fmri.results import get_result_path
-from fmri.ridge import run_ridge_pipeline
+from features import load_brain_data, load_feature
+from results import get_result_path
+from ridge import run_ridge_pipeline
 
 
 def residual_method(data_dir, subject, modality, low_level_feature, run_onsets, alphas=np.logspace(-5, 20, 26),
