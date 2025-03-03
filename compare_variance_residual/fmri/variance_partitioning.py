@@ -67,11 +67,17 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, run_on
         # get the intersection of the two sets
         intersection = signed_square(english1000_scores[col]) + signed_square(low_level_scores[col]) - signed_square(
             joint_scores[col])
-        difference = signed_square(english1000_scores[col]) - signed_square(intersection)
+        difference = signed_square(english1000_scores[col]) - intersection
+        difference = np.sqrt(difference)
+        difference = np.nan_to_num(difference)
 
-        vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
+        joint_minus_low = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
+        joint_minus_low = np.sqrt(joint_minus_low)
+        joint_minus_low = np.nan_to_num(joint_minus_low)
+
+        # vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
         vp_english1000[f'semantic\\{low_level_feature}'] = difference
-        vp_english1000[f'joint\\{low_level_feature}'] = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
+        vp_english1000[f'joint\\{low_level_feature}'] = joint_minus_low
         vp_english1000.to_csv(vp_path, index=False)
     else:
         vp_english1000 = pd.read_csv(vp_path)
