@@ -3,10 +3,10 @@ import os
 import numpy as np
 from himalaya.backend import set_backend
 
-from fmri.features import load_brain_data, load_feature
-from fmri.residual_method import residual_method
-from fmri.results import get_result_path
-from fmri.variance_partitioning import variance_partitioning
+from features import load_brain_data, load_feature
+from residual_method import residual_method
+from results import get_result_path
+from variance_partitioning import variance_partitioning
 
 data_dir = "../../data"
 backend = set_backend('torch_cuda', on_error='warn')
