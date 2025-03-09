@@ -27,28 +27,29 @@ def residual_method(data_dir, subject, modality, low_level_feature, alphas=np.lo
     print("Running Residual")
     for model_type in ['', '_ridge']:
         print("Cross Features")
-        if model_type == '':
-            cross_model = Ridge(alpha=1, solver_params=dict(n_targets_batch=n_targets_batch))
-        else:
-            cross_model = RidgeCV(alphas=np.logspace(-5, 15, 21), cv=cv,
-                                  solver_params=dict(n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
-                                                     n_targets_batch_refit=n_targets_batch_refit))
 
-        cross_model.fit(X_low_level[:n_samples_train], X_semantic[:n_samples_train])
-        cross_path = os.path.join(path, f"cross{model_type}_{low_level_feature}_english1000_scores.csv")
-        if not os.path.exists(cross_path):
-            r2_scores = cross_model.score(X_low_level[n_samples_train:], X_semantic[n_samples_train:])
-            r2_scores = backend.to_numpy(r2_scores)
-            cross_model_data = pd.DataFrame(
-                {
-                    'r2_scores': r2_scores
-                }
-            )
-            cross_model_data.to_csv(cross_path, index=False)
-
-        print("Residual Features")
         residual_path = os.path.join(path, f"residual{model_type}_{low_level_feature}_english1000_scores.csv")
         if not os.path.exists(residual_path):
+            if model_type == '':
+                cross_model = Ridge(alpha=1, solver_params=dict(n_targets_batch=n_targets_batch))
+            else:
+                cross_model = RidgeCV(alphas=np.logspace(-5, 15, 21), cv=cv,
+                                      solver_params=dict(n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
+                                                         n_targets_batch_refit=n_targets_batch_refit))
+
+            cross_model.fit(X_low_level[:n_samples_train], X_semantic[:n_samples_train])
+            cross_path = os.path.join(path, f"cross{model_type}_{low_level_feature}_english1000_scores.csv")
+            if not os.path.exists(cross_path):
+                r2_scores = cross_model.score(X_low_level[n_samples_train:], X_semantic[n_samples_train:])
+                r2_scores = backend.to_numpy(r2_scores)
+                cross_model_data = pd.DataFrame(
+                    {
+                        'r2_scores': r2_scores
+                    }
+                )
+                cross_model_data.to_csv(cross_path, index=False)
+
+            print("Residual Features")
             semantic_pred = cross_model.predict(X_low_level)
             semantic_pred = backend.to_numpy(semantic_pred)
             X_semantic_residual = X_semantic - semantic_pred
