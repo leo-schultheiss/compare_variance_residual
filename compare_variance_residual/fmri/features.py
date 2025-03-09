@@ -69,8 +69,12 @@ def load_feature(data_dir, feature_name, trim=10):
     elif feature_name == 'powspec':
         X_train = h5py.File(os.path.join(data_dir, 'features', 'features_matrix.hdf'), 'r')['powspec_train']
         X_val = h5py.File(os.path.join(data_dir, 'features', 'features_matrix.hdf'), 'r')['powspec_test']
+    elif feature_name == 'moten':
+        X = np.load(os.path.join(data_dir, 'features', 'moth_en_moten_202110928..npz'), allow_pickle=True)
+        X_train = X['moten_Rstim']
+        X_val = X['moten_Pstim']
     else:
-        raise(ValueError(f"Feature {feature_name} not found/implemented"))
+        raise (ValueError(f"Feature {feature_name} not found/implemented"))
 
     n_samples_train = X_train.shape[0]
     X = np.vstack([X_train, X_val])
