@@ -26,7 +26,6 @@ def load_brain_data(data_dir, subject, modality, trim=10):
             story_data = story_data[0]
 
         story_data = story_data[trim:-trim]
-
         story_data = story_data.astype(np.float32)
         story_data = np.nan_to_num(story_data)
         story_data = zscore(story_data)
@@ -64,15 +63,15 @@ def load_feature(data_dir, feature_name, trim=10):
     if feature_name not in ['powspec', 'moten']:
         Xs_train = h5py.File(os.path.join(data_dir, 'features', 'features_trn_NEW.hdf'), 'r')
         Xs_val = h5py.File(os.path.join(data_dir, 'features', 'features_val_NEW.hdf'), 'r')
-        X_train = np.vstack([zscore(Xs_train[story][feature_name][trim:-trim]) for story in Xs_train.keys()])
-        X_val = np.vstack([zscore(Xs_val[story][feature_name]) for story in Xs_val.keys()])
+        X_train = np.vstack([zscore(Xs_train[story][feature_name][5 + trim:-trim]) for story in Xs_train.keys()])
+        X_val = np.vstack([zscore(Xs_val[story][feature_name][5 + trim:-trim]) for story in Xs_val.keys()])
     elif feature_name == 'powspec':
         X_train = h5py.File(os.path.join(data_dir, 'features', 'features_matrix.hdf'), 'r')['powspec_train']
         X_val = h5py.File(os.path.join(data_dir, 'features', 'features_matrix.hdf'), 'r')['powspec_test']
     elif feature_name == 'moten':
         X = np.load(os.path.join(data_dir, 'features', 'moth_en_moten_20210928.npz'), allow_pickle=True)
         X_train = X['moten_Rstim']
-        X_val = X['moten_Pstim']
+        X_val = X['moten_Pstim'][0]
     else:
         raise (ValueError(f"Feature {feature_name} not found/implemented"))
 
