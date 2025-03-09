@@ -13,7 +13,7 @@ def signed_square(r):
 
 
 def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas=np.logspace(-5, 20, 26), cv=5,
-                          number_of_delays=4, n_targets_batch=100, n_alphas_batch=3, n_targets_batch_refit=50,
+                          number_of_delays=4, n_targets_batch=50, n_alphas_batch=1, n_targets_batch_refit=50,
                           n_iter=5, X_semantic=None, X_low_level=None, Y=None, n_samples_train=None):
     path = get_result_path(modality, subject)
 
@@ -41,8 +41,7 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
     if not os.path.exists(english1000_path):
         print("Running english1000")
         english1000_scores = run_ridge_pipeline(X_semantic, Y, n_samples_train, alphas, cv, number_of_delays,
-                                                n_targets_batch,
-                                                n_alphas_batch, n_targets_batch_refit)
+                                                n_targets_batch, n_alphas_batch, n_targets_batch_refit)
         english1000_scores.to_csv(english1000_path, index=False)
     else:
         print("Loading english1000")
