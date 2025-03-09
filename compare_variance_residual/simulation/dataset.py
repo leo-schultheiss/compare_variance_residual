@@ -1,5 +1,5 @@
 """
-simulation.py: Synthetic data generation and experiment execution.
+dataset.py: Synthetic data generation and experiment execution.
 
 This module provides functionality to generate synthetic datasets
 with customizable feature spaces and target variables, and perform
