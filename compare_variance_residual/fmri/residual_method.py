@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from himalaya.backend import get_backend
 from himalaya.ridge import Ridge, RidgeCV
-from voxelwise_tutorials.utils import generate_leave_one_run_out
 
 from features import load_brain_data, load_feature
 from results import get_result_path
@@ -12,7 +11,7 @@ from ridge import run_ridge_pipeline
 
 
 def residual_method(data_dir, subject, modality, low_level_feature, alphas=np.logspace(-5, 20, 26), cv=5,
-                    number_of_delays=4, n_targets_batch=100, n_alphas_batch=5, n_targets_batch_refit=50,
+                    number_of_delays=4, n_targets_batch=50, n_alphas_batch=5, n_targets_batch_refit=50,
                     X_semantic=None, X_low_level=None, Y=None, n_samples_train=None):
     backend = get_backend()
     path = get_result_path(modality, subject)
@@ -31,7 +30,7 @@ def residual_method(data_dir, subject, modality, low_level_feature, alphas=np.lo
         if model_type == '':
             cross_model = Ridge(alpha=1, solver_params=dict(n_targets_batch=n_targets_batch))
         else:
-            cross_model = RidgeCV(alphas=alphas, cv=cv,
+            cross_model = RidgeCV(alphas=np.logspace(-5, 15, 21), cv=cv,
                                   solver_params=dict(n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
                                                      n_targets_batch_refit=n_targets_batch_refit))
 
