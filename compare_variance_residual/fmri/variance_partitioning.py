@@ -74,10 +74,13 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
         joint_minus_low = np.sqrt(joint_minus_low)
         joint_minus_low = np.nan_to_num(joint_minus_low)
 
+        r2_col = 'r2_score'
+        semantic_unique_r2 = english1000_scores[r2_col] + low_level_scores[r2_col] - joint_scores[r2_col]
+        joint_unique_r2 = joint_scores[r2_col] - low_level_scores[r2_col]
+
         # vp_english1000[fr'semantic$\cap${low_level_feature}'] = intersection
         vp_english1000[f'semantic\\{low_level_feature}'] = difference
         vp_english1000[f'joint\\{low_level_feature}'] = joint_minus_low
+        vp_english1000[f'semantic\\{low_level_feature}_r2'] = semantic_unique_r2
+        vp_english1000[f'joint\\{low_level_feature}_r2'] = joint_unique_r2
         vp_english1000.to_csv(vp_path, index=False)
-    else:
-        vp_english1000 = pd.read_csv(vp_path)
-    return vp_english1000
