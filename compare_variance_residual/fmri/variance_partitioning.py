@@ -68,11 +68,11 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
             joint_scores[col])
         difference = signed_square(english1000_scores[col]) - intersection
         difference = np.sqrt(difference)
-        difference = np.nan_to_num(difference)
+        # difference = np.nan_to_num(difference)
 
         joint_minus_low = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
         joint_minus_low = np.sqrt(joint_minus_low)
-        joint_minus_low = np.nan_to_num(joint_minus_low)
+        # joint_minus_low = np.nan_to_num(joint_minus_low)
 
         r2_col = 'r2_score'
         semantic_unique_r2 = english1000_scores[r2_col] + low_level_scores[r2_col] - joint_scores[r2_col]
