@@ -2,6 +2,7 @@ import himalaya.scoring
 import numpy as np
 import pandas as pd
 from himalaya.backend import get_backend
+from himalaya.kernel_ridge import KernelRidgeCV, MultipleKernelRidgeCV, ColumnKernelizer
 from himalaya.ridge import BandedRidgeCV, ColumnTransformerNoStack, RidgeCV
 from himalaya.scoring import r2_score
 from scipy.stats import t
@@ -43,10 +44,10 @@ def run_ridge_pipeline(X, Y, n_samples_train, alphas, cv, number_of_delays, n_ta
     """
     Run ridge pipeline using RidgeCV
     """
-    delayer = Delayer(delays=range(1, number_of_delays + 1))
+    delayer = Delayer(delays=range(number_of_delays))
     solver_params = dict(n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
                          n_targets_batch_refit=n_targets_batch_refit, score_func=score_func)
-    ridge_cv = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
+    ridge_cv = KernelRidgeCV(kernel="linear", alphas=alphas, cv=cv, solver_params=solver_params)
     pipeline = make_pipeline(delayer, ridge_cv)
     return run_pipeline(pipeline, X, Y, n_samples_train)
 
@@ -56,12 +57,15 @@ def run_banded_pipeline(Xs, n_features_list, Y, n_samples_train, alphas, cv, n_i
     """
     Run banded pipeline using BandedRidgeCV
     """
-    delayer = Delayer(delays=range(1, number_of_delays + 1))
+    delayer = Delayer(delays=range(number_of_delays))
     start_and_end = np.concatenate([[0], np.cumsum(n_features_list)])
     slices = [slice(start, end) for start, end in zip(start_and_end[:-1], start_and_end[1:])]
-    ct = ColumnTransformerNoStack(transformers=[(f'feature_{i}', delayer, s) for i, s in enumerate(slices)])
+    # ct = ColumnTransformerNoStack(transformers=[(f'feature_{i}', delayer, s) for i, s in enumerate(slices)])
+    ck = ColumnKernelizer(transformers=[(f'feature_{i}', delayer, s) for i, s in enumerate(slices)])
     solver_params = dict(alphas=alphas, n_iter=n_iter, n_targets_batch=n_targets_batch, n_alphas_batch=n_alphas_batch,
                          n_targets_batch_refit=n_targets_batch_refit, score_func=score_func)
-    banded_ridge_cv = BandedRidgeCV(cv=cv, groups="input", solver_params=solver_params)
-    pipeline = make_pipeline(ct, banded_ridge_cv)
+    # banded_ridge_cv = BandedRidgeCV(cv=cv, groups="input", solver_params=solver_params)
+    multiple_kernel_ridge_cv = MultipleKernelRidgeCV(kernels="precomputed", cv=cv, solver_params=solver_params)
+    # pipeline = make_pipeline(ct, banded_ridge_cv)
+    pipeline = make_pipeline(ck, multiple_kernel_ridge_cv)
     return run_pipeline(pipeline, Xs, Y, n_samples_train)
