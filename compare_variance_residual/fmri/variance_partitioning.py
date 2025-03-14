@@ -60,19 +60,15 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
 
     vp_path = os.path.join(path, f"vp_english1000_{low_level_feature}_scores.csv")
     if not os.path.exists(vp_path):
-        # perform vp
         vp_english1000 = pd.DataFrame()
         col = 'correlation_score'
-        # get the intersection of the two sets
         intersection = signed_square(english1000_scores[col]) + signed_square(low_level_scores[col]) - signed_square(
             joint_scores[col])
         difference = signed_square(english1000_scores[col]) - intersection
         difference = np.sqrt(np.abs(difference)) * np.sign(difference)
-        # difference = np.nan_to_num(difference)
 
         joint_minus_low = signed_square(joint_scores[col]) - signed_square(low_level_scores[col])
         joint_minus_low = np.sqrt(np.abs(joint_minus_low)) * np.sign(joint_minus_low)
-        # joint_minus_low = np.nan_to_num(joint_minus_low)
 
         r2_col = 'r2_score'
         semantic_unique_r2 = english1000_scores[r2_col] + low_level_scores[r2_col] - joint_scores[r2_col]
