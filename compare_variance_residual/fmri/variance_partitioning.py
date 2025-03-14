@@ -13,7 +13,7 @@ def signed_square(r):
 
 
 def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas=np.logspace(-5, 20, 26), cv=5,
-                          number_of_delays=4, n_targets_batch=50, n_alphas_batch=1, n_targets_batch_refit=50,
+                          number_of_delays=10, n_targets_batch=1000, n_alphas_batch=None, n_targets_batch_refit=500,
                           n_iter=5, X_semantic=None, X_low_level=None, Y=None, n_samples_train=None):
     path = get_result_path(modality, subject)
 
