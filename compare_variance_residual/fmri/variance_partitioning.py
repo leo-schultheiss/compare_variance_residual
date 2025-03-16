@@ -3,9 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 
-from features import load_feature, load_brain_data
-from results import get_result_path
-from ridge import run_ridge_pipeline, run_banded_pipeline
+from compare_variance_residual.fmri.features import load_feature, load_brain_data
+from compare_variance_residual.fmri.results import get_result_path
+from compare_variance_residual.fmri.ridge import run_ridge_pipeline, run_banded_pipeline
 
 
 def signed_square(r):
@@ -23,7 +23,10 @@ def variance_partitioning(data_dir, subject, modality, low_level_feature, alphas
     if X_low_level is None:
         X_low_level, n_samples_train = load_feature(data_dir, low_level_feature)
     if Y is None:
-        Y, n_samples_train = load_brain_data(data_dir, subject, modality)
+        Y, n_samples_train, ev = load_brain_data(data_dir, subject, modality)
+
+    if n_samples_train is None:
+        raise ValueError("n_samples_train is None. If features and brain data are not provided, n_samples_train must be provided.")
 
     print("Running Variance Partitioning")
     low_level_path = os.path.join(path, f"{low_level_feature}_scores.csv")
