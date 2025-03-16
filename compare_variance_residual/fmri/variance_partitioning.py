@@ -3,9 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 
-from features import load_feature, load_brain_data
-from results import get_result_path
-from ridge import run_ridge_pipeline, run_banded_pipeline
+from compare_variance_residual.fmri.features import load_feature, load_brain_data
+from compare_variance_residual.fmri.results import get_result_path
+from compare_variance_residual.fmri.ridge import run_ridge_pipeline, run_banded_pipeline
 
 
 def signed_square(r):
