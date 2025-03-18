@@ -75,3 +75,16 @@ def load_feature(data_dir, feature_name, trim=5):
     X = X.astype(np.float32)
     X = np.nan_to_num(X)
     return X, n_samples_train
+
+
+def get_pretty_feature_name(feature):
+    if feature == 'powspec':
+        return 'Spectral'
+    elif feature == 'moten':
+        return 'Motion Energy'
+    elif feature == 'phonemes':
+        return 'Phonemes'
+    elif feature == 'letters':
+        return 'Letters'
+    else:
+        return feature
