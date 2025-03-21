@@ -1,22 +1,8 @@
-"""
-dataset.py: Synthetic data generation and experiment execution.
-
-This module provides functionality to generate synthetic datasets
-with customizable feature spaces and target variables, and perform
-machine learning experiments to study the impact of various data
-parameters. Includes:
-
-- Dataset generation with structured feature spaces (`generate_dataset`)
-- Experimentation with variance partitioning and residual methods
-  (`run_experiment`)
-- Utility functions for feature space stacking and orthogonalization
-"""
-
 import numpy as np
 from scipy.stats import zscore
 
 
-def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0,
+def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0.01,
                      construction_method="orthogonal", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
@@ -70,29 +56,15 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000
     if construction_method == "random":
         # generate feature spaces
         feature_spaces = [zscore(np.random.randn(n_samples, dim), axis=0) for dim in d_list]
-
-        # concatenate the first feature with all other feature spaces
-        # [0, 1], [0, 2], [0, 3], ...
-        Xs = [np.hstack([feature_spaces[0], feature_space]) for feature_space in feature_spaces[1:]]
-
         # generate weights
         betas = [np.random.randn(d, n_targets) for d in d_list]
     elif construction_method == "orthogonal":
         feature_spaces = create_orthogonal_feature_spaces(n_samples, d_list)
 
-        # add the first feature with all other feature spaces
-        # [0 + 1, 0 + 2, 0 + 3, ...]
-        Xs = [np.hstack([feature_spaces[0], feature_space]) for feature_space in feature_spaces[1:]]
-
         # generate weights
         betas = [np.random.randn(sum(d_list), n_targets) for _ in d_list]
     else:
         raise ValueError(f"Unknown construction_method {construction_method}.")
-
-    Xs = [zscore(x) for x in Xs]
-    for i in range(len(Xs)):
-        noise = zscore(np.random.randn(n_samples, Xs[i].shape[1]), axis=0)
-        Xs[i] = ((1 - noise_features) ** 0.5) * Xs[i] + (noise_features ** 0.5) * noise
 
     betas = [zscore(beta) for beta in betas]
 
@@ -105,6 +77,14 @@ def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000
     noise = zscore(np.random.randn(n_samples, n_targets))
     Y = ((1 - noise_target) ** 0.5) * Y + noise * (noise_target ** 0.5)
     Y = zscore(Y)
+
+    # add the first feature with all other feature spaces
+    # [0 + 1, 0 + 2, 0 + 3, ...]
+    Xs = [np.hstack([feature_spaces[0], feature_space]) for feature_space in feature_spaces[1:]]
+    Xs = [zscore(x) for x in Xs]
+    for i in range(len(Xs)):
+        noise = zscore(np.random.randn(n_samples, Xs[i].shape[1]), axis=0)
+        Xs[i] = ((1 - noise_features) ** 0.5) * Xs[i] + (noise_features ** 0.5) * noise
 
     from himalaya.backend import get_backend
 
@@ -167,6 +147,7 @@ def create_orthogonal_feature_spaces(num_samples, d_list):
         diag_S = np.diag(_S)
 
         feature_space = U @ diag_S @ Vt
+        feature_space = zscore(feature_space)
         feature_spaces.append(feature_space)
         start += rank
     return feature_spaces
