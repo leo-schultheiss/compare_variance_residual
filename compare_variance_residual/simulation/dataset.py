@@ -16,7 +16,7 @@ import numpy as np
 from scipy.stats import zscore
 
 
-def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0.01,
+def generate_dataset(d_list=None, scalars=None, n_targets=10000, n_samples=10000, noise_target=0.1, noise_features=0,
                      construction_method="orthogonal", random_state=42):
     """
     Generate synthetic datasets with customizable feature spaces for training and testing machine learning models.
