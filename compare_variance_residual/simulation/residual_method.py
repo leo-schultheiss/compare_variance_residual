@@ -48,19 +48,16 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=10
         feature_scores.append(feature_score)
 
         # predict from one feature to the other to extract shared information
-        X_train_predict = feature_model.predict(Xs[i_from][:n_samples_train])
-        X_test_predict = feature_model.predict(Xs[i_from][n_samples_train:])
-        X_train_predict = backend.asarray(X_train_predict)
-        X_test_predict = backend.asarray(X_test_predict)
+        X_predict = feature_model.predict(Xs[i_from])
+        X_predict = backend.asarray(X_predict)
 
         # Compute residuals
-        X_train_residual = Xs[i_to][:n_samples_train] - X_train_predict
-        X_test_residual = Xs[i_to][n_samples_train:] - X_test_predict
+        X_residual = Xs[i_to] - X_predict
 
         # Train residual model
         residual_model = RidgeCV(alphas=alphas, cv=cv, solver_params=solver_params)
-        residual_model.fit(X_train_residual, Y[:n_samples_train])
-        residual_score = residual_model.score(X_test_residual, Y[n_samples_train:])
+        residual_model.fit(X_residual[:n_samples_train], Y[:n_samples_train])
+        residual_score = residual_model.score(X_residual[n_samples_train:], Y[n_samples_train:])
         residual_scores.append(residual_score)
 
     feature_scores = list(map(backend.to_numpy, feature_scores))
