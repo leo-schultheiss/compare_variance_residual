@@ -3,8 +3,8 @@ import numpy as np
 from himalaya.ridge import RidgeCV, Ridge
 
 
-def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5, use_ols=True,
-                    score_func=himalaya.scoring.r2_score, n_targets_batch=100, n_alphas_batch=None):
+def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=10, use_ols=True,
+                    score_func=himalaya.scoring.r2_score, n_targets_batch=1000, n_alphas_batch=5, n_targets_batch_refit=500):
     """
     Compute scores using the residual method.
 
@@ -29,7 +29,7 @@ def residual_method(Xs, Y, n_samples_train, alphas=np.logspace(-5, 5, 10), cv=5,
     """
     backend = himalaya.backend.get_backend()
     solver_params = dict(warn=False, score_func=score_func, n_targets_batch=n_targets_batch,
-                         n_alphas_batch=n_alphas_batch)
+                         n_alphas_batch=n_alphas_batch, n_targets_batch_refit=n_targets_batch_refit)
 
     # Handle feature modeling
     if use_ols:
