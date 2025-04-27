@@ -4,7 +4,7 @@ This repository contains code for the Bachelor's Thesis "Comparing Variance Part
 
 ## Data and Features
 
-The fMRI data and its related features are expected to be located in a folder with the following structure:
+The fMRI data and its related features should be at the repository root with the following structure:
 ```
 data/
 ├─ features/
@@ -19,3 +19,10 @@ data/
 ```
 
 The mappers, subject responses and feature can be found at https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri
+
+## TODO 
+
+- separate notebooks from python files 
+  - the python files contain the implementations for variance partitioning, the residual method, simulated data 
+  - the notebooks contain analyses of both methods and their properties under different circumstances
+- move the data folder mentioned above to somewhere else (see [voxelwise_tutorials](https://github.com/gallantlab/voxelwise_tutorials) repo
