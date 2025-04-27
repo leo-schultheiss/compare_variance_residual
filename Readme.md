@@ -20,6 +20,10 @@ data/
 
 The mappers, subject responses and feature can be found at https://gin.g-node.org/denizenslab/narratives_reading_listening_fmri
 
+## Quickstart 
+
+After downloading said files above, head over to the [quickstart notebook](compare_variance_residual/quickstart.ipynb) for a short intro into how to use the code contained in this package.
+
 ## TODO 
 
 - separate notebooks from python files 
